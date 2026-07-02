@@ -1,20 +1,21 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
 
+import { ThemeProvider, useAppFonts } from './theme';
+import { ThemePreview } from './theme/ThemePreview';
+
+/**
+ * Root. Loads the mono fonts before rendering (decision 5 — hold until ready),
+ * then mounts the ThemeProvider. Screens land in Stage 5; for now a small
+ * design-system preview validates tokens/fonts/theming on web.
+ */
 export default function App() {
+  const fontsLoaded = useAppFonts();
+  if (!fontsLoaded) return null;
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
+    <ThemeProvider>
       <StatusBar style="auto" />
-    </View>
+      <ThemePreview />
+    </ThemeProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
