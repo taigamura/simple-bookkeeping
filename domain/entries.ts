@@ -26,6 +26,21 @@ export function dayNet(entries: Transaction[], day: number): number {
   return dayEntries(entries, day).reduce((sum, t) => sum + signedAmount(t), 0);
 }
 
+/** Total income (positive magnitude) over a list of entries. */
+export function income(entries: Transaction[]): number {
+  return entries.reduce((sum, t) => (t.type === 'income' ? sum + t.amount : sum), 0);
+}
+
+/** Total expense (positive magnitude) over a list of entries. */
+export function expense(entries: Transaction[]): number {
+  return entries.reduce((sum, t) => (t.type === 'expense' ? sum + t.amount : sum), 0);
+}
+
+/** Signed net (income − expense) over a list of entries. */
+export function net(entries: Transaction[]): number {
+  return income(entries) - expense(entries);
+}
+
 /** Draft captured by the Entry sheet before it becomes a `Transaction`. */
 export interface EntryDraft {
   type: TxType;

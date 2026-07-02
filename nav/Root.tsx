@@ -8,10 +8,12 @@
  * Month navigation is fixed to the current month here; it arrives in slice #4.
  */
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import {
   DEFAULT_CURRENCY,
+  clampDay,
+  shiftMonth,
   type Transaction,
   type YM,
 } from '../domain';
@@ -47,12 +49,21 @@ function Shell({ state, update }: RootProps) {
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
   // real current month, with the selected day defaulting to today.
   const today = useMemo(() => new Date(), []);
-  const [cursor] = useState<YM>({ y: today.getFullYear(), m: today.getMonth() });
+  const [cursor, setCursor] = useState<YM>({ y: today.getFullYear(), m: today.getMonth() });
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
   const symbol = DEFAULT_CURRENCY.symbol;
 
   const closeSheet = () => setSheet(null);
+  const openSettings = () => setSheet('settings');
+
+  // Month navigation: shift the cursor and clamp the selected day into the new
+  // month (e.g. Jan 31 → Feb 28) so the selection stays valid.
+  const goMonth = (delta: number) => {
+    const next = shiftMonth(cursor, delta);
+    setCursor(next);
+    setSelectedDay((d) => clampDay(d, next.y, next.m));
+  };
 
   // save(): append the entry, land on and re-select its day, show the Calendar.
   const handleSave = (entry: Transaction) => {
@@ -64,15 +75,6 @@ function Shell({ state, update }: RootProps) {
 
   return (
     <View style={styles.flex}>
-      <View style={styles.header}>
-        <View />
-        <IconButton
-          name="settings"
-          accessibilityLabel="Settings"
-          onPress={() => setSheet('settings')}
-        />
-      </View>
-
       <View style={styles.body}>
         {tab === 'calendar' ? (
           <CalendarScreen
@@ -81,9 +83,13 @@ function Shell({ state, update }: RootProps) {
             m={cursor.m}
             day={selectedDay}
             symbol={symbol}
+            onSelectDay={setSelectedDay}
+            onPrevMonth={() => goMonth(-1)}
+            onNextMonth={() => goMonth(1)}
+            onSettings={openSettings}
           />
         ) : (
-          <SummaryScreen />
+          <SummaryScreen onSettings={openSettings} />
         )}
       </View>
 
@@ -144,14 +150,9 @@ function Appearance() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: metrics.statusOffset,
-    paddingHorizontal: metrics.screenPadX,
-  },
-  body: { flex: 1 },
+  // Native SafeAreaView (AppShell) insets the top; web has no safe area, so add
+  // the design's status offset there to keep content off the container edge.
+  body: { flex: 1, paddingTop: Platform.OS === 'web' ? metrics.statusOffset : 0 },
   sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

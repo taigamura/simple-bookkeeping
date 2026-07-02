@@ -7,9 +7,13 @@ import {
   monthEntries,
   dayEntries,
   dayNet,
+  income,
+  expense,
+  net,
   signedAmount,
   makeEntry,
 } from './entries';
+import { daysInMonth, firstWeekday, shiftMonth, clampDay } from './calendar';
 import { pressKey, amountValue } from './keypad';
 import type { Transaction } from './types';
 
@@ -83,6 +87,44 @@ describe('monthEntries / dayEntries / dayNet', () => {
     expect(dayNet(july, 2)).toBe(1200 - 850); // 350
     expect(dayNet(july, 5)).toBe(-300);
     expect(dayNet(july, 9)).toBe(0);
+  });
+
+  it('income / expense / net aggregate the month totals', () => {
+    const july = monthEntries(entries, { y: 2026, m: 6 });
+    expect(income(july)).toBe(1200);
+    expect(expense(july)).toBe(850 + 300);
+    expect(net(july)).toBe(1200 - 1150); // 50
+  });
+
+  it('income / expense / net are 0 over an empty list', () => {
+    expect(income([])).toBe(0);
+    expect(expense([])).toBe(0);
+    expect(net([])).toBe(0);
+  });
+});
+
+describe('calendar grid math', () => {
+  it('daysInMonth handles 31/30/leap/non-leap February', () => {
+    expect(daysInMonth(2026, 6)).toBe(31); // July
+    expect(daysInMonth(2026, 8)).toBe(30); // September
+    expect(daysInMonth(2026, 1)).toBe(28); // Feb 2026 (non-leap)
+    expect(daysInMonth(2024, 1)).toBe(29); // Feb 2024 (leap)
+  });
+
+  it('firstWeekday returns the weekday of the 1st (0 = Sunday)', () => {
+    expect(firstWeekday(2026, 6)).toBe(new Date(2026, 6, 1).getDay());
+  });
+
+  it('shiftMonth rolls the year over at the boundaries', () => {
+    expect(shiftMonth({ y: 2026, m: 11 }, 1)).toEqual({ y: 2027, m: 0 });
+    expect(shiftMonth({ y: 2026, m: 0 }, -1)).toEqual({ y: 2025, m: 11 });
+    expect(shiftMonth({ y: 2026, m: 6 }, 1)).toEqual({ y: 2026, m: 7 });
+  });
+
+  it('clampDay caps a day to the last valid day of the month', () => {
+    expect(clampDay(31, 2026, 1)).toBe(28); // Feb → 28
+    expect(clampDay(15, 2026, 6)).toBe(15); // in range unchanged
+    expect(clampDay(0, 2026, 6)).toBe(1); // floor at 1
   });
 });
 

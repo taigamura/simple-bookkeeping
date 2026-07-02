@@ -1,26 +1,27 @@
 /**
- * CalendarScreen — the home tab (minimal for slice #3). The full month grid,
- * In/Out/Net strip and month navigation arrive in slice #4; here it shows the
- * selected day's label + net and that day's entries as `ListRow`s, or the
- * designed empty state (decision 8).
+ * CalendarScreen — the Calendar home (slice #4). Full month-at-a-glance:
+ * header (month+year title, ‹ › nav, ⚙), an In/Out/Net strip bounded by
+ * hairlines, the 7-column month grid, then the selected day's label + net and
+ * its entries (or the empty state from the core slice).
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import {
+  MONTH_NAMES,
   dayEntries,
   dayNet,
+  expense,
+  income,
   monthEntries,
+  net as monthNet,
   signed,
+  yen,
   type Transaction,
 } from '../domain';
-import { ListRow } from '../ui';
-import { useTheme, metrics, Txt } from '../theme';
-
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
+import { CalendarGrid, ListRow } from '../ui';
+import { useTheme, metrics, Txt, type Tone } from '../theme';
+import { IconButton } from '../nav/IconButton';
 
 interface CalendarScreenProps {
   entries: Transaction[];
@@ -28,29 +29,63 @@ interface CalendarScreenProps {
   m: number;
   day: number;
   symbol: string;
+  onSelectDay: (day: number) => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+  onSettings: () => void;
 }
 
-export function CalendarScreen({ entries, y, m, day, symbol }: CalendarScreenProps) {
+const netTone = (n: number): Tone => (n > 0 ? 'positive' : n < 0 ? 'negative' : 'muted');
+
+export function CalendarScreen({
+  entries,
+  y,
+  m,
+  day,
+  symbol,
+  onSelectDay,
+  onPrevMonth,
+  onNextMonth,
+  onSettings,
+}: CalendarScreenProps) {
   const { colors } = useTheme();
   const month = monthEntries(entries, { y, m });
   const rows = dayEntries(month, day);
-  const net = dayNet(month, day);
+  const dNet = dayNet(month, day);
 
   return (
     <View style={styles.screen}>
-      <Txt variant="screenTitle">
-        {MONTHS[m]} {y}
-      </Txt>
+      <View style={styles.header}>
+        <Txt variant="screenTitle">
+          {MONTH_NAMES[m]} {y}
+        </Txt>
+        <View style={styles.headerActions}>
+          <IconButton name="chevron-left" accessibilityLabel="Previous month" onPress={onPrevMonth} />
+          <IconButton name="chevron-right" accessibilityLabel="Next month" onPress={onNextMonth} />
+          <IconButton name="settings" accessibilityLabel="Settings" onPress={onSettings} />
+        </View>
+      </View>
+
+      <View style={[styles.strip, { borderColor: colors.line }]}>
+        <StripCol label="In" value={yen(income(month), symbol)} tone="positive" />
+        <StripCol label="Out" value={yen(expense(month), symbol)} tone="negative" />
+        <StripCol label="Net" value={signed(monthNet(month), symbol)} tone={netTone(monthNet(month))} />
+      </View>
+
+      <CalendarGrid
+        y={y}
+        m={m}
+        monthEntries={month}
+        selectedDay={day}
+        onSelectDay={onSelectDay}
+      />
 
       <View style={[styles.dayHeader, { borderBottomColor: colors.line }]}>
         <Txt variant="microLabel" tone="muted">
-          {MONTHS[m].slice(0, 3)} {day}
+          {MONTH_NAMES[m].slice(0, 3)} {day}
         </Txt>
-        <Txt
-          variant="inlineAmount"
-          tone={net > 0 ? 'positive' : net < 0 ? 'negative' : 'muted'}
-        >
-          {signed(net, symbol)}
+        <Txt variant="inlineAmount" tone={netTone(dNet)}>
+          {signed(dNet, symbol)}
         </Txt>
       </View>
 
@@ -61,10 +96,7 @@ export function CalendarScreen({ entries, y, m, day, symbol }: CalendarScreenPro
           </Txt>
         </View>
       ) : (
-        <ScrollView
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           {rows.map((entry) => (
             <ListRow key={entry.id} entry={entry} symbol={symbol} />
           ))}
@@ -74,13 +106,41 @@ export function CalendarScreen({ entries, y, m, day, symbol }: CalendarScreenPro
   );
 }
 
+function StripCol({ label, value, tone }: { label: string; value: string; tone: Tone }) {
+  return (
+    <View style={styles.stripCol}>
+      <Txt variant="microLabel" tone="dim">
+        {label}
+      </Txt>
+      <Txt variant="inlineAmount" tone={tone}>
+        {value}
+      </Txt>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, paddingHorizontal: metrics.screenPadX, paddingTop: 12 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  strip: {
+    flexDirection: 'row',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  stripCol: { flex: 1, alignItems: 'center', gap: 4 },
   dayHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 18,
     paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },

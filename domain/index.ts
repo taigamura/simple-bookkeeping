@@ -17,11 +17,22 @@ export {
   monthEntries,
   dayEntries,
   dayNet,
+  income,
+  expense,
+  net,
   signedAmount,
   makeEntry,
   uid,
   type EntryDraft,
 } from './entries';
+export {
+  daysInMonth,
+  firstWeekday,
+  shiftMonth,
+  clampDay,
+  WEEKDAYS,
+  MONTH_NAMES,
+} from './calendar';
 export {
   pressKey,
   amountValue,
