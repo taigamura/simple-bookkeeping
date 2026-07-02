@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Ralph autonomous-dev control files
+.ralph/
+.ralphrc
+.ralph-tsc.sh
