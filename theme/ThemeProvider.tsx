@@ -2,10 +2,10 @@
  * ThemeProvider — supplies the active color palette and mode switching.
  *
  * Decision 9: dark by default, manual only (OS appearance ignored — no
- * `useColorScheme`). The choice is meant to persist; persistence is wired in
- * Stage 3 (AsyncStorage store). For now the provider accepts an `initialMode`
- * and reports changes via `onModeChange` so the store can plug in without a
- * rewrite.
+ * `useColorScheme`). The provider stays storage-agnostic: it accepts an
+ * `initialMode` (seeded from persisted state) and reports changes via
+ * `onModeChange`. `App` plugs the store into those two props, so the choice
+ * persists across reload without this component knowing about AsyncStorage.
  */
 import React, {
   createContext,

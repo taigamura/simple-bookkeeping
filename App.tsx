@@ -1,19 +1,25 @@
 import { StatusBar } from 'expo-status-bar';
 
+import { useStore } from './store';
 import { ThemeProvider, useAppFonts } from './theme';
 import { ThemePreview } from './theme/ThemePreview';
 
 /**
- * Root. Loads the mono fonts before rendering (decision 5 — hold until ready),
- * then mounts the ThemeProvider. Screens land in Stage 5; for now a small
- * design-system preview validates tokens/fonts/theming on web.
+ * Root. Holds render until both gates clear — mono fonts loaded (decision 5)
+ * and persisted state restored — then mounts the ThemeProvider seeded from the
+ * stored theme, writing back every change so the choice survives reload.
+ * Screens land in Stage 5; for now a small preview validates the design system.
  */
 export default function App() {
   const fontsLoaded = useAppFonts();
-  if (!fontsLoaded) return null;
+  const { ready, state, update } = useStore();
+  if (!fontsLoaded || !ready) return null;
 
   return (
-    <ThemeProvider>
+    <ThemeProvider
+      initialMode={state.theme}
+      onModeChange={(mode) => update({ theme: mode })}
+    >
       <StatusBar style="auto" />
       <ThemePreview />
     </ThemeProvider>
