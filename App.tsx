@@ -1,14 +1,14 @@
 import { StatusBar } from 'expo-status-bar';
 
+import { Root } from './nav';
 import { useStore } from './store';
 import { ThemeProvider, useAppFonts } from './theme';
-import { ThemePreview } from './theme/ThemePreview';
 
 /**
  * Root. Holds render until both gates clear — mono fonts loaded (decision 5)
  * and persisted state restored — then mounts the ThemeProvider seeded from the
- * stored theme, writing back every change so the choice survives reload.
- * Screens land in Stage 5; for now a small preview validates the design system.
+ * stored theme, writing back every change so the choice survives reload. Inside
+ * sits the bespoke nav shell (tabs + sheets); real screens fill in from slice #2.
  */
 export default function App() {
   const fontsLoaded = useAppFonts();
@@ -21,7 +21,7 @@ export default function App() {
       onModeChange={(mode) => update({ theme: mode })}
     >
       <StatusBar style="auto" />
-      <ThemePreview />
+      <Root />
     </ThemeProvider>
   );
 }
