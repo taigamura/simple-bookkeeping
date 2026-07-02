@@ -1,36 +1,66 @@
 /**
- * Root — the bespoke navigation host (decision 3). Owns the only two pieces of
- * nav state (`tab`, `sheet`), renders the active screen, the custom TabBar, and
- * the Entry/Settings sheets. No router library.
+ * Root — the bespoke navigation host (decision 3). Owns the nav state (`tab`,
+ * `sheet`) and the calendar cursor (current month + selected day), renders the
+ * active screen, the custom TabBar, and the Entry/Settings sheets. No router.
  *
- * The Entry and Settings sheets are empty placeholders in this slice — the FAB
- * opens Entry, the header ⚙ opens Settings, both dismiss. Settings already hosts
- * the Appearance (Dark/Light) control so the theme toggle is reachable and its
- * persistence (via the store) is demoable end-to-end.
+ * Store `state`/`update` are threaded in from `App` (single source of truth) so
+ * the ledger and category seeds flow to the screens and new entries persist.
+ * Month navigation is fixed to the current month here; it arrives in slice #4.
  */
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
+import {
+  DEFAULT_CURRENCY,
+  type Transaction,
+  type YM,
+} from '../domain';
 import { CalendarScreen } from '../screens/CalendarScreen';
+import { EntrySheet } from '../screens/EntrySheet';
 import { SummaryScreen } from '../screens/SummaryScreen';
-import { useTheme, metrics, accents, Txt, type ThemeMode } from '../theme';
+import type { AppState } from '../store';
+import { useTheme, metrics, Txt, type ThemeMode } from '../theme';
+import { SegmentedToggle } from '../ui';
 import { AppShell } from './AppShell';
 import { BottomSheet } from './BottomSheet';
 import { IconButton } from './IconButton';
 import { TabBar } from './TabBar';
 import type { Sheet, Tab } from './types';
 
-export function Root() {
+interface RootProps {
+  state: AppState;
+  update: (patch: Partial<AppState>) => void;
+}
+
+export function Root({ state, update }: RootProps) {
   return (
     <AppShell>
-      <Shell />
+      <Shell state={state} update={update} />
     </AppShell>
   );
 }
 
-function Shell() {
+function Shell({ state, update }: RootProps) {
   const [tab, setTab] = useState<Tab>('calendar');
   const [sheet, setSheet] = useState<Sheet>(null);
+
+  // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
+  // real current month, with the selected day defaulting to today.
+  const today = useMemo(() => new Date(), []);
+  const [cursor] = useState<YM>({ y: today.getFullYear(), m: today.getMonth() });
+  const [selectedDay, setSelectedDay] = useState(today.getDate());
+
+  const symbol = DEFAULT_CURRENCY.symbol;
+
+  const closeSheet = () => setSheet(null);
+
+  // save(): append the entry, land on and re-select its day, show the Calendar.
+  const handleSave = (entry: Transaction) => {
+    update({ entries: [...state.entries, entry] });
+    setSelectedDay(entry.day);
+    setTab('calendar');
+    setSheet(null);
+  };
 
   return (
     <View style={styles.flex}>
@@ -44,20 +74,38 @@ function Shell() {
       </View>
 
       <View style={styles.body}>
-        {tab === 'calendar' ? <CalendarScreen /> : <SummaryScreen />}
+        {tab === 'calendar' ? (
+          <CalendarScreen
+            entries={state.entries}
+            y={cursor.y}
+            m={cursor.m}
+            day={selectedDay}
+            symbol={symbol}
+          />
+        ) : (
+          <SummaryScreen />
+        )}
       </View>
 
       <TabBar tab={tab} onSelect={setTab} onAdd={() => setSheet('entry')} />
 
-      <BottomSheet visible={sheet === 'entry'} onClose={() => setSheet(null)}>
-        <SheetHeader title="New Entry" onClose={() => setSheet(null)} />
-        <Txt variant="secondary" tone="muted" style={styles.sheetHint}>
-          Amount keypad, category chips & CTA land in slice #2.
-        </Txt>
+      <BottomSheet visible={sheet === 'entry'} onClose={closeSheet}>
+        {sheet === 'entry' && (
+          <EntrySheet
+            expCats={state.expCats}
+            incCats={state.incCats}
+            y={cursor.y}
+            m={cursor.m}
+            day={selectedDay}
+            symbol={symbol}
+            onSave={handleSave}
+            onClose={closeSheet}
+          />
+        )}
       </BottomSheet>
 
-      <BottomSheet visible={sheet === 'settings'} onClose={() => setSheet(null)}>
-        <SheetHeader title="Settings" onClose={() => setSheet(null)} />
+      <BottomSheet visible={sheet === 'settings'} onClose={closeSheet}>
+        <SheetHeader title="Settings" onClose={closeSheet} />
         <Appearance />
       </BottomSheet>
     </View>
@@ -76,38 +124,20 @@ function SheetHeader({ title, onClose }: { title: string; onClose: () => void })
 
 /** Appearance control — the manual Dark/Light switch (decision 9). */
 function Appearance() {
-  const { mode, colors, setMode } = useTheme();
-  const options: ThemeMode[] = ['dark', 'light'];
+  const { mode, setMode } = useTheme();
   return (
     <View style={styles.section}>
       <Txt variant="microLabel" tone="dim">
         Appearance
       </Txt>
-      <View style={[styles.segment, { backgroundColor: colors.card2 }]}>
-        {options.map((opt) => {
-          const active = mode === opt;
-          return (
-            <Pressable
-              key={opt}
-              onPress={() => setMode(opt)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              style={[
-                styles.segmentItem,
-                active && { backgroundColor: accents.positive },
-              ]}
-            >
-              <Txt
-                variant="listItem"
-                tone={active ? 'onPositive' : 'muted'}
-                style={styles.segmentLabel}
-              >
-                {opt === 'dark' ? 'Dark' : 'Light'}
-              </Txt>
-            </Pressable>
-          );
-        })}
-      </View>
+      <SegmentedToggle<ThemeMode>
+        options={[
+          { value: 'dark', label: 'Dark' },
+          { value: 'light', label: 'Light' },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
     </View>
   );
 }
@@ -128,20 +158,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  sheetHint: { marginBottom: 12 },
   section: { gap: 10, marginTop: 4 },
-  segment: {
-    flexDirection: 'row',
-    borderRadius: metrics.pill,
-    padding: 4,
-    gap: 4,
-  },
-  segmentItem: {
-    flex: 1,
-    height: 40,
-    borderRadius: metrics.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segmentLabel: { textTransform: 'none' },
 });

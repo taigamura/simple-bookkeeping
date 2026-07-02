@@ -41,7 +41,7 @@ export function createStore(
         const merged = { ...DEFAULT_STATE };
         for (const key of Object.keys(DEFAULT_STATE) as (keyof AppState)[]) {
           const value = persisted[key];
-          if (value !== undefined) merged[key] = value;
+          if (value !== undefined) (merged as Record<string, unknown>)[key] = value;
         }
         return merged;
       } catch {

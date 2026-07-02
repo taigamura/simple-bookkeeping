@@ -2,7 +2,8 @@ import { StatusBar } from 'expo-status-bar';
 
 import { Root } from './nav';
 import { useStore } from './store';
-import { ThemeProvider, useAppFonts } from './theme';
+import { ThemeProvider } from './theme';
+import { useAppFonts } from './theme/useAppFonts';
 
 /**
  * Root. Holds render until both gates clear — mono fonts loaded (decision 5)
@@ -21,7 +22,7 @@ export default function App() {
       onModeChange={(mode) => update({ theme: mode })}
     >
       <StatusBar style="auto" />
-      <Root />
+      <Root state={state} update={update} />
     </ThemeProvider>
   );
 }

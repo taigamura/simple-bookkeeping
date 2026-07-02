@@ -1,0 +1,30 @@
+/** Domain layer public surface — types, formatting, aggregation, input rules. */
+export type {
+  TxType,
+  Repeat,
+  WeekendShift,
+  Transaction,
+  Currency,
+  YM,
+} from './types';
+export {
+  DEFAULT_EXP_CATS,
+  DEFAULT_INC_CATS,
+  DEFAULT_CURRENCY,
+} from './defaults';
+export { yen, signed, code, MINUS } from './format';
+export {
+  monthEntries,
+  dayEntries,
+  dayNet,
+  signedAmount,
+  makeEntry,
+  uid,
+  type EntryDraft,
+} from './entries';
+export {
+  pressKey,
+  amountValue,
+  AMOUNT_MAX_DIGITS,
+  type KeypadKey,
+} from './keypad';
