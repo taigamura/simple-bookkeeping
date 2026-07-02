@@ -89,7 +89,13 @@ function Shell({ state, update }: RootProps) {
             onSettings={openSettings}
           />
         ) : (
-          <SummaryScreen onSettings={openSettings} />
+          <SummaryScreen
+            entries={state.entries}
+            y={cursor.y}
+            m={cursor.m}
+            symbol={symbol}
+            onSettings={openSettings}
+          />
         )}
       </View>
 

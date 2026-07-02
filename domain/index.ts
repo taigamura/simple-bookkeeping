@@ -34,6 +34,12 @@ export {
   MONTH_NAMES,
 } from './calendar';
 export {
+  categoryBreakdown,
+  splitProportions,
+  type CategorySlice,
+  type Split,
+} from './summary';
+export {
   pressKey,
   amountValue,
   AMOUNT_MAX_DIGITS,

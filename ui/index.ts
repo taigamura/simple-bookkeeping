@@ -5,3 +5,5 @@ export { CategoryChips } from './CategoryChips';
 export { ListRow } from './ListRow';
 export { DayCell } from './DayCell';
 export { CalendarGrid } from './CalendarGrid';
+export { SplitBar } from './SplitBar';
+export { CategoryBar } from './CategoryBar';
