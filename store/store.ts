@@ -34,8 +34,16 @@ export function createStore(
         if (envelope.version !== SCHEMA_VERSION || !envelope.state) {
           return { ...DEFAULT_STATE };
         }
-        // Merge so missing fields fall back and unknown fields are dropped.
-        return { ...DEFAULT_STATE, ...envelope.state };
+        // Merge over defaults by *known* keys only: missing fields fall back to
+        // defaults, and unknown persisted fields (e.g. from a newer schema) are
+        // dropped so the loaded state never drifts from the AppState type.
+        const persisted = envelope.state as Partial<AppState>;
+        const merged = { ...DEFAULT_STATE };
+        for (const key of Object.keys(DEFAULT_STATE) as (keyof AppState)[]) {
+          const value = persisted[key];
+          if (value !== undefined) merged[key] = value;
+        }
+        return merged;
       } catch {
         return { ...DEFAULT_STATE };
       }
