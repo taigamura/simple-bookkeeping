@@ -4,7 +4,7 @@
  * hardcoded-July gate becomes a real `y`/`m` filter so the ledger spans months.
  */
 import { amountValue } from './keypad';
-import type { Transaction, TxType, YM } from './types';
+import type { Repeat, Transaction, TxType, YM } from './types';
 
 /** Entries belonging to a given year+month. */
 export function monthEntries(all: Transaction[], ym: YM): Transaction[] {
@@ -50,6 +50,8 @@ export interface EntryDraft {
   y: number;
   m: number;
   day: number;
+  /** Recurrence kind recorded on the materialized entries (default 'never'). */
+  repeat?: Repeat;
 }
 
 /** Best-effort unique id (no crypto dependency): time + random suffix. */
@@ -78,6 +80,6 @@ export function makeEntry(draft: EntryDraft): Transaction | null {
     amount,
     category: draft.category,
     note,
-    repeat: 'never',
+    repeat: draft.repeat ?? 'never',
   };
 }

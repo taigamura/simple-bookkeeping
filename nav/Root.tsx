@@ -65,10 +65,14 @@ function Shell({ state, update }: RootProps) {
     setSelectedDay((d) => clampDay(d, next.y, next.m));
   };
 
-  // save(): append the entry, land on and re-select its day, show the Calendar.
-  const handleSave = (entry: Transaction) => {
-    update({ entries: [...state.entries, entry] });
-    setSelectedDay(entry.day);
+  // save(): append the materialized entries, land on and re-select the target
+  // day (keep the current selection if it's among them, e.g. daily fill), and
+  // show the Calendar.
+  const handleSave = (entries: Transaction[]) => {
+    if (entries.length === 0) return;
+    update({ entries: [...state.entries, ...entries] });
+    const days = new Set(entries.map((e) => e.day));
+    setSelectedDay((d) => (days.has(d) ? d : entries[0].day));
     setTab('calendar');
     setSheet(null);
   };

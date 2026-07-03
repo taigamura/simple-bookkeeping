@@ -1,23 +1,26 @@
 /**
- * EntrySheet — the populated New Entry sheet content (slice #3). Captures a
- * draft (type · amount · category) and builds a `Transaction` on save. Recurrence
- * (Note/Repeat/weekend rows) and the slim ad are later slices; this is the thin
- * money path: toggle type, key an amount, pick a category, save.
+ * EntrySheet — the New Entry sheet (slices #3 + #6). Captures a draft
+ * (type · amount · category · note · repeat · weekend-shift) and materializes it
+ * into one or more `Transaction`s on save (decision 2: materialize-on-save, no
+ * scheduler). Recurrence rows cycle their options on tap; the weekend row shows
+ * only for monthly/yearly repeats.
  *
- * Presentational state only — the parent owns persistence and where the new
- * entry lands (it passes the target `y`/`m`/`day`).
+ * Presentational state only — the parent owns persistence and where the entries
+ * land (it passes the target `y`/`m`/`day`).
  */
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
   amountValue,
-  makeEntry,
+  materialize,
   pressKey,
   yen,
   type KeypadKey,
+  type Repeat,
   type Transaction,
   type TxType,
+  type WeekendShift,
 } from '../domain';
 import { CategoryChips, Keypad, SegmentedToggle } from '../ui';
 import { useTheme, metrics, accents, shadows, heroAmountSize, Txt } from '../theme';
@@ -31,7 +34,7 @@ interface EntrySheetProps {
   m: number;
   day: number;
   symbol: string;
-  onSave: (entry: Transaction) => void;
+  onSave: (entries: Transaction[]) => void;
   onClose: () => void;
 }
 
@@ -39,6 +42,28 @@ const TYPE_OPTIONS = [
   { value: 'expense' as TxType, label: 'Expense' },
   { value: 'income' as TxType, label: 'Income' },
 ];
+
+/** Note presets cycled by the Note row; '—' means "fall back to the category". */
+const NOTE_OPTIONS = ['—', 'Cash', 'Card', 'Transfer', 'Gift', 'Refund'];
+
+const REPEAT_ORDER: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
+const REPEAT_LABEL: Record<Repeat, string> = {
+  never: 'Never',
+  daily: 'Every day',
+  monthly: 'Every month',
+  yearly: 'Every year',
+};
+
+// Cycle order starts at 'off' (Keep) so the default is no shift.
+const SHIFT_ORDER: WeekendShift[] = ['off', 'after', 'before'];
+const SHIFT_LABEL: Record<WeekendShift, string> = {
+  off: 'Keep',
+  after: 'Move to Monday',
+  before: 'Move to Friday',
+};
+
+const next = <T,>(order: T[], value: T): T =>
+  order[(order.indexOf(value) + 1) % order.length];
 
 export function EntrySheet({
   expCats,
@@ -55,20 +80,27 @@ export function EntrySheet({
   const [amountStr, setAmountStr] = useState('');
   const catsFor = (t: TxType) => (t === 'income' ? incCats : expCats);
   const [category, setCategory] = useState(() => catsFor('expense')[0]);
+  const [note, setNote] = useState(NOTE_OPTIONS[0]);
+  const [repeat, setRepeat] = useState<Repeat>('never');
+  const [weekendShift, setWeekendShift] = useState<WeekendShift>('off');
 
   const value = amountValue(amountStr);
   const canSave = value > 0;
   const heroText = yen(value, symbol);
+  const showWeekend = repeat === 'monthly' || repeat === 'yearly';
 
-  const changeType = (next: TxType) => {
-    setTxType(next);
+  const changeType = (nextType: TxType) => {
+    setTxType(nextType);
     // Keep the selected category valid for the new type's list.
-    if (!catsFor(next).includes(category)) setCategory(catsFor(next)[0]);
+    if (!catsFor(nextType).includes(category)) setCategory(catsFor(nextType)[0]);
   };
 
   const save = () => {
-    const entry = makeEntry({ type: txType, amountStr, category, y, m, day });
-    if (entry) onSave(entry);
+    const entries = materialize(
+      { type: txType, amountStr, category, note, y, m, day, repeat },
+      weekendShift,
+    );
+    if (entries.length) onSave(entries);
   };
 
   return (
@@ -107,9 +139,27 @@ export function EntrySheet({
         onSelect={setCategory}
       />
 
-      <View style={styles.keypad}>
-        <Keypad onKey={(key: KeypadKey) => setAmountStr((s) => pressKey(s, key))} />
+      <View style={styles.rows}>
+        <CycleRow
+          label="Note"
+          value={note}
+          onPress={() => setNote((n) => next(NOTE_OPTIONS, n))}
+        />
+        <CycleRow
+          label="Repeat"
+          value={REPEAT_LABEL[repeat]}
+          onPress={() => setRepeat((r) => next(REPEAT_ORDER, r))}
+        />
+        {showWeekend && (
+          <CycleRow
+            label="If on weekend"
+            value={SHIFT_LABEL[weekendShift]}
+            onPress={() => setWeekendShift((s) => next(SHIFT_ORDER, s))}
+          />
+        )}
       </View>
+
+      <Keypad onKey={(key: KeypadKey) => setAmountStr((s) => pressKey(s, key))} />
 
       <Pressable
         onPress={save}
@@ -130,12 +180,51 @@ export function EntrySheet({
   );
 }
 
+/** A tappable row: fixed label on the left, current value on the right. */
+function CycleRow({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${value}`}
+      style={({ pressed }) => [
+        styles.row,
+        { backgroundColor: pressed ? colors.card3 : colors.card2 },
+      ]}
+    >
+      <Txt variant="microLabel" tone="dim">
+        {label}
+      </Txt>
+      <Txt variant="listItem" tone="ink">
+        {value}
+      </Txt>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { gap: 16 },
+  container: { gap: 14 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   toggleWrap: { flex: 1 },
-  amountBlock: { alignItems: 'center', gap: 6, paddingVertical: 4 },
-  keypad: { marginTop: 2 },
+  amountBlock: { alignItems: 'center', gap: 6, paddingVertical: 2 },
+  rows: { gap: 8 },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    height: 46,
+    borderRadius: metrics.iconTileRadius,
+    paddingHorizontal: 14,
+  },
   cta: {
     height: metrics.ctaHeight,
     borderRadius: metrics.ctaRadius,

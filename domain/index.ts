@@ -39,6 +39,7 @@ export {
   type CategorySlice,
   type Split,
 } from './summary';
+export { shiftWeekendDay, materialize } from './recurrence';
 export {
   pressKey,
   amountValue,
