@@ -23,7 +23,7 @@ import {
   type WeekendShift,
 } from '../domain';
 import { AdCard, CategoryChips, Keypad, SegmentedToggle } from '../ui';
-import { useTheme, metrics, accents, shadows, heroAmountSize, Txt } from '../theme';
+import { useTheme, metrics, accents, shadows, heroAmountSize, Txt, type Tone } from '../theme';
 import { IconButton } from '../nav/IconButton';
 
 interface EntrySheetProps {
@@ -45,8 +45,14 @@ const TYPE_OPTIONS = [
   { value: 'income' as TxType, label: 'Income' },
 ];
 
-/** Note presets cycled by the Note row; '—' means "fall back to the category". */
-const NOTE_OPTIONS = ['—', 'Cash', 'Card', 'Transfer', 'Gift', 'Refund'];
+/**
+ * Note presets cycled by the Note row; '—' means "fall back to the category".
+ * Presets are per-type (design §7): the first entry is always the default '—'.
+ */
+const NOTE_OPTIONS: Record<TxType, string[]> = {
+  expense: ['—', 'Cash', 'Card', 'Konbini', 'Online'],
+  income: ['—', 'Bank transfer', 'Cash', 'Bonus'],
+};
 
 const REPEAT_ORDER: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
 const REPEAT_LABEL: Record<Repeat, string> = {
@@ -56,12 +62,12 @@ const REPEAT_LABEL: Record<Repeat, string> = {
   yearly: 'Every year',
 };
 
-// Cycle order starts at 'off' (Keep) so the default is no shift.
-const SHIFT_ORDER: WeekendShift[] = ['off', 'after', 'before'];
+// Cycle order starts at 'after' (Move to Monday) — the design default (§7).
+const SHIFT_ORDER: WeekendShift[] = ['after', 'before', 'off'];
 const SHIFT_LABEL: Record<WeekendShift, string> = {
-  off: 'Keep',
   after: 'Move to Monday',
   before: 'Move to Friday',
+  off: 'Keep on weekend',
 };
 
 const next = <T,>(order: T[], value: T): T =>
@@ -83,9 +89,9 @@ export function EntrySheet({
   const [amountStr, setAmountStr] = useState('');
   const catsFor = (t: TxType) => (t === 'income' ? incCats : expCats);
   const [category, setCategory] = useState(() => catsFor('expense')[0]);
-  const [note, setNote] = useState(NOTE_OPTIONS[0]);
+  const [note, setNote] = useState('—');
   const [repeat, setRepeat] = useState<Repeat>('never');
-  const [weekendShift, setWeekendShift] = useState<WeekendShift>('off');
+  const [weekendShift, setWeekendShift] = useState<WeekendShift>('after');
 
   const value = amountValue(amountStr);
   const canSave = value > 0;
@@ -96,6 +102,8 @@ export function EntrySheet({
     setTxType(nextType);
     // Keep the selected category valid for the new type's list.
     if (!catsFor(nextType).includes(category)) setCategory(catsFor(nextType)[0]);
+    // Note presets are per-type; drop a preset that isn't in the new list.
+    if (!NOTE_OPTIONS[nextType].includes(note)) setNote('—');
   };
 
   const save = () => {
@@ -110,13 +118,8 @@ export function EntrySheet({
     <View style={styles.container}>
       <View style={styles.topRow}>
         <View style={styles.toggleWrap}>
-          <SegmentedToggle
-            options={TYPE_OPTIONS}
-            value={txType}
-            onChange={changeType}
-            activeColor={colors.card3}
-            activeTone="ink"
-          />
+          {/* Active segment defaults to green + near-black (design §6). */}
+          <SegmentedToggle options={TYPE_OPTIONS} value={txType} onChange={changeType} />
         </View>
         <IconButton name="x" accessibilityLabel="Close" onPress={onClose} />
       </View>
@@ -142,21 +145,26 @@ export function EntrySheet({
         onSelect={setCategory}
       />
 
-      <View style={styles.rows}>
+      <View style={[styles.rowsCard, { backgroundColor: colors.card2 }]}>
         <CycleRow
+          first
           label="Note"
           value={note}
-          onPress={() => setNote((n) => next(NOTE_OPTIONS, n))}
+          active={note !== '—'}
+          onPress={() => setNote((n) => next(NOTE_OPTIONS[txType], n))}
         />
         <CycleRow
-          label="Repeat"
+          label="↻ Repeat"
           value={REPEAT_LABEL[repeat]}
+          active={repeat !== 'never'}
+          activeTone="positive"
           onPress={() => setRepeat((r) => next(REPEAT_ORDER, r))}
         />
         {showWeekend && (
           <CycleRow
             label="If on weekend"
             value={SHIFT_LABEL[weekendShift]}
+            active={weekendShift !== 'after'}
             onPress={() => setWeekendShift((s) => next(SHIFT_ORDER, s))}
           />
         )}
@@ -170,29 +178,42 @@ export function EntrySheet({
         onPress={save}
         disabled={!canSave}
         accessibilityRole="button"
+        accessibilityLabel={`Add ${txType === 'income' ? 'income' : 'expense'}`}
         accessibilityState={{ disabled: !canSave }}
         style={[
           styles.cta,
-          { backgroundColor: accents.positive, opacity: canSave ? 1 : 0.4 },
+          // Disabled = card2 fill + dim text; enabled = green + glow (design §8).
+          { backgroundColor: canSave ? accents.positive : colors.card2 },
           canSave && shadows.ctaGlow,
         ]}
       >
-        <Txt variant="listItem" tone="onPositive">
-          Add {txType === 'income' ? 'Income' : 'Expense'}
+        <Txt variant="listItem" tone={canSave ? 'onPositive' : 'dim'}>
+          Add {txType === 'income' ? 'income' : 'expense'}
         </Txt>
       </Pressable>
     </View>
   );
 }
 
-/** A tappable row: fixed label on the left, current value on the right. */
+/**
+ * A tappable option row inside the grouped card: sans-13 dim label on the left,
+ * current value on the right. The value is dim at its default (`active` false)
+ * and tinted otherwise — `activeTone` (default ink) lets Repeat go green when
+ * set. A hairline top divider separates rows; the `first` row omits it.
+ */
 function CycleRow({
   label,
   value,
+  active,
+  activeTone = 'ink',
+  first = false,
   onPress,
 }: {
   label: string;
   value: string;
+  active: boolean;
+  activeTone?: Tone;
+  first?: boolean;
   onPress: () => void;
 }) {
   const { colors } = useTheme();
@@ -203,13 +224,14 @@ function CycleRow({
       accessibilityLabel={`${label}: ${value}`}
       style={({ pressed }) => [
         styles.row,
-        { backgroundColor: pressed ? colors.card3 : colors.card2 },
+        !first && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hair },
+        pressed && { opacity: 0.6 },
       ]}
     >
-      <Txt variant="microLabel" tone="dim">
+      <Txt variant="optionLabel" tone="dim">
         {label}
       </Txt>
-      <Txt variant="listItem" tone="ink">
+      <Txt variant="listItem" tone={active ? activeTone : 'dim'}>
         {value}
       </Txt>
     </Pressable>
@@ -221,14 +243,15 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   toggleWrap: { flex: 1 },
   amountBlock: { alignItems: 'center', gap: 6, paddingVertical: 2 },
-  rows: { gap: 8 },
+  rowsCard: {
+    borderRadius: 14,
+    paddingHorizontal: 14,
+  },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     height: 46,
-    borderRadius: metrics.iconTileRadius,
-    paddingHorizontal: 14,
   },
   cta: {
     height: metrics.ctaHeight,

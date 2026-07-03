@@ -112,6 +112,11 @@ export const type = {
     fontSize: 12,
     fontWeight: '500',
   },
+  /** Option-row label (sans) — Entry/Settings grouped rows. */
+  optionLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
   /** Section micro-label — uppercase mono with wide tracking. */
   microLabel: {
     fontFamily: mono.semibold,
