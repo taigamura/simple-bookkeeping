@@ -100,9 +100,11 @@ export function CalendarScreen({
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-          {rows.map((entry) => (
-            <ListRow key={entry.id} entry={entry} symbol={symbol} />
-          ))}
+          <View style={[styles.dayCard, { backgroundColor: colors.card }]}>
+            {rows.map((entry, i) => (
+              <ListRow key={entry.id} entry={entry} symbol={symbol} first={i === 0} />
+            ))}
+          </View>
         </ScrollView>
       )}
 
@@ -156,5 +158,9 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 },
   emptyText: { textAlign: 'center' },
   list: { paddingBottom: 8 },
+  dayCard: {
+    borderRadius: metrics.cardRadius,
+    paddingHorizontal: 14,
+  },
   adSlot: { marginTop: 'auto', paddingTop: 10, paddingBottom: 8 },
 });
