@@ -11,21 +11,20 @@ import React, { useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import {
-  DEFAULT_CURRENCY,
   clampDay,
   shiftMonth,
+  type Currency,
   type Transaction,
   type YM,
 } from '../domain';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
+import { SettingsSheet } from '../screens/SettingsSheet';
 import { SummaryScreen } from '../screens/SummaryScreen';
 import type { AppState } from '../store';
-import { useTheme, metrics, Txt, type ThemeMode } from '../theme';
-import { SegmentedToggle } from '../ui';
+import { metrics } from '../theme';
 import { AppShell } from './AppShell';
 import { BottomSheet } from './BottomSheet';
-import { IconButton } from './IconButton';
 import { TabBar } from './TabBar';
 import type { Sheet, Tab } from './types';
 
@@ -52,7 +51,7 @@ function Shell({ state, update }: RootProps) {
   const [cursor, setCursor] = useState<YM>({ y: today.getFullYear(), m: today.getMonth() });
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
-  const symbol = DEFAULT_CURRENCY.symbol;
+  const symbol = state.currency.symbol;
 
   const closeSheet = () => setSheet(null);
   const openSettings = () => setSheet('settings');
@@ -121,39 +120,18 @@ function Shell({ state, update }: RootProps) {
       </BottomSheet>
 
       <BottomSheet visible={sheet === 'settings'} onClose={closeSheet}>
-        <SheetHeader title="Settings" onClose={closeSheet} />
-        <Appearance />
+        {sheet === 'settings' && (
+          <SettingsSheet
+            currency={state.currency}
+            expCats={state.expCats}
+            incCats={state.incCats}
+            onChangeCurrency={(currency: Currency) => update({ currency })}
+            onChangeExpCats={(expCats) => update({ expCats })}
+            onChangeIncCats={(incCats) => update({ incCats })}
+            onClose={closeSheet}
+          />
+        )}
       </BottomSheet>
-    </View>
-  );
-}
-
-/** Sheet title row with a round ✕ close button (decision 6 — icon by intent). */
-function SheetHeader({ title, onClose }: { title: string; onClose: () => void }) {
-  return (
-    <View style={styles.sheetHeader}>
-      <Txt variant="screenTitle">{title}</Txt>
-      <IconButton name="x" accessibilityLabel="Close" onPress={onClose} />
-    </View>
-  );
-}
-
-/** Appearance control — the manual Dark/Light switch (decision 9). */
-function Appearance() {
-  const { mode, setMode } = useTheme();
-  return (
-    <View style={styles.section}>
-      <Txt variant="microLabel" tone="dim">
-        Appearance
-      </Txt>
-      <SegmentedToggle<ThemeMode>
-        options={[
-          { value: 'dark', label: 'Dark' },
-          { value: 'light', label: 'Light' },
-        ]}
-        value={mode}
-        onChange={setMode}
-      />
     </View>
   );
 }
@@ -163,11 +141,4 @@ const styles = StyleSheet.create({
   // Native SafeAreaView (AppShell) insets the top; web has no safe area, so add
   // the design's status offset there to keep content off the container edge.
   body: { flex: 1, paddingTop: Platform.OS === 'web' ? metrics.statusOffset : 0 },
-  sheetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  section: { gap: 10, marginTop: 4 },
 });

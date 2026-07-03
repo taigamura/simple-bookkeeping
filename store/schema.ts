@@ -8,8 +8,8 @@
  * only). `currency`/`premium` arrive with their slices (#7/#8); because the
  * store merges by known keys, adding a field later is backward-compatible.
  */
-import { DEFAULT_EXP_CATS, DEFAULT_INC_CATS } from '../domain';
-import type { Transaction } from '../domain';
+import { DEFAULT_EXP_CATS, DEFAULT_INC_CATS, DEFAULT_CURRENCY } from '../domain';
+import type { Currency, Transaction } from '../domain';
 import type { ThemeMode } from '../theme/tokens';
 
 /** Bump when the shape changes incompatibly; `load()` falls back to defaults. */
@@ -20,6 +20,7 @@ export interface AppState {
   entries: Transaction[];
   expCats: string[];
   incCats: string[];
+  currency: Currency;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -27,6 +28,7 @@ export const DEFAULT_STATE: AppState = {
   entries: [],
   expCats: DEFAULT_EXP_CATS,
   incCats: DEFAULT_INC_CATS,
+  currency: DEFAULT_CURRENCY,
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */

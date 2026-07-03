@@ -41,6 +41,12 @@ export {
 } from './summary';
 export { shiftWeekendDay, materialize } from './recurrence';
 export {
+  CURRENCIES,
+  addCategory,
+  removeCategory,
+  moveCategory,
+} from './categories';
+export {
   pressKey,
   amountValue,
   AMOUNT_MAX_DIGITS,
