@@ -46,6 +46,7 @@ export {
   removeCategory,
   moveCategory,
 } from './categories';
+export { sampleEntries } from './sample';
 export {
   pressKey,
   amountValue,

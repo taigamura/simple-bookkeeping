@@ -12,6 +12,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 
 import {
   clampDay,
+  sampleEntries,
   shiftMonth,
   type Currency,
   type Transaction,
@@ -52,9 +53,20 @@ function Shell({ state, update }: RootProps) {
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
   const symbol = state.currency.symbol;
+  const showAd = !state.premium;
 
   const closeSheet = () => setSheet(null);
   const openSettings = () => setSheet('settings');
+
+  // loadSample(): replace the ledger with the July-2026 demo set (stable ids)
+  // and jump the cursor there so the entries are immediately visible.
+  const loadSample = () => {
+    update({ entries: sampleEntries() });
+    setCursor({ y: 2026, m: 6 });
+    setSelectedDay(1);
+    setTab('calendar');
+    setSheet(null);
+  };
 
   // Month navigation: shift the cursor and clamp the selected day into the new
   // month (e.g. Jan 31 → Feb 28) so the selection stays valid.
@@ -90,6 +102,7 @@ function Shell({ state, update }: RootProps) {
             onPrevMonth={() => goMonth(-1)}
             onNextMonth={() => goMonth(1)}
             onSettings={openSettings}
+            showAd={showAd}
           />
         ) : (
           <SummaryScreen
@@ -98,6 +111,7 @@ function Shell({ state, update }: RootProps) {
             m={cursor.m}
             symbol={symbol}
             onSettings={openSettings}
+            showAd={showAd}
           />
         )}
       </View>
@@ -113,6 +127,7 @@ function Shell({ state, update }: RootProps) {
             m={cursor.m}
             day={selectedDay}
             symbol={symbol}
+            showAd={showAd}
             onSave={handleSave}
             onClose={closeSheet}
           />
@@ -125,9 +140,12 @@ function Shell({ state, update }: RootProps) {
             currency={state.currency}
             expCats={state.expCats}
             incCats={state.incCats}
+            premium={state.premium}
             onChangeCurrency={(currency: Currency) => update({ currency })}
             onChangeExpCats={(expCats) => update({ expCats })}
             onChangeIncCats={(incCats) => update({ incCats })}
+            onTogglePremium={(premium) => update({ premium })}
+            onLoadSample={loadSample}
             onClose={closeSheet}
           />
         )}

@@ -17,7 +17,7 @@ import {
   yen,
   type Transaction,
 } from '../domain';
-import { CategoryBar, SplitBar } from '../ui';
+import { AdCard, CategoryBar, SplitBar } from '../ui';
 import { useTheme, metrics, Txt, type Tone } from '../theme';
 import { IconButton } from '../nav/IconButton';
 
@@ -27,11 +27,13 @@ interface SummaryScreenProps {
   m: number;
   symbol: string;
   onSettings: () => void;
+  /** Free-tier ad slot above the tab bar; hidden for premium (decision 7). */
+  showAd: boolean;
 }
 
 const netTone = (n: number): Tone => (n > 0 ? 'positive' : n < 0 ? 'negative' : 'ink');
 
-export function SummaryScreen({ entries, y, m, symbol, onSettings }: SummaryScreenProps) {
+export function SummaryScreen({ entries, y, m, symbol, onSettings, showAd }: SummaryScreenProps) {
   const { colors } = useTheme();
   const month = monthEntries(entries, { y, m });
   const total = monthNet(month);
@@ -50,7 +52,11 @@ export function SummaryScreen({ entries, y, m, symbol, onSettings }: SummaryScre
         <IconButton name="settings" accessibilityLabel="Settings" onPress={onSettings} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Txt variant="microLabel" tone="dim">
             Net
@@ -90,6 +96,12 @@ export function SummaryScreen({ entries, y, m, symbol, onSettings }: SummaryScre
           ))
         )}
       </ScrollView>
+
+      {showAd && (
+        <View style={styles.adSlot}>
+          <AdCard variant="banner" />
+        </View>
+      )}
     </View>
   );
 }
@@ -119,7 +131,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   subtitle: { marginTop: 2 },
-  body: { paddingBottom: metrics.adReserve },
+  scroll: { flex: 1 },
+  body: { paddingBottom: 8 },
+  adSlot: { paddingTop: 10, paddingBottom: 8 },
   card: {
     borderRadius: metrics.cardRadius,
     borderWidth: 1,

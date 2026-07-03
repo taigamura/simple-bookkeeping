@@ -21,6 +21,7 @@ export interface AppState {
   expCats: string[];
   incCats: string[];
   currency: Currency;
+  premium: boolean;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -29,6 +30,7 @@ export const DEFAULT_STATE: AppState = {
   expCats: DEFAULT_EXP_CATS,
   incCats: DEFAULT_INC_CATS,
   currency: DEFAULT_CURRENCY,
+  premium: false,
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */

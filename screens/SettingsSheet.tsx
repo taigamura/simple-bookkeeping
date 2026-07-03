@@ -28,9 +28,12 @@ interface SettingsSheetProps {
   currency: Currency;
   expCats: string[];
   incCats: string[];
+  premium: boolean;
   onChangeCurrency: (currency: Currency) => void;
   onChangeExpCats: (list: string[]) => void;
   onChangeIncCats: (list: string[]) => void;
+  onTogglePremium: (premium: boolean) => void;
+  onLoadSample: () => void;
   onClose: () => void;
 }
 
@@ -43,9 +46,12 @@ export function SettingsSheet({
   currency,
   expCats,
   incCats,
+  premium,
   onChangeCurrency,
   onChangeExpCats,
   onChangeIncCats,
+  onTogglePremium,
+  onLoadSample,
   onClose,
 }: SettingsSheetProps) {
   return (
@@ -66,6 +72,11 @@ export function SettingsSheet({
           incCats={incCats}
           onChangeExpCats={onChangeExpCats}
           onChangeIncCats={onChangeIncCats}
+        />
+        <DataAndPremium
+          premium={premium}
+          onTogglePremium={onTogglePremium}
+          onLoadSample={onLoadSample}
         />
       </ScrollView>
     </View>
@@ -234,6 +245,61 @@ function Categories({
   );
 }
 
+/** Premium/Remove-ads toggle + Load-sample-data action (decisions 7 & 8). */
+function DataAndPremium({
+  premium,
+  onTogglePremium,
+  onLoadSample,
+}: {
+  premium: boolean;
+  onTogglePremium: (premium: boolean) => void;
+  onLoadSample: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Section label="Data & Premium">
+      <View style={[styles.dataRow, { backgroundColor: colors.card2 }]}>
+        <View style={styles.dataCopy}>
+          <Txt variant="listItem" tone="ink">
+            Remove ads
+          </Txt>
+          <Txt variant="secondary" tone="dim">
+            {premium ? 'Premium — ad-free' : 'Free tier shows sponsored slots'}
+          </Txt>
+        </View>
+        <Pressable
+          onPress={() => onTogglePremium(!premium)}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: premium }}
+          accessibilityLabel="Remove ads"
+          style={[
+            styles.pill,
+            { backgroundColor: premium ? accents.positive : colors.card3 },
+          ]}
+        >
+          <Txt variant="microLabel" tone={premium ? 'onPositive' : 'muted'}>
+            {premium ? 'On' : 'Off'}
+          </Txt>
+        </Pressable>
+      </View>
+
+      <Pressable
+        onPress={onLoadSample}
+        accessibilityRole="button"
+        accessibilityLabel="Load sample data"
+        style={({ pressed }) => [
+          styles.sampleBtn,
+          { backgroundColor: pressed ? colors.card3 : colors.card2 },
+        ]}
+      >
+        <Txt variant="listItem" tone="ink">
+          Load sample data
+        </Txt>
+      </Pressable>
+    </Section>
+  );
+}
+
 /** A titled settings block: micro-label over its content. */
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -257,6 +323,28 @@ const styles = StyleSheet.create({
   scroll: { maxHeight: 460 },
   scrollBody: { gap: 22, paddingBottom: 4 },
   section: { gap: 10 },
+  dataRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: metrics.iconTileRadius,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dataCopy: { flex: 1, gap: 2 },
+  pill: {
+    paddingHorizontal: 16,
+    height: 32,
+    borderRadius: metrics.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sampleBtn: {
+    height: 46,
+    borderRadius: metrics.iconTileRadius,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   grid: { flexDirection: 'row', gap: 8 },
   currencyTile: {
     flex: 1,

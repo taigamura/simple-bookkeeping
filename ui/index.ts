@@ -7,3 +7,4 @@ export { DayCell } from './DayCell';
 export { CalendarGrid } from './CalendarGrid';
 export { SplitBar } from './SplitBar';
 export { CategoryBar } from './CategoryBar';
+export { AdCard } from './AdCard';
