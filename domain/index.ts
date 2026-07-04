@@ -50,6 +50,12 @@ export {
 } from './categories';
 export { sampleEntries } from './sample';
 export {
+  decodeZaimBytes,
+  parseZaimCsv,
+  type ZaimCategories,
+  type ZaimImportResult,
+} from './zaim';
+export {
   pressKey,
   amountValue,
   AMOUNT_MAX_DIGITS,

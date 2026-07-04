@@ -1,0 +1,114 @@
+/**
+ * Zaim import tests (slice #12): `parseZaimCsv` against a small synthetic
+ * fixture (never a real export — see `.ralph/fix_plan.md`), and
+ * `decodeZaimBytes` against a Shift-JIS-encoded sample built at test time.
+ */
+import * as Encoding from 'encoding-japanese';
+
+import { decodeZaimBytes, parseZaimCsv, type ZaimCategories } from './zaim';
+
+const HEADER =
+  '日付,方法,カテゴリ,カテゴリの内訳,支払元,入金先,品目,メモ,お店,通貨,収入,支出,振替,残高調整';
+
+const cats = (over: Partial<ZaimCategories> = {}): ZaimCategories => ({
+  expCats: ['Food', 'Transport'],
+  incCats: ['Salary'],
+  ...over,
+});
+
+describe('parseZaimCsv', () => {
+  it('turns a payment row into an expense entry', () => {
+    const csv = [
+      HEADER,
+      '2026-07-01,Cash,Food,-,-,-,-,-,-,JPY,-,1200,-,-',
+    ].join('\n');
+    const { entries } = parseZaimCsv(csv, cats());
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      y: 2026,
+      m: 6,
+      day: 1,
+      type: 'expense',
+      amount: 1200,
+      category: 'Food',
+    });
+  });
+
+  it('turns an income row into an income entry', () => {
+    const csv = [
+      HEADER,
+      '2026-07-02,Bank,Salary,-,-,-,-,-,-,JPY,300000,-,-,-',
+    ].join('\n');
+    const { entries } = parseZaimCsv(csv, cats());
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      y: 2026,
+      m: 6,
+      day: 2,
+      type: 'income',
+      amount: 300000,
+      category: 'Salary',
+    });
+  });
+
+  it('reuses an existing category (case-insensitive) instead of appending a duplicate', () => {
+    const csv = [
+      HEADER,
+      '2026-07-03,Cash,food,-,-,-,-,-,-,JPY,-,500,-,-',
+    ].join('\n');
+    const { expCats } = parseZaimCsv(csv, cats());
+    expect(expCats).toEqual(['Food', 'Transport']);
+  });
+
+  it('appends a category the ledger does not already have', () => {
+    const csv = [
+      HEADER,
+      '2026-07-04,Cash,Hobby,-,-,-,-,-,-,JPY,-,3000,-,-',
+    ].join('\n');
+    const { expCats } = parseZaimCsv(csv, cats());
+    expect(expCats).toEqual(['Food', 'Transport', 'Hobby']);
+  });
+
+  it('composes the note from sub-category / item / memo / shop when all are present', () => {
+    const csv = [
+      HEADER,
+      '2026-07-05,Cash,Food,Lunch,-,-,Sandwich,Quick bite,Cafe A,JPY,-,900,-,-',
+    ].join('\n');
+    const { entries } = parseZaimCsv(csv, cats());
+    expect(entries[0].note).toBe('Lunch / Sandwich / Quick bite / Cafe A');
+  });
+
+  it('falls back to the category name when all note-source fields are blank', () => {
+    const csv = [
+      HEADER,
+      '2026-07-06,Cash,Food,-,-,-,-,-,-,JPY,-,900,-,-',
+    ].join('\n');
+    const { entries } = parseZaimCsv(csv, cats());
+    expect(entries[0].note).toBe('Food');
+  });
+
+  it('does not mutate the existing category arrays', () => {
+    const existing = cats();
+    const csv = [HEADER, '2026-07-07,Cash,Hobby,-,-,-,-,-,-,JPY,-,100,-,-'].join('\n');
+    parseZaimCsv(csv, existing);
+    expect(existing.expCats).toEqual(['Food', 'Transport']);
+  });
+});
+
+describe('decodeZaimBytes', () => {
+  it('decodes a Shift-JIS-encoded sample and validates the Zaim header', () => {
+    const csv = [HEADER, '2026-07-01,現金,食費,-,-,-,-,-,-,JPY,-,1200,-,-'].join('\n');
+    const bytes = new Uint8Array(
+      Encoding.convert(Encoding.stringToCode(csv), { to: 'SJIS', type: 'array' }),
+    );
+    expect(decodeZaimBytes(bytes)).toBe(csv);
+  });
+
+  it('returns null when the header does not match a Zaim export', () => {
+    const notZaim = 'name,amount\nlunch,900';
+    const bytes = new Uint8Array(
+      Encoding.convert(Encoding.stringToCode(notZaim), { to: 'SJIS', type: 'array' }),
+    );
+    expect(decodeZaimBytes(bytes)).toBeNull();
+  });
+});

@@ -33,6 +33,7 @@ interface SettingsSheetProps {
   onChangeIncCats: (list: string[]) => void;
   onTogglePremium: (premium: boolean) => void;
   onLoadSample: () => void;
+  onImportZaim: () => void;
   onClose: () => void;
 }
 
@@ -51,6 +52,7 @@ export function SettingsSheet({
   onChangeIncCats,
   onTogglePremium,
   onLoadSample,
+  onImportZaim,
   onClose,
 }: SettingsSheetProps) {
   return (
@@ -85,6 +87,7 @@ export function SettingsSheet({
           premium={premium}
           onTogglePremium={onTogglePremium}
           onLoadSample={onLoadSample}
+          onImportZaim={onImportZaim}
         />
       </ScrollView>
     </View>
@@ -308,15 +311,17 @@ function Categories({
   );
 }
 
-/** Premium/Remove-ads toggle + Load-sample-data action (decisions 7 & 8). */
+/** Premium/Remove-ads toggle + Load-sample-data + Zaim import (decisions 7 & 8, #12). */
 function DataAndPremium({
   premium,
   onTogglePremium,
   onLoadSample,
+  onImportZaim,
 }: {
   premium: boolean;
   onTogglePremium: (premium: boolean) => void;
   onLoadSample: () => void;
+  onImportZaim: () => void;
 }) {
   const { colors } = useTheme();
   return (
@@ -357,6 +362,20 @@ function DataAndPremium({
       >
         <Txt variant="listItem" tone="ink">
           Load sample data
+        </Txt>
+      </Pressable>
+
+      <Pressable
+        onPress={onImportZaim}
+        accessibilityRole="button"
+        accessibilityLabel="Import from Zaim"
+        style={({ pressed }) => [
+          styles.sampleBtn,
+          { backgroundColor: pressed ? colors.card3 : colors.card2 },
+        ]}
+      >
+        <Txt variant="listItem" tone="ink">
+          Import from Zaim
         </Txt>
       </Pressable>
     </Section>
