@@ -9,7 +9,7 @@
  */
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 
 import {
@@ -39,6 +39,11 @@ import type { Sheet, Tab } from './types';
 interface RootProps {
   state: AppState;
   update: (patch: Partial<AppState>) => void;
+  /** True for this session if boot's load() stashed an unreadable blob (#28). */
+  showCorruptNotice: boolean;
+  /** Whether a corrupt-stash blob exists — gates the Settings recovery row. */
+  hasCorruptStash: boolean;
+  readCorruptStash: () => Promise<string | null>;
 }
 
 // RN Web's Alert.alert is a no-op stub (react-native-web has no dialog
@@ -80,15 +85,21 @@ function confirm(title: string, message: string, onConfirm: () => void) {
   }
 }
 
-export function Root({ state, update }: RootProps) {
+export function Root(props: RootProps) {
   return (
     <AppShell>
-      <Shell state={state} update={update} />
+      <Shell {...props} />
     </AppShell>
   );
 }
 
-function Shell({ state, update }: RootProps) {
+function Shell({
+  state,
+  update,
+  showCorruptNotice,
+  hasCorruptStash,
+  readCorruptStash,
+}: RootProps) {
   const [tab, setTab] = useState<Tab>('calendar');
   const [sheet, setSheet] = useState<Sheet>(null);
 
@@ -99,6 +110,18 @@ function Shell({ state, update }: RootProps) {
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
   const symbol = state.currency.symbol;
+
+  // One-time boot notice (#28): fires once per corrupt boot, off
+  // `showCorruptNotice` (this session's load result), never off
+  // `hasCorruptStash` (which stays true across later, healthy boots too).
+  useEffect(() => {
+    if (showCorruptNotice) {
+      notify(
+        'Backup kept',
+        "Your previous data couldn't be read; a backup copy was kept. You can export it from Settings.",
+      );
+    }
+  }, [showCorruptNotice]);
 
   const closeSheet = () => setSheet(null);
   const openSettings = () => setSheet('settings');
@@ -118,6 +141,13 @@ function Shell({ state, update }: RootProps) {
   // an exported file round-trips through it unchanged, so no new import UI.
   const exportData = () => {
     shareTextFile('kaji-export.csv', serializeZaimCsv(state.entries));
+  };
+
+  // exportCorruptStash(): share the raw unreadable blob kept by the #28 safety
+  // net, so a stuck user can get their pre-corruption data off the device.
+  const exportCorruptStash = async () => {
+    const raw = await readCorruptStash();
+    if (raw) shareTextFile('kaji-unreadable-backup.txt', raw);
   };
 
   // importZaim(): pick a Zaim CSV export → decode (Shift-JIS or UTF-8) →
@@ -241,6 +271,8 @@ function Shell({ state, update }: RootProps) {
             onLoadSample={loadSample}
             onExportData={exportData}
             onImportZaim={importZaim}
+            hasCorruptStash={hasCorruptStash}
+            onExportCorruptStash={exportCorruptStash}
             onClose={closeSheet}
           />
         )}

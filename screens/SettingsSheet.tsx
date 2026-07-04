@@ -33,6 +33,9 @@ interface SettingsSheetProps {
   onLoadSample: () => void;
   onExportData: () => void;
   onImportZaim: () => void;
+  /** Whether a corrupt-stash blob exists (#28) — gates the recovery row. */
+  hasCorruptStash: boolean;
+  onExportCorruptStash: () => void;
   onClose: () => void;
 }
 
@@ -51,6 +54,8 @@ export function SettingsSheet({
   onLoadSample,
   onExportData,
   onImportZaim,
+  hasCorruptStash,
+  onExportCorruptStash,
   onClose,
 }: SettingsSheetProps) {
   return (
@@ -85,6 +90,8 @@ export function SettingsSheet({
           onLoadSample={onLoadSample}
           onExportData={onExportData}
           onImportZaim={onImportZaim}
+          hasCorruptStash={hasCorruptStash}
+          onExportCorruptStash={onExportCorruptStash}
         />
       </ScrollView>
     </View>
@@ -309,17 +316,22 @@ function Categories({
 }
 
 /**
- * Load-sample-data (decision 8, #12), Export/Import-from-Zaim (#24, #12).
- * Premium/ads stripped for v1 (#23).
+ * Load-sample-data (decision 8, #12), Export/Import-from-Zaim (#24, #12), and
+ * the conditional unreadable-backup recovery row (#28). Premium/ads stripped
+ * for v1 (#23).
  */
 function DataActions({
   onLoadSample,
   onExportData,
   onImportZaim,
+  hasCorruptStash,
+  onExportCorruptStash,
 }: {
   onLoadSample: () => void;
   onExportData: () => void;
   onImportZaim: () => void;
+  hasCorruptStash: boolean;
+  onExportCorruptStash: () => void;
 }) {
   const { colors } = useTheme();
   const rowStyle = ({ pressed }: { pressed: boolean }) => [
@@ -360,6 +372,19 @@ function DataActions({
           Import from Zaim
         </Txt>
       </Pressable>
+
+      {hasCorruptStash && (
+        <Pressable
+          onPress={onExportCorruptStash}
+          accessibilityRole="button"
+          accessibilityLabel="Export unreadable backup"
+          style={rowStyle}
+        >
+          <Txt variant="listItem" tone="negative">
+            Export unreadable backup
+          </Txt>
+        </Pressable>
+      )}
     </Section>
   );
 }

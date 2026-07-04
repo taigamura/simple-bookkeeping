@@ -12,14 +12,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export interface Persistence {
   read(): Promise<string | null>;
   write(value: string): Promise<void>;
+  /** The raw blob `load()` couldn't parse/version-match, stashed before it
+   *  fell back to defaults (#28) — `null` when nothing has been stashed. */
+  readCorruptStash(): Promise<string | null>;
+  writeCorruptStash(value: string): Promise<void>;
 }
 
 /** Single key holding the whole-state JSON envelope. */
 const STORAGE_KEY = 'kaji:state:v1';
+/** Second key holding the last unreadable blob, kept for recovery (#28). */
+const CORRUPT_STASH_KEY = 'kaji:state:v1:corrupt-stash';
 
 export const asyncStoragePersistence: Persistence = {
   read: () => AsyncStorage.getItem(STORAGE_KEY),
   write: (value) => AsyncStorage.setItem(STORAGE_KEY, value),
+  readCorruptStash: () => AsyncStorage.getItem(CORRUPT_STASH_KEY),
+  writeCorruptStash: (value) => AsyncStorage.setItem(CORRUPT_STASH_KEY, value),
 };
 
 /**
@@ -28,10 +36,15 @@ export const asyncStoragePersistence: Persistence = {
  */
 export function createMemoryPersistence(initial: string | null = null): Persistence {
   let value = initial;
+  let stash: string | null = null;
   return {
     read: async () => value,
     write: async (next) => {
       value = next;
+    },
+    readCorruptStash: async () => stash,
+    writeCorruptStash: async (next) => {
+      stash = next;
     },
   };
 }

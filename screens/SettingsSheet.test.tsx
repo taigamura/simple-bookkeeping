@@ -23,6 +23,8 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         onLoadSample={() => {}}
         onExportData={() => {}}
         onImportZaim={() => {}}
+        hasCorruptStash={false}
+        onExportCorruptStash={() => {}}
         onClose={() => {}}
         {...over}
       />
@@ -70,5 +72,17 @@ describe('SettingsSheet', () => {
     renderSheet();
     expect(screen.queryByLabelText('Remove ads')).toBeNull();
     expect(screen.queryByText('Data & Premium')).toBeNull();
+  });
+
+  it('hides "Export unreadable backup" when no corrupt stash exists', () => {
+    renderSheet({ hasCorruptStash: false });
+    expect(screen.queryByLabelText('Export unreadable backup')).toBeNull();
+  });
+
+  it('renders "Export unreadable backup" and fires its callback when a stash exists (#28)', () => {
+    const onExportCorruptStash = jest.fn();
+    renderSheet({ hasCorruptStash: true, onExportCorruptStash });
+    fireEvent.press(screen.getByLabelText('Export unreadable backup'));
+    expect(onExportCorruptStash).toHaveBeenCalled();
   });
 });

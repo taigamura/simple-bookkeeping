@@ -105,11 +105,93 @@ describe('createStore', () => {
       write: async (value) => {
         written = value;
       },
+      readCorruptStash: async () => null,
+      writeCorruptStash: async () => {},
     });
 
     const state = stateWith({ theme: 'dark' });
     await store.save(state);
 
     expect(JSON.parse(written!)).toEqual({ version: SCHEMA_VERSION, state });
+  });
+});
+
+describe('createStore — corrupt-load safety net (#28)', () => {
+  it('stashes a byte-identical copy of a garbled blob before degrading to defaults', async () => {
+    const garbled = '{not valid json';
+    const store = createStore(createMemoryPersistence(garbled));
+
+    const loaded = await store.load();
+
+    expect(loaded).toEqual(DEFAULT_STATE);
+    expect(store.wasLastLoadCorrupt()).toBe(true);
+    expect(await store.hasCorruptStash()).toBe(true);
+    expect(await store.readCorruptStash()).toBe(garbled);
+  });
+
+  it('stashes a byte-identical copy of a version-mismatched blob before degrading to defaults', async () => {
+    const stale = JSON.stringify({
+      version: SCHEMA_VERSION + 1,
+      state: stateWith({ theme: 'light' }),
+    });
+    const store = createStore(createMemoryPersistence(stale));
+
+    const loaded = await store.load();
+
+    expect(loaded).toEqual(DEFAULT_STATE);
+    expect(store.wasLastLoadCorrupt()).toBe(true);
+    expect(await store.readCorruptStash()).toBe(stale);
+  });
+
+  it('leaves no stash after a healthy load', async () => {
+    const blob = JSON.stringify({ version: SCHEMA_VERSION, state: stateWith({ theme: 'light' }) });
+    const store = createStore(createMemoryPersistence(blob));
+
+    await store.load();
+
+    expect(store.wasLastLoadCorrupt()).toBe(false);
+    expect(await store.hasCorruptStash()).toBe(false);
+    expect(await store.readCorruptStash()).toBeNull();
+  });
+
+  it('leaves no stash when nothing was persisted (first launch, not a corrupt load)', async () => {
+    const store = createStore(createMemoryPersistence(null));
+
+    await store.load();
+
+    expect(store.wasLastLoadCorrupt()).toBe(false);
+    expect(await store.hasCorruptStash()).toBe(false);
+  });
+
+  it('never overwrites an existing stash on a subsequent save', async () => {
+    const garbled = '{not valid json';
+    const store = createStore(createMemoryPersistence(garbled));
+
+    await store.load();
+    await store.save(stateWith({ theme: 'light' }));
+    await store.save(stateWith({ theme: 'dark' }));
+
+    expect(await store.readCorruptStash()).toBe(garbled);
+  });
+
+  it('a later healthy boot no longer reports the notice, even though the stash persists', async () => {
+    // Boot 1: corrupt load stashes the blob and reports it via wasLastLoadCorrupt().
+    const persistence = createMemoryPersistence('{not valid json');
+    const firstBoot = createStore(persistence);
+    await firstBoot.load();
+    expect(firstBoot.wasLastLoadCorrupt()).toBe(true);
+
+    // The app saves the recovered (default) state, overwriting the primary key
+    // with a valid blob — simulating normal use after the corrupt boot.
+    await firstBoot.save(DEFAULT_STATE);
+
+    // Boot 2 (a fresh Store instance, as on a real app relaunch): the primary
+    // blob is now healthy, so no new notice — but the stash from boot 1 is
+    // untouched, so recovery is still offered.
+    const secondBoot = createStore(persistence);
+    await secondBoot.load();
+
+    expect(secondBoot.wasLastLoadCorrupt()).toBe(false);
+    expect(await secondBoot.hasCorruptStash()).toBe(true);
   });
 });

@@ -20,19 +20,44 @@ export interface Store {
   load(): Promise<AppState>;
   /** Persist the whole state as a versioned JSON envelope. */
   save(state: AppState): Promise<void>;
+  /** Whether the most recent `load()` call stashed an unreadable blob (#28) —
+   *  drives the one-time boot notice; `false` on a healthy or empty load. */
+  wasLastLoadCorrupt(): boolean;
+  /** Whether a corrupt-stash blob currently exists, from this boot or a past one. */
+  hasCorruptStash(): Promise<boolean>;
+  /** The stashed raw blob, or `null` if none exists. */
+  readCorruptStash(): Promise<string | null>;
 }
 
 export function createStore(
   persistence: Persistence = asyncStoragePersistence,
 ): Store {
+  let lastLoadCorrupt = false;
+
+  // Stash the raw blob load() couldn't use before degrading to defaults, so a
+  // bad blob is recoverable instead of silently lost on the next save.
+  async function stashAndDefault(raw: string): Promise<AppState> {
+    await persistence.writeCorruptStash(raw);
+    lastLoadCorrupt = true;
+    return { ...DEFAULT_STATE };
+  }
+
   return {
     async load() {
+      lastLoadCorrupt = false;
+
+      let raw: string | null;
       try {
-        const raw = await persistence.read();
-        if (!raw) return { ...DEFAULT_STATE };
+        raw = await persistence.read();
+      } catch {
+        return { ...DEFAULT_STATE };
+      }
+      if (!raw) return { ...DEFAULT_STATE };
+
+      try {
         const envelope = JSON.parse(raw) as Partial<PersistedEnvelope>;
         if (envelope.version !== SCHEMA_VERSION || !envelope.state) {
-          return { ...DEFAULT_STATE };
+          return await stashAndDefault(raw);
         }
         // Merge over defaults by *known* keys only: missing fields fall back to
         // defaults, and unknown persisted fields (e.g. from a newer schema) are
@@ -45,12 +70,15 @@ export function createStore(
         }
         return merged;
       } catch {
-        return { ...DEFAULT_STATE };
+        return await stashAndDefault(raw);
       }
     },
     async save(state) {
       const envelope: PersistedEnvelope = { version: SCHEMA_VERSION, state };
       await persistence.write(JSON.stringify(envelope));
     },
+    wasLastLoadCorrupt: () => lastLoadCorrupt,
+    hasCorruptStash: async () => (await persistence.readCorruptStash()) !== null,
+    readCorruptStash: () => persistence.readCorruptStash(),
   };
 }

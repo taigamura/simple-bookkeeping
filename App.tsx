@@ -13,7 +13,8 @@ import { useAppFonts } from './theme/useAppFonts';
  */
 export default function App() {
   const fontsLoaded = useAppFonts();
-  const { ready, state, update } = useStore();
+  const { ready, state, update, showCorruptNotice, hasCorruptStash, readCorruptStash } =
+    useStore();
   if (!fontsLoaded || !ready) return null;
 
   return (
@@ -22,7 +23,13 @@ export default function App() {
       onModeChange={(mode) => update({ theme: mode })}
     >
       <StatusBar style="auto" />
-      <Root state={state} update={update} />
+      <Root
+        state={state}
+        update={update}
+        showCorruptNotice={showCorruptNotice}
+        hasCorruptStash={hasCorruptStash}
+        readCorruptStash={readCorruptStash}
+      />
     </ThemeProvider>
   );
 }
