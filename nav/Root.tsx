@@ -63,6 +63,7 @@ function skipSummary(skipped: ZaimSkipTally): string {
     parts.push(`${plural(skipped.balanceAdjustment, 'balance adjustment')} skipped`);
   }
   if (skipped.malformed > 0) parts.push(`${plural(skipped.malformed, 'malformed row')} skipped`);
+  if (skipped.duplicate > 0) parts.push(`${plural(skipped.duplicate, 'duplicate')} skipped`);
   return parts.length > 0 ? ` — ${parts.join(', ')}` : '';
 }
 
@@ -111,10 +112,12 @@ function Shell({ state, update }: RootProps) {
     setSheet(null);
   };
 
-  // importZaim(): pick a Zaim CSV export → decode (Shift-JIS) → parse →
-  // native Import/Cancel confirmation with the entry count → merge entries
-  // and any new categories into the ledger through the normal update() path.
-  // Canceling the picker or the confirmation writes nothing.
+  // importZaim(): pick a Zaim CSV export → decode (Shift-JIS or UTF-8) →
+  // parse against the current ledger (so re-importing an overlapping export
+  // skips rows already present) → native Import/Cancel confirmation with the
+  // entry count and skip-reason breakdown → merge entries and any new
+  // categories into the ledger through the normal update() path. Canceling
+  // the picker or the confirmation writes nothing.
   const importZaim = async () => {
     const picked = await DocumentPicker.getDocumentAsync({ type: 'text/csv' });
     if (picked.canceled) return;
@@ -126,7 +129,11 @@ function Shell({ state, update }: RootProps) {
       return;
     }
 
-    const result = parseZaimCsv(text, { expCats: state.expCats, incCats: state.incCats });
+    const result = parseZaimCsv(text, {
+      expCats: state.expCats,
+      incCats: state.incCats,
+      entries: state.entries,
+    });
     if (result.entries.length === 0) {
       notify(
         'No entries found',

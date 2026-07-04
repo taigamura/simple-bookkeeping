@@ -56,20 +56,22 @@ function hasZaimHeader(text: string): boolean {
   return ZAIM_HEADER.every((col, i) => cols[i] === col);
 }
 
-/** The two category lists to reconcile new Zaim categories against. */
-export interface ZaimCategories {
+/** The existing ledger state a Zaim import reconciles and dedupes against. */
+export interface ZaimExisting {
   expCats: string[];
   incCats: string[];
+  entries: Transaction[];
 }
 
 /** Why a row was excluded from the imported entries. */
-export type ZaimSkipReason = 'transfer' | 'balanceAdjustment' | 'malformed';
+export type ZaimSkipReason = 'transfer' | 'balanceAdjustment' | 'malformed' | 'duplicate';
 
 /** Count of skipped rows, broken down by `ZaimSkipReason`. */
 export interface ZaimSkipTally {
   transfer: number;
   balanceAdjustment: number;
   malformed: number;
+  duplicate: number;
 }
 
 /** Parsed entries plus the (possibly grown) category lists and skip tally. */
@@ -85,19 +87,22 @@ export interface ZaimImportResult {
  * entry, each `income` row an income entry; the row's top-level category is
  * reconciled against `existing` (case-insensitive match reuses it, otherwise
  * it's appended). Transfer rows (money moved between the user's own
- * accounts — kaji has no multi-account model), balance-adjustment rows, and
- * malformed rows (bad date, non-numeric amount, missing category) are
+ * accounts — kaji has no multi-account model), balance-adjustment rows,
+ * malformed rows (bad date, non-numeric amount, missing category), and rows
+ * that match an existing entry by (year, month, day, type, amount, category,
+ * note) — a duplicate, e.g. from re-importing an overlapping export — are all
  * excluded from `entries` and counted in `skipped` by reason; a bad row never
  * aborts the rest of the file.
  */
-export function parseZaimCsv(csvText: string, existing: ZaimCategories): ZaimImportResult {
+export function parseZaimCsv(csvText: string, existing: ZaimExisting): ZaimImportResult {
   const lines = csvText.split(/\r\n|\r|\n/).filter((line) => line.length > 0);
   const rows = lines.slice(1); // drop the header row
 
   let expCats = existing.expCats;
   let incCats = existing.incCats;
   const entries: Transaction[] = [];
-  const skipped: ZaimSkipTally = { transfer: 0, balanceAdjustment: 0, malformed: 0 };
+  const skipped: ZaimSkipTally = { transfer: 0, balanceAdjustment: 0, malformed: 0, duplicate: 0 };
+  const seenKeys = new Set(existing.entries.map(dedupeKey));
 
   for (const line of rows) {
     const result = readRow(parseCsvLine(line));
@@ -107,6 +112,14 @@ export function parseZaimCsv(csvText: string, existing: ZaimCategories): ZaimImp
     }
 
     const row = result.row;
+    const note = composeNote(row);
+    const key = dedupeKey({ ...row, note });
+    if (seenKeys.has(key)) {
+      skipped.duplicate++;
+      continue;
+    }
+    seenKeys.add(key);
+
     if (row.type === 'expense') {
       expCats = addCategory(expCats, row.category);
     } else {
@@ -121,12 +134,19 @@ export function parseZaimCsv(csvText: string, existing: ZaimCategories): ZaimImp
       type: row.type,
       amount: row.amount,
       category: row.category,
-      note: composeNote(row),
+      note,
       repeat: 'never',
     });
   }
 
   return { entries, expCats, incCats, skipped };
+}
+
+/** Value key for duplicate detection: (year, month, day, type, amount, category, note). */
+function dedupeKey(
+  t: Pick<Transaction, 'y' | 'm' | 'day' | 'type' | 'amount' | 'category' | 'note'>,
+): string {
+  return [t.y, t.m, t.day, t.type, t.amount, t.category, t.note].join(' ');
 }
 
 interface ParsedRow {

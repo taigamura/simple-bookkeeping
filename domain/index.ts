@@ -52,7 +52,7 @@ export { sampleEntries } from './sample';
 export {
   decodeZaimBytes,
   parseZaimCsv,
-  type ZaimCategories,
+  type ZaimExisting,
   type ZaimImportResult,
   type ZaimSkipReason,
   type ZaimSkipTally,
