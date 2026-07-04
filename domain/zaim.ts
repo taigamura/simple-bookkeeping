@@ -1,12 +1,12 @@
 /**
- * Zaim CSV import — pure parsing (slice #12, PRD #11). `decodeZaimBytes` turns
- * a Zaim export's raw file bytes into text; `parseZaimCsv` turns that text's
- * payment/income rows into kaji entries. No React Native or storage here —
- * same shape as the other domain modules (`categories`, `recurrence`).
+ * Zaim CSV import — pure parsing (slices #12–#13, PRD #11). `decodeZaimBytes`
+ * turns a Zaim export's raw file bytes into text; `parseZaimCsv` turns that
+ * text's payment/income rows into kaji entries, skipping transfer,
+ * balance-adjustment, and malformed rows with a reason tally. No React Native
+ * or storage here — same shape as the other domain modules (`categories`,
+ * `recurrence`).
  *
- * Rows this slice doesn't yet classify (transfers, balance adjustments,
- * malformed rows) are silently dropped; counting them by reason is #13, and a
- * UTF-8 decode fallback is #14 — both extend this module without reshaping it.
+ * A UTF-8 decode fallback is #14 — extends this module without reshaping it.
  */
 import * as Encoding from 'encoding-japanese';
 
@@ -58,19 +58,33 @@ export interface ZaimCategories {
   incCats: string[];
 }
 
-/** Parsed entries plus the (possibly grown) category lists. */
+/** Why a row was excluded from the imported entries. */
+export type ZaimSkipReason = 'transfer' | 'balanceAdjustment' | 'malformed';
+
+/** Count of skipped rows, broken down by `ZaimSkipReason`. */
+export interface ZaimSkipTally {
+  transfer: number;
+  balanceAdjustment: number;
+  malformed: number;
+}
+
+/** Parsed entries plus the (possibly grown) category lists and skip tally. */
 export interface ZaimImportResult {
   entries: Transaction[];
   expCats: string[];
   incCats: string[];
+  skipped: ZaimSkipTally;
 }
 
 /**
  * Parse a decoded Zaim CSV export. Each `payment` row becomes an expense
  * entry, each `income` row an income entry; the row's top-level category is
  * reconciled against `existing` (case-insensitive match reuses it, otherwise
- * it's appended). Any other row — transfer, balance-adjustment, malformed —
- * is dropped.
+ * it's appended). Transfer rows (money moved between the user's own
+ * accounts — kaji has no multi-account model), balance-adjustment rows, and
+ * malformed rows (bad date, non-numeric amount, missing category) are
+ * excluded from `entries` and counted in `skipped` by reason; a bad row never
+ * aborts the rest of the file.
  */
 export function parseZaimCsv(csvText: string, existing: ZaimCategories): ZaimImportResult {
   const lines = csvText.split(/\r\n|\r|\n/).filter((line) => line.length > 0);
@@ -79,11 +93,16 @@ export function parseZaimCsv(csvText: string, existing: ZaimCategories): ZaimImp
   let expCats = existing.expCats;
   let incCats = existing.incCats;
   const entries: Transaction[] = [];
+  const skipped: ZaimSkipTally = { transfer: 0, balanceAdjustment: 0, malformed: 0 };
 
   for (const line of rows) {
-    const row = readRow(parseCsvLine(line));
-    if (!row) continue;
+    const result = readRow(parseCsvLine(line));
+    if (result.kind === 'skip') {
+      skipped[result.reason]++;
+      continue;
+    }
 
+    const row = result.row;
     if (row.type === 'expense') {
       expCats = addCategory(expCats, row.category);
     } else {
@@ -103,7 +122,7 @@ export function parseZaimCsv(csvText: string, existing: ZaimCategories): ZaimImp
     });
   }
 
-  return { entries, expCats, incCats };
+  return { entries, expCats, incCats, skipped };
 }
 
 interface ParsedRow {
@@ -129,12 +148,26 @@ const COL = {
   shop: 8,
   income: 10,
   expense: 11,
+  transfer: 12,
+  balanceAdjustment: 13,
 };
 
-function readRow(cols: string[]): ParsedRow | null {
+type RowResult = { kind: 'entry'; row: ParsedRow } | { kind: 'skip'; reason: ZaimSkipReason };
+
+function readRow(cols: string[]): RowResult {
+  // Transfer and balance-adjustment rows carry their amount in their own
+  // dedicated column rather than 収入/支出 — checked first since such rows
+  // also tend to leave カテゴリ blank, which would otherwise read as malformed.
+  if (parseAmount(cols[COL.transfer]) !== null) {
+    return { kind: 'skip', reason: 'transfer' };
+  }
+  if (parseAmount(cols[COL.balanceAdjustment]) !== null) {
+    return { kind: 'skip', reason: 'balanceAdjustment' };
+  }
+
   const date = parseZaimDate(cols[COL.date]);
   const category = cleanField(cols[COL.category]);
-  if (!date || !category) return null;
+  if (!date || !category) return { kind: 'skip', reason: 'malformed' };
 
   const expense = parseAmount(cols[COL.expense]);
   const income = parseAmount(cols[COL.income]);
@@ -148,18 +181,21 @@ function readRow(cols: string[]): ParsedRow | null {
     type = 'income';
     amount = income;
   } else {
-    return null; // transfer / balance-adjustment / malformed — dropped this slice
+    return { kind: 'skip', reason: 'malformed' };
   }
 
   return {
-    ...date,
-    type,
-    amount,
-    category,
-    subCategory: cleanField(cols[COL.subCategory]),
-    item: cleanField(cols[COL.item]),
-    memo: cleanField(cols[COL.memo]),
-    shop: cleanField(cols[COL.shop]),
+    kind: 'entry',
+    row: {
+      ...date,
+      type,
+      amount,
+      category,
+      subCategory: cleanField(cols[COL.subCategory]),
+      item: cleanField(cols[COL.item]),
+      memo: cleanField(cols[COL.memo]),
+      shop: cleanField(cols[COL.shop]),
+    },
   };
 }
 

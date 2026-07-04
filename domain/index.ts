@@ -54,6 +54,8 @@ export {
   parseZaimCsv,
   type ZaimCategories,
   type ZaimImportResult,
+  type ZaimSkipReason,
+  type ZaimSkipTally,
 } from './zaim';
 export {
   pressKey,

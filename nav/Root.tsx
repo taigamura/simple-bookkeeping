@@ -21,6 +21,7 @@ import {
   type Currency,
   type Transaction,
   type YM,
+  type ZaimSkipTally,
 } from '../domain';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
@@ -48,6 +49,21 @@ function notify(title: string, message: string) {
   } else {
     Alert.alert(title, message);
   }
+}
+
+// skipSummary(): renders the Zaim skip tally as a trailing clause, e.g.
+// " — 12 transfers skipped, 10 malformed rows skipped" (empty when nothing
+// was skipped) so the confirmation shows a breakdown by reason, not just an
+// opaque "some rows were skipped".
+function skipSummary(skipped: ZaimSkipTally): string {
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const parts: string[] = [];
+  if (skipped.transfer > 0) parts.push(`${plural(skipped.transfer, 'transfer')} skipped`);
+  if (skipped.balanceAdjustment > 0) {
+    parts.push(`${plural(skipped.balanceAdjustment, 'balance adjustment')} skipped`);
+  }
+  if (skipped.malformed > 0) parts.push(`${plural(skipped.malformed, 'malformed row')} skipped`);
+  return parts.length > 0 ? ` — ${parts.join(', ')}` : '';
 }
 
 function confirm(title: string, message: string, onConfirm: () => void) {
@@ -112,11 +128,15 @@ function Shell({ state, update }: RootProps) {
 
     const result = parseZaimCsv(text, { expCats: state.expCats, incCats: state.incCats });
     if (result.entries.length === 0) {
-      notify('No entries found', 'No importable rows were found in that file.');
+      notify(
+        'No entries found',
+        `No importable rows were found in that file.${skipSummary(result.skipped)}`,
+      );
       return;
     }
 
-    confirm('Import from Zaim', `${result.entries.length} entries ready to import`, () => {
+    const message = `${result.entries.length} entries ready to import${skipSummary(result.skipped)}`;
+    confirm('Import from Zaim', message, () => {
       update({
         entries: [...state.entries, ...result.entries],
         expCats: result.expCats,

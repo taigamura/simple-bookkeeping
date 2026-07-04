@@ -93,6 +93,76 @@ describe('parseZaimCsv', () => {
     parseZaimCsv(csv, existing);
     expect(existing.expCats).toEqual(['Food', 'Transport']);
   });
+
+  it('starts with a zeroed skip tally when nothing is skipped', () => {
+    const csv = [HEADER, '2026-07-01,Cash,Food,-,-,-,-,-,-,JPY,-,1200,-,-'].join('\n');
+    const { skipped } = parseZaimCsv(csv, cats());
+    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 0 });
+  });
+
+  it('skips a transfer row and counts it, without producing an entry', () => {
+    const csv = [
+      HEADER,
+      '2026-07-08,Transfer,-,-,Bank,Cash,-,-,-,JPY,-,-,5000,-',
+    ].join('\n');
+    const { entries, skipped } = parseZaimCsv(csv, cats());
+    expect(entries).toHaveLength(0);
+    expect(skipped).toEqual({ transfer: 1, balanceAdjustment: 0, malformed: 0 });
+  });
+
+  it('skips a balance-adjustment row and counts it, without producing an entry', () => {
+    const csv = [
+      HEADER,
+      '2026-07-09,Adjust,-,-,-,-,-,-,-,JPY,-,-,-,1000',
+    ].join('\n');
+    const { entries, skipped } = parseZaimCsv(csv, cats());
+    expect(entries).toHaveLength(0);
+    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 1, malformed: 0 });
+  });
+
+  it('skips a row with a bad date and counts it as malformed', () => {
+    const csv = [
+      HEADER,
+      '2026-13-40,Cash,Food,-,-,-,-,-,-,JPY,-,900,-,-',
+    ].join('\n');
+    const { entries, skipped } = parseZaimCsv(csv, cats());
+    expect(entries).toHaveLength(0);
+    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 1 });
+  });
+
+  it('skips a row with a non-numeric amount and counts it as malformed', () => {
+    const csv = [
+      HEADER,
+      '2026-07-10,Cash,Food,-,-,-,-,-,-,JPY,-,abc,-,-',
+    ].join('\n');
+    const { entries, skipped } = parseZaimCsv(csv, cats());
+    expect(entries).toHaveLength(0);
+    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 1 });
+  });
+
+  it('skips a row with a missing category and counts it as malformed', () => {
+    const csv = [
+      HEADER,
+      '2026-07-11,Cash,-,-,-,-,-,-,-,JPY,-,900,-,-',
+    ].join('\n');
+    const { entries, skipped } = parseZaimCsv(csv, cats());
+    expect(entries).toHaveLength(0);
+    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 1 });
+  });
+
+  it('imports every valid row from a file mixing valid, transfer, balance-adjustment, and malformed rows', () => {
+    const csv = [
+      HEADER,
+      '2026-07-01,Cash,Food,-,-,-,-,-,-,JPY,-,1200,-,-',
+      '2026-07-02,Bank,Salary,-,-,-,-,-,-,JPY,300000,-,-,-',
+      '2026-07-08,Transfer,-,-,Bank,Cash,-,-,-,JPY,-,-,5000,-',
+      '2026-07-09,Adjust,-,-,-,-,-,-,-,JPY,-,-,-,1000',
+      '2026-13-40,Cash,Food,-,-,-,-,-,-,JPY,-,900,-,-',
+    ].join('\n');
+    const { entries, skipped } = parseZaimCsv(csv, cats());
+    expect(entries).toHaveLength(2);
+    expect(skipped).toEqual({ transfer: 1, balanceAdjustment: 1, malformed: 1 });
+  });
 });
 
 describe('decodeZaimBytes', () => {
