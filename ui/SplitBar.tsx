@@ -16,7 +16,7 @@ interface SplitBarProps {
 export function SplitBar({ incomeFraction, expenseFraction }: SplitBarProps) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.track, { backgroundColor: colors.card3 }]}>
+    <View style={[styles.track, { backgroundColor: colors.bg }]}>
       <View
         style={{
           flex: incomeFraction,

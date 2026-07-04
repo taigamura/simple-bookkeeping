@@ -9,6 +9,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   MONTH_NAMES,
+  dayLabel,
   dayEntries,
   dayNet,
   expense,
@@ -20,7 +21,7 @@ import {
   type Transaction,
 } from '../domain';
 import { AdCard, CalendarGrid, ListRow } from '../ui';
-import { useTheme, metrics, Txt, type Tone } from '../theme';
+import { useTheme, metrics, mono, Txt, type Tone } from '../theme';
 import { IconButton } from '../nav/IconButton';
 
 interface CalendarScreenProps {
@@ -72,7 +73,7 @@ export function CalendarScreen({
       <View style={[styles.strip, { borderColor: colors.line }]}>
         <StripCol label="In" value={yen(income(month), symbol)} tone="positive" />
         <StripCol label="Out" value={yen(expense(month), symbol)} tone="negative" />
-        <StripCol label="Net" value={signed(monthNet(month), symbol)} tone={netTone(monthNet(month))} />
+        <StripCol label="Net" value={signed(monthNet(month), symbol)} tone="ink" strong />
       </View>
 
       <CalendarGrid
@@ -85,7 +86,7 @@ export function CalendarScreen({
 
       <View style={[styles.dayHeader, { borderBottomColor: colors.line }]}>
         <Txt variant="microLabel" tone="muted">
-          {MONTH_NAMES[m].slice(0, 3)} {day}
+          {dayLabel(y, m, day)}
         </Txt>
         <Txt variant="inlineAmount" tone={netTone(dNet)}>
           {signed(dNet, symbol)}
@@ -100,9 +101,11 @@ export function CalendarScreen({
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-          {rows.map((entry) => (
-            <ListRow key={entry.id} entry={entry} symbol={symbol} />
-          ))}
+          <View style={[styles.dayCard, { backgroundColor: colors.card }]}>
+            {rows.map((entry, i) => (
+              <ListRow key={entry.id} entry={entry} symbol={symbol} first={i === 0} />
+            ))}
+          </View>
         </ScrollView>
       )}
 
@@ -115,13 +118,24 @@ export function CalendarScreen({
   );
 }
 
-function StripCol({ label, value, tone }: { label: string; value: string; tone: Tone }) {
+function StripCol({
+  label,
+  value,
+  tone,
+  strong = false,
+}: {
+  label: string;
+  value: string;
+  tone: Tone;
+  /** Net column: mono 700 rather than the 600 In/Out use (design §3). */
+  strong?: boolean;
+}) {
   return (
     <View style={styles.stripCol}>
       <Txt variant="microLabel" tone="dim">
         {label}
       </Txt>
-      <Txt variant="inlineAmount" tone={tone}>
+      <Txt variant="inlineAmount" tone={tone} style={strong ? styles.stripNet : undefined}>
         {value}
       </Txt>
     </View>
@@ -139,12 +153,16 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   strip: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
     paddingVertical: 12,
     marginBottom: 16,
   },
-  stripCol: { flex: 1, alignItems: 'center', gap: 4 },
+  // In left · Out center · Net right — columns are content-sized and pushed
+  // apart by `space-between` on the strip (design §3), not equal-flex + centered.
+  stripCol: { gap: 4 },
+  stripNet: { fontFamily: mono.bold },
   dayHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -156,5 +174,9 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 },
   emptyText: { textAlign: 'center' },
   list: { paddingBottom: 8 },
+  dayCard: {
+    borderRadius: metrics.cardRadius,
+    paddingHorizontal: 14,
+  },
   adSlot: { marginTop: 'auto', paddingTop: 10, paddingBottom: 8 },
 });

@@ -29,8 +29,17 @@ export function clampDay(day: number, y: number, m: number): number {
 /** Short weekday headers for the grid, Sunday-first. */
 export const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
 
+/** Three-letter weekday names, Sunday-first — for the selected-day label. */
+export const WEEKDAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+
 /** Full + short month names, indexed by 0-based month. */
 export const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ] as const;
+
+/** Selected-day label with weekday prefix, e.g. "Wed, Jul 2" (design §3). */
+export function dayLabel(y: number, m: number, day: number): string {
+  const wd = WEEKDAY_ABBR[new Date(y, m, day).getDay()];
+  return `${wd}, ${MONTH_NAMES[m].slice(0, 3)} ${day}`;
+}

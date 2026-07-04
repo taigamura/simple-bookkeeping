@@ -13,7 +13,7 @@ import {
   signedAmount,
   makeEntry,
 } from './entries';
-import { daysInMonth, firstWeekday, shiftMonth, clampDay } from './calendar';
+import { daysInMonth, firstWeekday, shiftMonth, clampDay, dayLabel } from './calendar';
 import { pressKey, amountValue } from './keypad';
 import type { Transaction } from './types';
 
@@ -125,6 +125,13 @@ describe('calendar grid math', () => {
     expect(clampDay(31, 2026, 1)).toBe(28); // Feb → 28
     expect(clampDay(15, 2026, 6)).toBe(15); // in range unchanged
     expect(clampDay(0, 2026, 6)).toBe(1); // floor at 1
+  });
+
+  it('dayLabel prefixes the weekday and short month (design §3)', () => {
+    // 2026-07-02 is a Thursday; 2026-07-01 a Wednesday.
+    expect(dayLabel(2026, 6, 2)).toBe('Thu, Jul 2');
+    expect(dayLabel(2026, 6, 1)).toBe('Wed, Jul 1');
+    expect(dayLabel(2026, 0, 15)).toBe('Thu, Jan 15');
   });
 });
 

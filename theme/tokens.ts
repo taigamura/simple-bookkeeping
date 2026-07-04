@@ -112,6 +112,11 @@ export const type = {
     fontSize: 12,
     fontWeight: '500',
   },
+  /** Option-row label (sans) — Entry/Settings grouped rows. */
+  optionLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
   /** Section micro-label — uppercase mono with wide tracking. */
   microLabel: {
     fontFamily: mono.semibold,
@@ -190,5 +195,13 @@ export const shadows = {
     shadowOpacity: 0.26,
     shadowRadius: 24,
     elevation: 8,
+  },
+  /** Center ＋ FAB green glow (design: `0 8 22 rgba(43,212,138,.32)`). */
+  fabGlow: {
+    shadowColor: accents.positive,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.32,
+    shadowRadius: 22,
+    elevation: 10,
   },
 } as const;

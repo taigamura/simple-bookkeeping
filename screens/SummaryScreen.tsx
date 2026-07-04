@@ -31,8 +31,6 @@ interface SummaryScreenProps {
   showAd: boolean;
 }
 
-const netTone = (n: number): Tone => (n > 0 ? 'positive' : n < 0 ? 'negative' : 'ink');
-
 export function SummaryScreen({ entries, y, m, symbol, onSettings, showAd }: SummaryScreenProps) {
   const { colors } = useTheme();
   const month = monthEntries(entries, { y, m });
@@ -57,11 +55,11 @@ export function SummaryScreen({ entries, y, m, symbol, onSettings, showAd }: Sum
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
           <Txt variant="microLabel" tone="dim">
-            Net
+            Net this month
           </Txt>
-          <Txt variant="summaryNet" tone={netTone(total)} style={styles.net}>
+          <Txt variant="summaryNet" tone="positive" style={styles.net}>
             {signed(total, symbol)}
           </Txt>
 
@@ -136,7 +134,6 @@ const styles = StyleSheet.create({
   adSlot: { paddingTop: 10, paddingBottom: 8 },
   card: {
     borderRadius: metrics.cardRadius,
-    borderWidth: 1,
     padding: 18,
     gap: 12,
     marginBottom: 24,

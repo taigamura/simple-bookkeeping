@@ -1,7 +1,9 @@
 /**
- * ListRow — one entry in the day list. A 2-letter `code` tile, the note (which
- * falls back to the category) with the category as a subtitle when they differ,
- * and the signed amount tinted by direction (income green, expense red).
+ * ListRow — one entry in the day list. A 2-letter `code` tile, the category as
+ * the row title with the note as its subtitle (both always shown), and the
+ * signed amount tinted by direction (income green, expense red). Rows share one
+ * rounded card in the parent; a hairline divider sits above every row except the
+ * first (`first` prop), so there is no rule above the first or below the last.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -18,15 +20,25 @@ import { useTheme, metrics, Txt } from '../theme';
 interface ListRowProps {
   entry: Transaction;
   symbol?: string;
+  /** First row in the card — omit the top divider. */
+  first?: boolean;
 }
 
-export function ListRow({ entry, symbol = DEFAULT_CURRENCY.symbol }: ListRowProps) {
+export function ListRow({
+  entry,
+  symbol = DEFAULT_CURRENCY.symbol,
+  first = false,
+}: ListRowProps) {
   const { colors } = useTheme();
   const value = signedAmount(entry);
-  const showCategory = entry.note !== entry.category;
 
   return (
-    <View style={[styles.row, { borderBottomColor: colors.hair }]}>
+    <View
+      style={[
+        styles.row,
+        !first && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hair },
+      ]}
+    >
       <View style={[styles.tile, { backgroundColor: colors.card3 }]}>
         <Txt variant="microLabel" tone="muted">
           {code(entry.category)}
@@ -35,13 +47,11 @@ export function ListRow({ entry, symbol = DEFAULT_CURRENCY.symbol }: ListRowProp
 
       <View style={styles.body}>
         <Txt variant="listItem" numberOfLines={1}>
+          {entry.category}
+        </Txt>
+        <Txt variant="secondary" tone="muted" numberOfLines={1}>
           {entry.note}
         </Txt>
-        {showCategory && (
-          <Txt variant="secondary" tone="dim" numberOfLines={1}>
-            {entry.category}
-          </Txt>
-        )}
       </View>
 
       <Txt variant="inlineAmount" tone={entry.type === 'income' ? 'positive' : 'negative'}>
@@ -57,7 +67,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   tile: {
     width: 38,

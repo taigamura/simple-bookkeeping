@@ -51,9 +51,15 @@ describe('DayCell', () => {
     expect(cellBg(7)).toBe(accents.positive);
   });
 
-  it('is not green when unselected', () => {
+  it('is transparent when unselected (design §1)', () => {
     renderCell({ day: 8, selected: false });
-    expect(cellBg(8)).not.toBe(accents.positive);
+    expect(cellBg(8)).toBe('transparent');
+  });
+
+  it('renders the selected-day total in translucent near-black (design §1)', () => {
+    renderCell({ day: 10, net: 1200, selected: true });
+    const total = StyleSheet.flatten(screen.getByText('+1,200').props.style);
+    expect(total.color).toBe('rgba(11,14,18,.7)');
   });
 
   it('reports the tapped day', () => {

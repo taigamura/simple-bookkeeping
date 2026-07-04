@@ -8,7 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { useTheme, metrics, accents, Txt } from '../theme';
+import { useTheme, metrics, accents, shadows, Txt } from '../theme';
 import type { Tab } from './types';
 
 interface TabBarProps {
@@ -45,6 +45,7 @@ export function TabBar({ tab, onSelect, onAdd }: TabBarProps) {
         accessibilityLabel="Add entry"
         style={({ pressed }) => [
           styles.fab,
+          shadows.fabGlow,
           { backgroundColor: accents.positive, opacity: pressed ? 0.85 : 1 },
         ]}
       >
@@ -66,7 +67,7 @@ function TabButton({
   onPress: (tab: Tab) => void;
 }) {
   const { colors } = useTheme();
-  const color = active ? colors.ink : colors.dim;
+  const color = active ? colors.positive : colors.dim;
   return (
     <Pressable
       onPress={() => onPress(def.key)}
@@ -76,7 +77,7 @@ function TabButton({
       style={styles.tab}
     >
       <Feather name={def.icon} size={20} color={color} />
-      <Txt variant="microLabel" tone={active ? 'ink' : 'dim'} style={styles.tabLabel}>
+      <Txt variant="microLabel" tone={active ? 'positive' : 'dim'} style={styles.tabLabel}>
         {def.label}
       </Txt>
     </Pressable>
@@ -98,12 +99,12 @@ const styles = StyleSheet.create({
   },
   tabLabel: { marginTop: 1 },
   fab: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -18,
+    marginTop: -16,
     marginHorizontal: 8,
   },
 });

@@ -21,7 +21,6 @@ import {
   type TxType,
 } from '../domain';
 import { IconButton } from '../nav/IconButton';
-import { SegmentedToggle } from '../ui';
 import { useTheme, accents, metrics, Txt, type ThemeMode } from '../theme';
 
 interface SettingsSheetProps {
@@ -58,7 +57,16 @@ export function SettingsSheet({
     <View style={styles.container}>
       <View style={styles.header}>
         <Txt variant="screenTitle">Settings</Txt>
-        <IconButton name="x" accessibilityLabel="Close" onPress={onClose} />
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Done"
+          hitSlop={8}
+        >
+          <Txt variant="listItem" tone="positive">
+            Done
+          </Txt>
+        </Pressable>
       </View>
       <ScrollView
         style={styles.scroll}
@@ -86,16 +94,22 @@ export function SettingsSheet({
 /** Manual Dark/Light switch (decision 9 — no OS-appearance theming). */
 function Appearance() {
   const { mode, setMode } = useTheme();
+  const MODES: { value: ThemeMode; label: string }[] = [
+    { value: 'dark', label: 'Dark' },
+    { value: 'light', label: 'Light' },
+  ];
   return (
     <Section label="Appearance">
-      <SegmentedToggle<ThemeMode>
-        options={[
-          { value: 'dark', label: 'Dark' },
-          { value: 'light', label: 'Light' },
-        ]}
-        value={mode}
-        onChange={setMode}
-      />
+      <View style={styles.optRow}>
+        {MODES.map((m) => (
+          <OptBox
+            key={m.value}
+            label={m.label}
+            active={mode === m.value}
+            onPress={() => setMode(m.value)}
+          />
+        ))}
+      </View>
     </Section>
   );
 }
@@ -108,35 +122,56 @@ function CurrencyGrid({
   value: Currency;
   onChange: (currency: Currency) => void;
 }) {
-  const { colors } = useTheme();
   return (
     <Section label="Currency">
-      <View style={styles.grid}>
-        {CURRENCIES.map((c) => {
-          const active = c.code === value.code;
-          return (
-            <Pressable
-              key={c.code}
-              onPress={() => onChange(c)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={`${c.code} ${c.symbol}`}
-              style={[
-                styles.currencyTile,
-                { backgroundColor: active ? accents.positive : colors.card2 },
-              ]}
-            >
-              <Txt variant="screenTitle" tone={active ? 'onPositive' : 'ink'}>
-                {c.symbol}
-              </Txt>
-              <Txt variant="microLabel" tone={active ? 'onPositive' : 'dim'}>
-                {c.code}
-              </Txt>
-            </Pressable>
-          );
-        })}
+      <View style={styles.optRow}>
+        {CURRENCIES.map((c) => (
+          <OptBox
+            key={c.code}
+            label={`${c.symbol} ${c.code}`}
+            active={c.code === value.code}
+            accessibilityLabel={`${c.code} ${c.symbol}`}
+            onPress={() => onChange(c)}
+          />
+        ))}
       </View>
     </Section>
+  );
+}
+
+/** Selection tile shared by Appearance & Currency: green-tint + inset green ring
+ *  and green text when active, else card2 with a muted label (design §9). */
+const OPT_TINT = 'rgba(43,212,138,.15)';
+
+function OptBox({
+  label,
+  active,
+  accessibilityLabel,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  accessibilityLabel?: string;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={accessibilityLabel ?? label}
+      style={[
+        styles.optBox,
+        active
+          ? { backgroundColor: OPT_TINT, borderColor: accents.positive }
+          : { backgroundColor: colors.card2, borderColor: 'transparent' },
+      ]}
+    >
+      <Txt variant="optionLabel" tone={active ? 'positive' : 'muted'} numberOfLines={1}>
+        {label}
+      </Txt>
+    </Pressable>
   );
 }
 
@@ -166,19 +201,47 @@ function Categories({
   };
 
   return (
-    <Section label="Categories">
-      <SegmentedToggle<TxType>
-        options={CAT_TABS}
-        value={tab}
-        onChange={(t) => {
-          setTab(t);
-          setDraft('');
-        }}
-      />
+    <View style={styles.section}>
+      <View style={styles.catHeader}>
+        <Txt variant="microLabel" tone="dim">
+          Categories
+        </Txt>
+        <View style={styles.pillGroup}>
+          {CAT_TABS.map((t) => {
+            const active = tab === t.value;
+            return (
+              <Pressable
+                key={t.value}
+                onPress={() => {
+                  setTab(t.value);
+                  setDraft('');
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={t.label}
+                style={[
+                  styles.miniPill,
+                  { backgroundColor: active ? accents.positive : colors.card2 },
+                ]}
+              >
+                <Txt variant="microLabel" tone={active ? 'onPositive' : 'muted'}>
+                  {t.label}
+                </Txt>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
 
-      <View style={styles.catList}>
+      <View style={[styles.catCard, { backgroundColor: colors.card2 }]}>
         {list.map((cat, i) => (
-          <View key={cat} style={[styles.catRow, { backgroundColor: colors.card2 }]}>
+          <View
+            key={cat}
+            style={[
+              styles.catRow,
+              i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hair },
+            ]}
+          >
             <View style={[styles.codeTile, { backgroundColor: colors.card3 }]}>
               <Txt variant="microLabel" tone="muted">
                 {code(cat)}
@@ -241,7 +304,7 @@ function Categories({
           </Txt>
         </Pressable>
       </View>
-    </Section>
+    </View>
   );
 }
 
@@ -345,23 +408,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  grid: { flexDirection: 'row', gap: 8 },
-  currencyTile: {
+  optRow: { flexDirection: 'row', gap: 8 },
+  optBox: {
     flex: 1,
-    height: 64,
-    borderRadius: metrics.iconTileRadius,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
   },
-  catList: { gap: 8 },
+  catHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pillGroup: { flexDirection: 'row', gap: 6 },
+  miniPill: {
+    paddingHorizontal: 12,
+    height: 26,
+    borderRadius: metrics.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  catCard: {
+    borderRadius: 14,
+    paddingHorizontal: 10,
+  },
   catRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     height: 50,
-    borderRadius: metrics.iconTileRadius,
-    paddingHorizontal: 10,
   },
   codeTile: {
     width: 34,
