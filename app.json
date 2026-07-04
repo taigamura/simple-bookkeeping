@@ -35,7 +35,11 @@
       "@sentry/react-native/expo"
     ],
     "extra": {
-      "sentryDsn": ""
-    }
+      "sentryDsn": "",
+      "eas": {
+        "projectId": "130c36b5-0731-4688-9e25-e7dd5dd87615"
+      }
+    },
+    "owner": "taigamura"
   }
 }
