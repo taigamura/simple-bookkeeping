@@ -14,6 +14,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { strings } from '../i18n';
 import { useTheme, metrics } from '../theme';
 
 export interface BottomSheetProps {
@@ -38,7 +39,7 @@ export function BottomSheet({ visible, onClose, children, style }: BottomSheetPr
         <Pressable
           style={styles.backdrop}
           accessibilityRole="button"
-          accessibilityLabel="Close"
+          accessibilityLabel={strings.nav.close}
           onPress={onClose}
         />
         <View

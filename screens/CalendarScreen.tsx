@@ -20,6 +20,7 @@ import {
   yen,
   type Transaction,
 } from '../domain';
+import { strings } from '../i18n';
 import { CalendarGrid, ListRow } from '../ui';
 import { useTheme, metrics, mono, Txt, type Tone } from '../theme';
 import { IconButton } from '../nav/IconButton';
@@ -61,16 +62,29 @@ export function CalendarScreen({
           {MONTH_NAMES[m]} {y}
         </Txt>
         <View style={styles.headerActions}>
-          <IconButton name="chevron-left" accessibilityLabel="Previous month" onPress={onPrevMonth} />
-          <IconButton name="chevron-right" accessibilityLabel="Next month" onPress={onNextMonth} />
-          <IconButton name="settings" accessibilityLabel="Settings" onPress={onSettings} />
+          <IconButton
+            name="chevron-left"
+            accessibilityLabel={strings.calendar.previousMonth}
+            onPress={onPrevMonth}
+          />
+          <IconButton
+            name="chevron-right"
+            accessibilityLabel={strings.calendar.nextMonth}
+            onPress={onNextMonth}
+          />
+          <IconButton name="settings" accessibilityLabel={strings.nav.settings} onPress={onSettings} />
         </View>
       </View>
 
       <View style={[styles.strip, { borderColor: colors.line }]}>
-        <StripCol label="In" value={yen(income(month), symbol)} tone="positive" />
-        <StripCol label="Out" value={yen(expense(month), symbol)} tone="negative" />
-        <StripCol label="Net" value={signed(monthNet(month), symbol)} tone="ink" strong />
+        <StripCol label={strings.calendar.in} value={yen(income(month), symbol)} tone="positive" />
+        <StripCol label={strings.calendar.out} value={yen(expense(month), symbol)} tone="negative" />
+        <StripCol
+          label={strings.calendar.net}
+          value={signed(monthNet(month), symbol)}
+          tone="ink"
+          strong
+        />
       </View>
 
       <CalendarGrid
@@ -93,7 +107,7 @@ export function CalendarScreen({
       {rows.length === 0 ? (
         <View style={styles.empty}>
           <Txt variant="secondary" tone="dim" style={styles.emptyText}>
-            No entries this day. Tap ＋ to add one.
+            {strings.calendar.emptyDay}
           </Txt>
         </View>
       ) : (

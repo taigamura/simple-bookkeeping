@@ -8,6 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { strings } from '../i18n';
 import { useTheme, metrics, accents, shadows, Txt } from '../theme';
 import type { Tab } from './types';
 
@@ -24,8 +25,8 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { key: 'calendar', label: 'Calendar', icon: 'calendar' },
-  { key: 'summary', label: 'Summary', icon: 'bar-chart-2' },
+  { key: 'calendar', label: strings.nav.calendar, icon: 'calendar' },
+  { key: 'summary', label: strings.nav.summary, icon: 'bar-chart-2' },
 ];
 
 export function TabBar({ tab, onSelect, onAdd }: TabBarProps) {
@@ -42,7 +43,7 @@ export function TabBar({ tab, onSelect, onAdd }: TabBarProps) {
       <Pressable
         onPress={onAdd}
         accessibilityRole="button"
-        accessibilityLabel="Add entry"
+        accessibilityLabel={strings.nav.addEntry}
         style={({ pressed }) => [
           styles.fab,
           shadows.fabGlow,

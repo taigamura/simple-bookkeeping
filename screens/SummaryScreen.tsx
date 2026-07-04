@@ -17,6 +17,7 @@ import {
   yen,
   type Transaction,
 } from '../domain';
+import { strings } from '../i18n';
 import { CategoryBar, SplitBar } from '../ui';
 import { useTheme, metrics, Txt, type Tone } from '../theme';
 import { IconButton } from '../nav/IconButton';
@@ -40,12 +41,12 @@ export function SummaryScreen({ entries, y, m, symbol, onSettings }: SummaryScre
     <View style={styles.screen}>
       <View style={styles.header}>
         <View>
-          <Txt variant="screenTitle">Summary</Txt>
+          <Txt variant="screenTitle">{strings.nav.summary}</Txt>
           <Txt variant="secondary" tone="muted" style={styles.subtitle}>
             {MONTH_NAMES[m]} {y}
           </Txt>
         </View>
-        <IconButton name="settings" accessibilityLabel="Settings" onPress={onSettings} />
+        <IconButton name="settings" accessibilityLabel={strings.nav.settings} onPress={onSettings} />
       </View>
 
       <ScrollView
@@ -55,7 +56,7 @@ export function SummaryScreen({ entries, y, m, symbol, onSettings }: SummaryScre
       >
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <Txt variant="microLabel" tone="dim">
-            Net this month
+            {strings.summary.netThisMonth}
           </Txt>
           <Txt variant="summaryNet" tone="positive" style={styles.net}>
             {signed(total, symbol)}
@@ -67,18 +68,18 @@ export function SummaryScreen({ entries, y, m, symbol, onSettings }: SummaryScre
           />
 
           <View style={styles.legend}>
-            <Legend label="In" value={yen(split.income, symbol)} tone="positive" />
-            <Legend label="Out" value={yen(split.expense, symbol)} tone="negative" />
+            <Legend label={strings.calendar.in} value={yen(split.income, symbol)} tone="positive" />
+            <Legend label={strings.calendar.out} value={yen(split.expense, symbol)} tone="negative" />
           </View>
         </View>
 
         <Txt variant="microLabel" tone="dim" style={styles.sectionLabel}>
-          Spending by category
+          {strings.summary.spendingByCategory}
         </Txt>
 
         {breakdown.length === 0 ? (
           <Txt variant="secondary" tone="dim" style={styles.empty}>
-            No spending this month.
+            {strings.summary.noSpending}
           </Txt>
         ) : (
           breakdown.map((slice) => (

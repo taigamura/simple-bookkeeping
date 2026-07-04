@@ -22,6 +22,7 @@ import {
   type TxType,
   type WeekendShift,
 } from '../domain';
+import { strings } from '../i18n';
 import { CategoryChips, Keypad, SegmentedToggle } from '../ui';
 import { useTheme, metrics, accents, shadows, heroAmountSize, Txt, type Tone } from '../theme';
 import { IconButton } from '../nav/IconButton';
@@ -39,34 +40,22 @@ interface EntrySheetProps {
 }
 
 const TYPE_OPTIONS = [
-  { value: 'expense' as TxType, label: 'Expense' },
-  { value: 'income' as TxType, label: 'Income' },
+  { value: 'expense' as TxType, label: strings.common.expense },
+  { value: 'income' as TxType, label: strings.common.income },
 ];
 
 /**
  * Note presets cycled by the Note row; '—' means "fall back to the category".
  * Presets are per-type (design §7): the first entry is always the default '—'.
  */
-const NOTE_OPTIONS: Record<TxType, string[]> = {
-  expense: ['—', 'Cash', 'Card', 'Konbini', 'Online'],
-  income: ['—', 'Bank transfer', 'Cash', 'Bonus'],
-};
+const NOTE_OPTIONS: Record<TxType, string[]> = strings.entry.notePresets;
 
 const REPEAT_ORDER: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
-const REPEAT_LABEL: Record<Repeat, string> = {
-  never: 'Never',
-  daily: 'Every day',
-  monthly: 'Every month',
-  yearly: 'Every year',
-};
+const REPEAT_LABEL: Record<Repeat, string> = strings.entry.repeatLabels;
 
 // Cycle order starts at 'after' (Move to Monday) — the design default (§7).
 const SHIFT_ORDER: WeekendShift[] = ['after', 'before', 'off'];
-const SHIFT_LABEL: Record<WeekendShift, string> = {
-  after: 'Move to Monday',
-  before: 'Move to Friday',
-  off: 'Keep on weekend',
-};
+const SHIFT_LABEL: Record<WeekendShift, string> = strings.entry.weekendLabels;
 
 const next = <T,>(order: T[], value: T): T =>
   order[(order.indexOf(value) + 1) % order.length];
@@ -118,7 +107,7 @@ export function EntrySheet({
           {/* Active segment defaults to green + near-black (design §6). */}
           <SegmentedToggle options={TYPE_OPTIONS} value={txType} onChange={changeType} />
         </View>
-        <IconButton name="x" accessibilityLabel="Close" onPress={onClose} />
+        <IconButton name="x" accessibilityLabel={strings.nav.close} onPress={onClose} />
       </View>
 
       <View style={styles.amountBlock}>
@@ -132,7 +121,7 @@ export function EntrySheet({
           {heroText}
         </Txt>
         <Txt variant="microLabel" tone="dim">
-          {txType}
+          {txType === 'income' ? strings.common.income : strings.common.expense}
         </Txt>
       </View>
 
@@ -145,13 +134,13 @@ export function EntrySheet({
       <View style={[styles.rowsCard, { backgroundColor: colors.card2 }]}>
         <CycleRow
           first
-          label="Note"
+          label={strings.entry.noteRowLabel}
           value={note}
           active={note !== '—'}
           onPress={() => setNote((n) => next(NOTE_OPTIONS[txType], n))}
         />
         <CycleRow
-          label="↻ Repeat"
+          label={strings.entry.repeatRowLabel}
           value={REPEAT_LABEL[repeat]}
           active={repeat !== 'never'}
           activeTone="positive"
@@ -159,7 +148,7 @@ export function EntrySheet({
         />
         {showWeekend && (
           <CycleRow
-            label="If on weekend"
+            label={strings.entry.weekendRowLabel}
             value={SHIFT_LABEL[weekendShift]}
             active={weekendShift !== 'after'}
             onPress={() => setWeekendShift((s) => next(SHIFT_ORDER, s))}
@@ -173,7 +162,7 @@ export function EntrySheet({
         onPress={save}
         disabled={!canSave}
         accessibilityRole="button"
-        accessibilityLabel={`Add ${txType === 'income' ? 'income' : 'expense'}`}
+        accessibilityLabel={txType === 'income' ? strings.entry.addIncome : strings.entry.addExpense}
         accessibilityState={{ disabled: !canSave }}
         style={[
           styles.cta,
@@ -183,7 +172,7 @@ export function EntrySheet({
         ]}
       >
         <Txt variant="listItem" tone={canSave ? 'onPositive' : 'dim'}>
-          Add {txType === 'income' ? 'income' : 'expense'}
+          {txType === 'income' ? strings.entry.addIncome : strings.entry.addExpense}
         </Txt>
       </Pressable>
     </View>

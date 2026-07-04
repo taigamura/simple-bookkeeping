@@ -24,6 +24,7 @@ import {
   type YM,
   type ZaimSkipTally,
 } from '../domain';
+import { strings } from '../i18n';
 import { shareTextFile } from '../platform/shareFile';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
@@ -63,14 +64,12 @@ function notify(title: string, message: string) {
 // was skipped) so the confirmation shows a breakdown by reason, not just an
 // opaque "some rows were skipped".
 function skipSummary(skipped: ZaimSkipTally): string {
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const { skip } = strings.zaim;
   const parts: string[] = [];
-  if (skipped.transfer > 0) parts.push(`${plural(skipped.transfer, 'transfer')} skipped`);
-  if (skipped.balanceAdjustment > 0) {
-    parts.push(`${plural(skipped.balanceAdjustment, 'balance adjustment')} skipped`);
-  }
-  if (skipped.malformed > 0) parts.push(`${plural(skipped.malformed, 'malformed row')} skipped`);
-  if (skipped.duplicate > 0) parts.push(`${plural(skipped.duplicate, 'duplicate')} skipped`);
+  if (skipped.transfer > 0) parts.push(skip.transfer(skipped.transfer));
+  if (skipped.balanceAdjustment > 0) parts.push(skip.balanceAdjustment(skipped.balanceAdjustment));
+  if (skipped.malformed > 0) parts.push(skip.malformedRow(skipped.malformed));
+  if (skipped.duplicate > 0) parts.push(skip.duplicate(skipped.duplicate));
   return parts.length > 0 ? ` — ${parts.join(', ')}` : '';
 }
 
@@ -79,8 +78,8 @@ function confirm(title: string, message: string, onConfirm: () => void) {
     if (window.confirm(`${title}\n${message}`)) onConfirm();
   } else {
     Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Import', onPress: onConfirm },
+      { text: strings.common.cancel, style: 'cancel' },
+      { text: strings.common.import, onPress: onConfirm },
     ]);
   }
 }
@@ -116,10 +115,7 @@ function Shell({
   // `hasCorruptStash` (which stays true across later, healthy boots too).
   useEffect(() => {
     if (showCorruptNotice) {
-      notify(
-        'Backup kept',
-        "Your previous data couldn't be read; a backup copy was kept. You can export it from Settings.",
-      );
+      notify(strings.corruptNotice.title, strings.corruptNotice.message);
     }
   }, [showCorruptNotice]);
 
@@ -168,7 +164,7 @@ function Shell({
     const bytes = new Uint8Array(buffer);
     const text = decodeZaimBytes(bytes);
     if (!text) {
-      notify("Doesn't look like a Zaim export", 'No entries were imported.');
+      notify(strings.zaim.notZaimTitle, strings.zaim.notZaimMessage);
       return;
     }
 
@@ -179,14 +175,14 @@ function Shell({
     });
     if (result.entries.length === 0) {
       notify(
-        'No entries found',
-        `No importable rows were found in that file.${skipSummary(result.skipped)}`,
+        strings.zaim.noEntriesTitle,
+        `${strings.zaim.noEntriesMessage}${skipSummary(result.skipped)}`,
       );
       return;
     }
 
-    const message = `${result.entries.length} entries ready to import${skipSummary(result.skipped)}`;
-    confirm('Import from Zaim', message, () => {
+    const message = `${strings.zaim.entriesReady(result.entries.length)}${skipSummary(result.skipped)}`;
+    confirm(strings.settings.importFromZaim, message, () => {
       update({
         entries: [...state.entries, ...result.entries],
         expCats: result.expCats,

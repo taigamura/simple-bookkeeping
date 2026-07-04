@@ -20,6 +20,7 @@ import {
   type Currency,
   type TxType,
 } from '../domain';
+import { strings } from '../i18n';
 import { IconButton } from '../nav/IconButton';
 import { useTheme, accents, metrics, Txt, type ThemeMode } from '../theme';
 
@@ -40,8 +41,8 @@ interface SettingsSheetProps {
 }
 
 const CAT_TABS = [
-  { value: 'expense' as TxType, label: 'Expense' },
-  { value: 'income' as TxType, label: 'Income' },
+  { value: 'expense' as TxType, label: strings.common.expense },
+  { value: 'income' as TxType, label: strings.common.income },
 ];
 
 export function SettingsSheet({
@@ -61,15 +62,15 @@ export function SettingsSheet({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Txt variant="screenTitle">Settings</Txt>
+        <Txt variant="screenTitle">{strings.nav.settings}</Txt>
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Done"
+          accessibilityLabel={strings.nav.done}
           hitSlop={8}
         >
           <Txt variant="listItem" tone="positive">
-            Done
+            {strings.nav.done}
           </Txt>
         </Pressable>
       </View>
@@ -102,11 +103,11 @@ export function SettingsSheet({
 function Appearance() {
   const { mode, setMode } = useTheme();
   const MODES: { value: ThemeMode; label: string }[] = [
-    { value: 'dark', label: 'Dark' },
-    { value: 'light', label: 'Light' },
+    { value: 'dark', label: strings.settings.dark },
+    { value: 'light', label: strings.settings.light },
   ];
   return (
-    <Section label="Appearance">
+    <Section label={strings.settings.appearance}>
       <View style={styles.optRow}>
         {MODES.map((m) => (
           <OptBox
@@ -130,7 +131,7 @@ function CurrencyGrid({
   onChange: (currency: Currency) => void;
 }) {
   return (
-    <Section label="Currency">
+    <Section label={strings.settings.currency}>
       <View style={styles.optRow}>
         {CURRENCIES.map((c) => (
           <OptBox
@@ -211,7 +212,7 @@ function Categories({
     <View style={styles.section}>
       <View style={styles.catHeader}>
         <Txt variant="microLabel" tone="dim">
-          Categories
+          {strings.settings.categories}
         </Txt>
         <View style={styles.pillGroup}>
           {CAT_TABS.map((t) => {
@@ -260,20 +261,20 @@ function Categories({
             <IconButton
               name="arrow-up"
               size={15}
-              accessibilityLabel={`Move ${cat} up`}
+              accessibilityLabel={strings.settings.moveCategoryUp(cat)}
               onPress={() => apply(moveCategory(list, i, -1))}
             />
             <IconButton
               name="arrow-down"
               size={15}
-              accessibilityLabel={`Move ${cat} down`}
+              accessibilityLabel={strings.settings.moveCategoryDown(cat)}
               onPress={() => apply(moveCategory(list, i, 1))}
             />
             <IconButton
               name="x"
               size={15}
               tone="negative"
-              accessibilityLabel={`Remove ${cat}`}
+              accessibilityLabel={strings.settings.removeCategory(cat)}
               onPress={() => apply(removeCategory(list, i))}
             />
           </View>
@@ -285,7 +286,7 @@ function Categories({
           value={draft}
           onChangeText={setDraft}
           onSubmitEditing={add}
-          placeholder="Add category"
+          placeholder={strings.settings.addCategory}
           placeholderTextColor={colors.dim}
           returnKeyType="done"
           style={[
@@ -297,7 +298,7 @@ function Categories({
           onPress={add}
           disabled={draft.trim().length === 0}
           accessibilityRole="button"
-          accessibilityLabel="Add category"
+          accessibilityLabel={strings.settings.addCategory}
           style={[
             styles.addBtn,
             {
@@ -307,7 +308,7 @@ function Categories({
           ]}
         >
           <Txt variant="listItem" tone="onPositive">
-            Add
+            {strings.common.add}
           </Txt>
         </Pressable>
       </View>
@@ -339,37 +340,37 @@ function DataActions({
     { backgroundColor: pressed ? colors.card3 : colors.card2 },
   ];
   return (
-    <Section label="Data">
+    <Section label={strings.settings.data}>
       <Pressable
         onPress={onLoadSample}
         accessibilityRole="button"
-        accessibilityLabel="Load sample data"
+        accessibilityLabel={strings.settings.loadSampleData}
         style={rowStyle}
       >
         <Txt variant="listItem" tone="ink">
-          Load sample data
+          {strings.settings.loadSampleData}
         </Txt>
       </Pressable>
 
       <Pressable
         onPress={onExportData}
         accessibilityRole="button"
-        accessibilityLabel="Export data"
+        accessibilityLabel={strings.settings.exportData}
         style={rowStyle}
       >
         <Txt variant="listItem" tone="ink">
-          Export data
+          {strings.settings.exportData}
         </Txt>
       </Pressable>
 
       <Pressable
         onPress={onImportZaim}
         accessibilityRole="button"
-        accessibilityLabel="Import from Zaim"
+        accessibilityLabel={strings.settings.importFromZaim}
         style={rowStyle}
       >
         <Txt variant="listItem" tone="ink">
-          Import from Zaim
+          {strings.settings.importFromZaim}
         </Txt>
       </Pressable>
 
@@ -377,11 +378,11 @@ function DataActions({
         <Pressable
           onPress={onExportCorruptStash}
           accessibilityRole="button"
-          accessibilityLabel="Export unreadable backup"
+          accessibilityLabel={strings.settings.exportUnreadableBackup}
           style={rowStyle}
         >
           <Txt variant="listItem" tone="negative">
-            Export unreadable backup
+            {strings.settings.exportUnreadableBackup}
           </Txt>
         </Pressable>
       )}

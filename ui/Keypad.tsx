@@ -9,6 +9,7 @@ import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { KeypadKey } from '../domain';
+import { strings } from '../i18n';
 import { useTheme, metrics, Txt } from '../theme';
 
 const KEYS: KeypadKey[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', 'del'];
@@ -22,7 +23,7 @@ export function Keypad({ onKey }: { onKey: (key: KeypadKey) => void }) {
           key={key}
           onPress={() => onKey(key)}
           accessibilityRole="button"
-          accessibilityLabel={key === 'del' ? 'Delete' : key}
+          accessibilityLabel={key === 'del' ? strings.keypad.delete : key}
           style={({ pressed }) => [
             styles.key,
             { backgroundColor: pressed ? colors.card3 : colors.card2 },
