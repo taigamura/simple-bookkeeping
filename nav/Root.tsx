@@ -122,7 +122,12 @@ function Shell({ state, update }: RootProps) {
     const picked = await DocumentPicker.getDocumentAsync({ type: 'text/csv' });
     if (picked.canceled) return;
 
-    const bytes = new Uint8Array(await new File(picked.assets[0].uri).arrayBuffer());
+    const asset = picked.assets[0];
+    const buffer =
+      Platform.OS === 'web'
+        ? await asset.file!.arrayBuffer()
+        : await new File(asset.uri).arrayBuffer();
+    const bytes = new Uint8Array(buffer);
     const text = decodeZaimBytes(bytes);
     if (!text) {
       notify("Doesn't look like a Zaim export", 'No entries were imported.');
