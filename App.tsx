@@ -1,9 +1,19 @@
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 
 import { Root } from './nav';
 import { useStore } from './store';
 import { ThemeProvider } from './theme';
 import { useAppFonts } from './theme/useAppFonts';
+
+// Keep the native splash screen (asset + dark background configured via the
+// expo-splash-screen plugin in app.json, #25) up past its own auto-hide, so it
+// still covers the fonts/persisted-state gate below. Called at module scope,
+// not inside the component, per the package's own guidance — inside a
+// component risks running after the splash has already auto-hidden. A no-op
+// on web (no native splash there).
+SplashScreen.preventAutoHideAsync();
 
 /**
  * Root. Holds render until both gates clear — mono fonts loaded (decision 5)
@@ -15,7 +25,13 @@ export default function App() {
   const fontsLoaded = useAppFonts();
   const { ready, state, update, showCorruptNotice, hasCorruptStash, readCorruptStash } =
     useStore();
-  if (!fontsLoaded || !ready) return null;
+  const appReady = fontsLoaded && ready;
+
+  useEffect(() => {
+    if (appReady) SplashScreen.hideAsync();
+  }, [appReady]);
+
+  if (!appReady) return null;
 
   return (
     <ThemeProvider
