@@ -152,3 +152,68 @@ Aggregation (in-memory JS, mirrors the prototype):
 6. **Validate** — run Expo web; confirm flows; iterate on fidelity.
 
 Pause for review at the end of each stage.
+
+## Design fidelity (v0.1) — build vs design gaps
+
+The canonical visual reference is **`docs/v0.1_design.html`** (the imported Claude Design
+bundle; unpack the `__bundler/template` script to read the prototype markup + logic). Slices
+#2–#8 built to the *decisions text* issue-by-issue and are functionally complete, but the
+rendered UI drifted from the design in the ways below. **The design wins** on every point
+except where a locked decision says otherwise. This section is the authoritative spec for the
+Design Fidelity Pass in `.ralph/fix_plan.md`; each fix must keep `tsc`/tests/web green.
+
+**Locked exceptions (do NOT "fix" back to the prototype):** icons stay `@expo/vector-icons`
+Feather glyphs, not the prototype's Unicode (decision 6); the in-app Premium/Remove-ads toggle
+and Load-sample-data row stay (decisions 7 & 8) — the prototype has neither; keep them styled
+consistently with the rest of Settings.
+
+### Required corrections (target = design)
+
+1. **Calendar day cells** (`ui/DayCell.tsx`) — non-selected cells are **transparent**, not
+   `card2`. Only the selected day is a solid green tile (near-black number). Selected-day total
+   uses translucent near-black `rgba(11,14,18,.7)`, not solid.
+2. **Day-entries list** (`ui/ListRow.tsx`, `screens/CalendarScreen.tsx`) — **category is the
+   row title** (sans 600 · 14.5 · ink), **note is the subtitle** (sans 500 · 12 · muted),
+   *always both*. Wrap the day's rows in one rounded `card` (radius 18) with hairline dividers
+   between rows (no rule above the first, none below the last). Current code inverts title/note
+   and shows the subtitle only when they differ, with no card.
+3. **Calendar header/strip** (`screens/CalendarScreen.tsx`) — In left / Out center / Net right
+   (not all-centered); Net renders in **ink** weight-700 (not sign-tinted). Selected-day label
+   includes the weekday: `"Wed, Jul 2"`, not `"Jul 2"`.
+4. **Summary net card** (`screens/SummaryScreen.tsx`, `ui/SplitBar.tsx`) — micro-label reads
+   **"Net this month"**; the net figure is **always green** per the design (not sign-tinted);
+   the card has **no border** (surface only); split-bar track = `--bg`.
+5. **Summary category bars** (`ui/CategoryBar.tsx`) — bar fill is **green** (`positive`), track =
+   `--card`. Current code fills them red.
+6. **Entry type toggle** (`screens/EntrySheet.tsx`) — active Expense/Income segment is **green**
+   with near-black text (the shared selection accent), not the grey `card3`/ink it uses now.
+7. **Entry option rows** (`screens/EntrySheet.tsx`) — group Note / Repeat / weekend into **one
+   card** (radius 14) with hairline dividers. Labels are **sans 13 · dim** (not uppercase mono);
+   values are sans 600, dim when at the default else tinted (Repeat turns **green** when set).
+   Repeat label shows the ↻. Note presets are **per-type**: expense =
+   `['—','Cash','Card','Konbini','Online']`, income = `['—','Bank transfer','Cash','Bonus']`
+   (replaces the single flat list). Weekend row: options `Move to Monday / Move to Friday /
+   Keep on weekend`, default **Move to Monday**.
+8. **Entry CTA** (`screens/EntrySheet.tsx`) — disabled state is a **`card2` fill with dim text**,
+   not green-at-40%-opacity. Label is sentence-case: **"Add expense" / "Add income"**.
+9. **Settings selection styling** (`screens/SettingsSheet.tsx`) — Appearance and Currency use the
+   design's **optBox**: `rgba(43,212,138,.15)` tint + inset green ring + green text when active,
+   `card2`/muted when not (radius 12). Not a green-fill pill (Appearance) or a solid-green
+   two-line tile (Currency). Currency tiles are **single-line** `"¥ JPY"`.
+10. **Settings categories** (`screens/SettingsSheet.tsx`) — the Expense/Income sub-tab is a
+    **small pill group aligned right on the "Categories" header row** (`pill()` style), not a
+    full-width toggle below the label. Category rows share **one card** with hairline dividers
+    (not one grey card per row).
+11. **Settings "Done"** (`screens/SettingsSheet.tsx`) — top-right is a green **"Done"** text
+    button, not an ✕ icon.
+12. **Tab bar** (`nav/TabBar.tsx`) — active tab (icon + label) is **green**, not ink. The ＋ FAB
+    is 54×54 with a green glow (`0 8 22 rgba(43,212,138,.32)`). Stretch: make the bar float with
+    a gradient fade to `--bg` and let content scroll under it (design behaviour); if deferred,
+    at minimum land the green active tint + FAB glow.
+
+### Structural note (lower priority)
+
+The design's Entry and Settings sheets are **tall fixed-height** sheets (`top: 34` / `top: 24`
+from the frame top) with a flexible spacer pushing the keypad/CTA to the bottom, rather than the
+current content-height bottom-anchored `Modal`. Optional polish — fold into the Entry/Settings
+fidelity tasks only if it doesn't destabilise the sheet layout.
