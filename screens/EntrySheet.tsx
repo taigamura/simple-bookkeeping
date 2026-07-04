@@ -22,7 +22,7 @@ import {
   type TxType,
   type WeekendShift,
 } from '../domain';
-import { AdCard, CategoryChips, Keypad, SegmentedToggle } from '../ui';
+import { CategoryChips, Keypad, SegmentedToggle } from '../ui';
 import { useTheme, metrics, accents, shadows, heroAmountSize, Txt, type Tone } from '../theme';
 import { IconButton } from '../nav/IconButton';
 
@@ -34,8 +34,6 @@ interface EntrySheetProps {
   m: number;
   day: number;
   symbol: string;
-  /** Slim free-tier ad above the keypad; hidden for premium (decision 7). */
-  showAd: boolean;
   onSave: (entries: Transaction[]) => void;
   onClose: () => void;
 }
@@ -80,7 +78,6 @@ export function EntrySheet({
   m,
   day,
   symbol,
-  showAd,
   onSave,
   onClose,
 }: EntrySheetProps) {
@@ -169,8 +166,6 @@ export function EntrySheet({
           />
         )}
       </View>
-
-      {showAd && <AdCard variant="slim" />}
 
       <Keypad onKey={(key: KeypadKey) => setAmountStr((s) => pressKey(s, key))} />
 

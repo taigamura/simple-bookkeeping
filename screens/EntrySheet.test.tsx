@@ -19,7 +19,6 @@ const renderSheet = () =>
         m={6}
         day={2}
         symbol="¥"
-        showAd={false}
         onSave={() => {}}
         onClose={() => {}}
       />
@@ -56,5 +55,10 @@ describe('EntrySheet', () => {
   it('defaults the Repeat row to Never', () => {
     renderSheet();
     expect(screen.getByLabelText('↻ Repeat: Never')).toBeTruthy();
+  });
+
+  it('renders no ad card (Premium/ads stripped for v1, #23)', () => {
+    renderSheet();
+    expect(screen.queryByLabelText('Sponsored ad')).toBeNull();
   });
 });

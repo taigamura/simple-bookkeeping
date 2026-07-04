@@ -20,7 +20,7 @@ import {
   yen,
   type Transaction,
 } from '../domain';
-import { AdCard, CalendarGrid, ListRow } from '../ui';
+import { CalendarGrid, ListRow } from '../ui';
 import { useTheme, metrics, mono, Txt, type Tone } from '../theme';
 import { IconButton } from '../nav/IconButton';
 
@@ -34,8 +34,6 @@ interface CalendarScreenProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onSettings: () => void;
-  /** Free-tier ad slot above the tab bar; hidden for premium (decision 7). */
-  showAd: boolean;
 }
 
 const netTone = (n: number): Tone => (n > 0 ? 'positive' : n < 0 ? 'negative' : 'muted');
@@ -50,7 +48,6 @@ export function CalendarScreen({
   onPrevMonth,
   onNextMonth,
   onSettings,
-  showAd,
 }: CalendarScreenProps) {
   const { colors } = useTheme();
   const month = monthEntries(entries, { y, m });
@@ -107,12 +104,6 @@ export function CalendarScreen({
             ))}
           </View>
         </ScrollView>
-      )}
-
-      {showAd && (
-        <View style={styles.adSlot}>
-          <AdCard variant="banner" />
-        </View>
       )}
     </View>
   );
@@ -178,5 +169,4 @@ const styles = StyleSheet.create({
     borderRadius: metrics.cardRadius,
     paddingHorizontal: 14,
   },
-  adSlot: { marginTop: 'auto', paddingTop: 10, paddingBottom: 8 },
 });

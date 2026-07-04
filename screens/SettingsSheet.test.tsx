@@ -17,11 +17,9 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         currency={CURRENCIES[0]}
         expCats={['Food', 'Rent']}
         incCats={['Salary']}
-        premium={false}
         onChangeCurrency={() => {}}
         onChangeExpCats={() => {}}
         onChangeIncCats={() => {}}
-        onTogglePremium={() => {}}
         onLoadSample={() => {}}
         onImportZaim={() => {}}
         onClose={() => {}}
@@ -58,5 +56,11 @@ describe('SettingsSheet', () => {
     renderSheet({ onImportZaim });
     fireEvent.press(screen.getByLabelText('Import from Zaim'));
     expect(onImportZaim).toHaveBeenCalled();
+  });
+
+  it('renders no Premium/Remove-ads toggle (stripped for v1, #23)', () => {
+    renderSheet();
+    expect(screen.queryByLabelText('Remove ads')).toBeNull();
+    expect(screen.queryByText('Data & Premium')).toBeNull();
   });
 });

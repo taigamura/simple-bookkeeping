@@ -17,7 +17,7 @@ import {
   yen,
   type Transaction,
 } from '../domain';
-import { AdCard, CategoryBar, SplitBar } from '../ui';
+import { CategoryBar, SplitBar } from '../ui';
 import { useTheme, metrics, Txt, type Tone } from '../theme';
 import { IconButton } from '../nav/IconButton';
 
@@ -27,11 +27,9 @@ interface SummaryScreenProps {
   m: number;
   symbol: string;
   onSettings: () => void;
-  /** Free-tier ad slot above the tab bar; hidden for premium (decision 7). */
-  showAd: boolean;
 }
 
-export function SummaryScreen({ entries, y, m, symbol, onSettings, showAd }: SummaryScreenProps) {
+export function SummaryScreen({ entries, y, m, symbol, onSettings }: SummaryScreenProps) {
   const { colors } = useTheme();
   const month = monthEntries(entries, { y, m });
   const total = monthNet(month);
@@ -94,12 +92,6 @@ export function SummaryScreen({ entries, y, m, symbol, onSettings, showAd }: Sum
           ))
         )}
       </ScrollView>
-
-      {showAd && (
-        <View style={styles.adSlot}>
-          <AdCard variant="banner" />
-        </View>
-      )}
     </View>
   );
 }
@@ -131,7 +123,6 @@ const styles = StyleSheet.create({
   subtitle: { marginTop: 2 },
   scroll: { flex: 1 },
   body: { paddingBottom: 8 },
-  adSlot: { paddingTop: 10, paddingBottom: 8 },
   card: {
     borderRadius: metrics.cardRadius,
     padding: 18,

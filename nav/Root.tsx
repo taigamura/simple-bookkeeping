@@ -97,7 +97,6 @@ function Shell({ state, update }: RootProps) {
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
   const symbol = state.currency.symbol;
-  const showAd = !state.premium;
 
   const closeSheet = () => setSheet(null);
   const openSettings = () => setSheet('settings');
@@ -192,7 +191,6 @@ function Shell({ state, update }: RootProps) {
             onPrevMonth={() => goMonth(-1)}
             onNextMonth={() => goMonth(1)}
             onSettings={openSettings}
-            showAd={showAd}
           />
         ) : (
           <SummaryScreen
@@ -201,7 +199,6 @@ function Shell({ state, update }: RootProps) {
             m={cursor.m}
             symbol={symbol}
             onSettings={openSettings}
-            showAd={showAd}
           />
         )}
       </View>
@@ -217,7 +214,6 @@ function Shell({ state, update }: RootProps) {
             m={cursor.m}
             day={selectedDay}
             symbol={symbol}
-            showAd={showAd}
             onSave={handleSave}
             onClose={closeSheet}
           />
@@ -230,11 +226,9 @@ function Shell({ state, update }: RootProps) {
             currency={state.currency}
             expCats={state.expCats}
             incCats={state.incCats}
-            premium={state.premium}
             onChangeCurrency={(currency: Currency) => update({ currency })}
             onChangeExpCats={(expCats) => update({ expCats })}
             onChangeIncCats={(incCats) => update({ incCats })}
-            onTogglePremium={(premium) => update({ premium })}
             onLoadSample={loadSample}
             onImportZaim={importZaim}
             onClose={closeSheet}
