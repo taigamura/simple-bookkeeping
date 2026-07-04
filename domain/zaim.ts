@@ -1,12 +1,11 @@
 /**
- * Zaim CSV import — pure parsing (slices #12–#13, PRD #11). `decodeZaimBytes`
- * turns a Zaim export's raw file bytes into text; `parseZaimCsv` turns that
- * text's payment/income rows into kaji entries, skipping transfer,
- * balance-adjustment, and malformed rows with a reason tally. No React Native
- * or storage here — same shape as the other domain modules (`categories`,
- * `recurrence`).
- *
- * A UTF-8 decode fallback is #14 — extends this module without reshaping it.
+ * Zaim CSV import — pure parsing (slices #12–#14, PRD #11). `decodeZaimBytes`
+ * turns a Zaim export's raw file bytes into text, trying Shift-JIS then
+ * UTF-8, and returns `null` when neither decodes into a recognizable Zaim
+ * header. `parseZaimCsv` turns that text's payment/income rows into kaji
+ * entries, skipping transfer, balance-adjustment, and malformed rows with a
+ * reason tally. No React Native or storage here — same shape as the other
+ * domain modules (`categories`, `recurrence`).
  */
 import * as Encoding from 'encoding-japanese';
 
@@ -37,13 +36,18 @@ const BLANK_VALUES = new Set(['', '-', '−', '—']);
 
 /**
  * Decode raw file bytes as Shift-JIS (Zaim's default export encoding) and
- * validate the decoded header row against `ZAIM_HEADER`. Returns the decoded
- * text on a match, or `null` when it doesn't look like a Zaim export (the
- * UTF-8 retry lands in a later slice).
+ * validate the decoded header row against `ZAIM_HEADER`. If that doesn't look
+ * like a Zaim export, retry decoding the same bytes as UTF-8 (some Zaim
+ * exports — e.g. re-saved through another tool — use it instead) and
+ * re-validate. Returns the decoded text on either match, or `null` when
+ * neither encoding produces a recognizable Zaim export.
  */
 export function decodeZaimBytes(bytes: Uint8Array): string | null {
-  const text = Encoding.convert(bytes, { to: 'UNICODE', from: 'SJIS', type: 'string' });
-  return hasZaimHeader(text) ? text : null;
+  const sjis = Encoding.convert(bytes, { to: 'UNICODE', from: 'SJIS', type: 'string' });
+  if (hasZaimHeader(sjis)) return sjis;
+
+  const utf8 = Encoding.convert(bytes, { to: 'UNICODE', from: 'UTF8', type: 'string' });
+  return hasZaimHeader(utf8) ? utf8 : null;
 }
 
 function hasZaimHeader(text: string): boolean {

@@ -174,7 +174,13 @@ describe('decodeZaimBytes', () => {
     expect(decodeZaimBytes(bytes)).toBe(csv);
   });
 
-  it('returns null when the header does not match a Zaim export', () => {
+  it('falls back to UTF-8 when the Shift-JIS decode does not validate the header', () => {
+    const csv = [HEADER, '2026-07-01,現金,食費,-,-,-,-,-,-,JPY,-,1200,-,-'].join('\n');
+    const bytes = new Uint8Array(Buffer.from(csv, 'utf-8'));
+    expect(decodeZaimBytes(bytes)).toBe(csv);
+  });
+
+  it('returns null when neither Shift-JIS nor UTF-8 validates the header', () => {
     const notZaim = 'name,amount\nlunch,900';
     const bytes = new Uint8Array(
       Encoding.convert(Encoding.stringToCode(notZaim), { to: 'SJIS', type: 'array' }),
