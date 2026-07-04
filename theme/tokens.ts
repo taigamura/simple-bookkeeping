@@ -196,4 +196,12 @@ export const shadows = {
     shadowRadius: 24,
     elevation: 8,
   },
+  /** Center ＋ FAB green glow (design: `0 8 22 rgba(43,212,138,.32)`). */
+  fabGlow: {
+    shadowColor: accents.positive,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.32,
+    shadowRadius: 22,
+    elevation: 10,
+  },
 } as const;
