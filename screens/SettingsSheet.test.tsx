@@ -23,6 +23,7 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         onChangeIncCats={() => {}}
         onTogglePremium={() => {}}
         onLoadSample={() => {}}
+        onImportZaim={() => {}}
         onClose={() => {}}
         {...over}
       />
@@ -50,5 +51,12 @@ describe('SettingsSheet', () => {
     fireEvent.press(screen.getByLabelText('Income'));
     expect(screen.getByText('Salary')).toBeTruthy();
     expect(screen.queryByText('Food')).toBeNull();
+  });
+
+  it('renders an "Import from Zaim" action that fires its callback', () => {
+    const onImportZaim = jest.fn();
+    renderSheet({ onImportZaim });
+    fireEvent.press(screen.getByLabelText('Import from Zaim'));
+    expect(onImportZaim).toHaveBeenCalled();
   });
 });

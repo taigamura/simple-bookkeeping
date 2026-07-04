@@ -7,16 +7,21 @@
  * the ledger and category seeds flow to the screens and new entries persist.
  * Month navigation is fixed to the current month here; it arrives in slice #4.
  */
+import * as DocumentPicker from 'expo-document-picker';
+import { File } from 'expo-file-system';
 import React, { useMemo, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Alert, Platform, StyleSheet, View } from 'react-native';
 
 import {
   clampDay,
+  decodeZaimBytes,
+  parseZaimCsv,
   sampleEntries,
   shiftMonth,
   type Currency,
   type Transaction,
   type YM,
+  type ZaimSkipTally,
 } from '../domain';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
@@ -32,6 +37,45 @@ import type { Sheet, Tab } from './types';
 interface RootProps {
   state: AppState;
   update: (patch: Partial<AppState>) => void;
+}
+
+// RN Web's Alert.alert is a no-op stub (react-native-web has no dialog
+// implementation), so a plain Alert-only confirmation would silently do
+// nothing on web — this project's primary verification platform. These two
+// helpers fall back to the browser's window.alert/confirm there.
+function notify(title: string, message: string) {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+}
+
+// skipSummary(): renders the Zaim skip tally as a trailing clause, e.g.
+// " — 12 transfers skipped, 10 malformed rows skipped" (empty when nothing
+// was skipped) so the confirmation shows a breakdown by reason, not just an
+// opaque "some rows were skipped".
+function skipSummary(skipped: ZaimSkipTally): string {
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const parts: string[] = [];
+  if (skipped.transfer > 0) parts.push(`${plural(skipped.transfer, 'transfer')} skipped`);
+  if (skipped.balanceAdjustment > 0) {
+    parts.push(`${plural(skipped.balanceAdjustment, 'balance adjustment')} skipped`);
+  }
+  if (skipped.malformed > 0) parts.push(`${plural(skipped.malformed, 'malformed row')} skipped`);
+  if (skipped.duplicate > 0) parts.push(`${plural(skipped.duplicate, 'duplicate')} skipped`);
+  return parts.length > 0 ? ` — ${parts.join(', ')}` : '';
+}
+
+function confirm(title: string, message: string, onConfirm: () => void) {
+  if (Platform.OS === 'web') {
+    if (window.confirm(`${title}\n${message}`)) onConfirm();
+  } else {
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Import', onPress: onConfirm },
+    ]);
+  }
 }
 
 export function Root({ state, update }: RootProps) {
@@ -66,6 +110,47 @@ function Shell({ state, update }: RootProps) {
     setSelectedDay(1);
     setTab('calendar');
     setSheet(null);
+  };
+
+  // importZaim(): pick a Zaim CSV export → decode (Shift-JIS or UTF-8) →
+  // parse against the current ledger (so re-importing an overlapping export
+  // skips rows already present) → native Import/Cancel confirmation with the
+  // entry count and skip-reason breakdown → merge entries and any new
+  // categories into the ledger through the normal update() path. Canceling
+  // the picker or the confirmation writes nothing.
+  const importZaim = async () => {
+    const picked = await DocumentPicker.getDocumentAsync({ type: 'text/csv' });
+    if (picked.canceled) return;
+
+    const bytes = new Uint8Array(await new File(picked.assets[0].uri).arrayBuffer());
+    const text = decodeZaimBytes(bytes);
+    if (!text) {
+      notify("Doesn't look like a Zaim export", 'No entries were imported.');
+      return;
+    }
+
+    const result = parseZaimCsv(text, {
+      expCats: state.expCats,
+      incCats: state.incCats,
+      entries: state.entries,
+    });
+    if (result.entries.length === 0) {
+      notify(
+        'No entries found',
+        `No importable rows were found in that file.${skipSummary(result.skipped)}`,
+      );
+      return;
+    }
+
+    const message = `${result.entries.length} entries ready to import${skipSummary(result.skipped)}`;
+    confirm('Import from Zaim', message, () => {
+      update({
+        entries: [...state.entries, ...result.entries],
+        expCats: result.expCats,
+        incCats: result.incCats,
+      });
+      setSheet(null);
+    });
   };
 
   // Month navigation: shift the cursor and clamp the selected day into the new
@@ -146,6 +231,7 @@ function Shell({ state, update }: RootProps) {
             onChangeIncCats={(incCats) => update({ incCats })}
             onTogglePremium={(premium) => update({ premium })}
             onLoadSample={loadSample}
+            onImportZaim={importZaim}
             onClose={closeSheet}
           />
         )}
