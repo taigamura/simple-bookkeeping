@@ -31,7 +31,9 @@ export {
   shiftMonth,
   clampDay,
   WEEKDAYS,
+  WEEKDAY_ABBR,
   MONTH_NAMES,
+  dayLabel,
 } from './calendar';
 export {
   categoryBreakdown,

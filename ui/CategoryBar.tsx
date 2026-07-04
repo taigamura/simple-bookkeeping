@@ -1,7 +1,8 @@
 /**
  * CategoryBar — one ranked spending row on Summary: category label + amount on
- * top, a track bar below whose fill is scaled to the largest category
- * (`fraction`). Expenses only, so the amount reads in the negative tone.
+ * top, a track bar below whose green fill is scaled to the largest category
+ * (`fraction`). Track = `--card`, fill = `positive` per the design (§5); the
+ * amount reads muted since these are all expenses.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -34,11 +35,11 @@ export function CategoryBar({
           {yen(total, symbol)}
         </Txt>
       </View>
-      <View style={[styles.track, { backgroundColor: colors.card3 }]}>
+      <View style={[styles.track, { backgroundColor: colors.card }]}>
         <View
           style={[
             styles.fill,
-            { backgroundColor: accents.negative, width: `${Math.max(0, Math.min(1, fraction)) * 100}%` },
+            { backgroundColor: accents.positive, width: `${Math.max(0, Math.min(1, fraction)) * 100}%` },
           ]}
         />
       </View>
