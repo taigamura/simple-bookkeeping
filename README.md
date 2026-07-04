@@ -81,17 +81,68 @@ Deployment target is the iOS App Store via [EAS](https://expo.dev/eas)
 Web (`npm run web`) is used purely for development validation — it is not
 the shipping target.
 
-High-level pipeline (see `initial-spec.md` §1.3):
-
-1. Enroll in the Apple Developer Program ($99/yr) — required before any
-   App Store submission or TestFlight distribution.
-2. `eas build --platform ios` — produces a signed iOS binary in Expo's
-   cloud (no local Xcode/Mac needed).
-3. `eas submit --platform ios` — uploads the build to App Store Connect.
-4. Distribute via TestFlight for real-device testing before public release.
-5. Complete App Store Connect metadata (privacy nutrition label, age
-   rating, screenshots, description) and submit for review.
-
 EAS's free tier covers roughly 15 iOS + 15 Android builds/month, which is
-enough for this project's needs; the Apple Developer fee is the only
-unavoidable cost, and only once going native.
+enough for this project's needs; the Apple Developer fee ($99/yr) is the
+only unavoidable cost.
+
+### Shipping plan (status as of 2026-07-04)
+
+All code-side items from [`docs/appstore-readiness.md`](docs/appstore-readiness.md)
+are done (Premium/ad surfaces stripped, CSV export, corrupt-load safety
+net, JP/EN localization, haptics, Face ID lock, Sentry, splash screen).
+Apple Developer enrollment is paid and awaiting approval. Remaining steps,
+in order:
+
+**While Apple enrollment is pending (typically 24–48h):**
+
+1. **EAS build configuration** — the last unchecked code item:
+   - Create a free [Expo account](https://expo.dev), then `npx eas init`
+     and `npx eas build:configure`; commit `eas.json`.
+   - Add to `app.json`: `ios.bundleIdentifier` (permanent once shipped —
+     choose carefully), `ios.buildNumber: "1"`, and `android.package` for
+     later.
+   - Add `ios.config.usesNonExemptEncryption: false` — the app makes no
+     custom encrypted connections; this skips the export-compliance
+     question on every TestFlight upload.
+   - Bump `version` to `1.0.0` for the submission.
+2. **Write and host the privacy policy.** The easy case ("all data stays
+   on device; nothing is collected") with one decision: Sentry is inert
+   until a DSN is supplied — ship v1 with it off for a pure "Data Not
+   Collected" label, or on (then the policy must mention crash data). Off
+   is simpler for v1. A GitHub Pages page in this repo works as the
+   hosted URL.
+
+**Once Apple approves the account:**
+
+3. **Accept agreements** at
+   [App Store Connect](https://appstoreconnect.apple.com) (Business →
+   Paid/Free Apps). Builds can't be submitted until these are accepted.
+4. **First iOS build:** `npx eas build --platform ios`. Let EAS log into
+   the Apple account when prompted — it creates the signing certificate,
+   provisioning profile, and bundle ID registration automatically (no
+   manual Xcode certificate work).
+5. **Create the app record + upload to TestFlight:**
+   `npx eas submit --platform ios` — it can create the App Store Connect
+   app record (this is where the name "Kaji" is claimed; have a fallback
+   name ready). Add yourself as an internal tester in TestFlight and
+   install on a real iPhone.
+6. **Native validation on device** (non-negotiable per the readiness
+   doc): exercise the risky areas — RN `Modal` bottom sheets, safe-area
+   insets, document picker + Shift-JIS Zaim import, keypad/keyboard
+   interaction — plus the features that have only run in dev: Face ID
+   lock, haptics, JP/EN locale switching, CSV export share sheet. Fix
+   what breaks, rebuild, re-test.
+
+**Then the listing and submission:**
+
+7. **App Store Connect listing:** description, subtitle, keywords,
+   category (Finance), age rating questionnaire, privacy policy URL, and
+   privacy nutrition labels ("Data Not Collected" if Sentry stays off).
+   Do both Japanese and English listings — Japan is the real market.
+8. **Screenshots:** at least one 6.9" (iPhone 16 Pro Max class) set;
+   simulator captures are fine. JP and EN sets to match the listings.
+9. **Submit for review.** First reviews typically take 1–3 days. The
+   common first-app rejection causes (fake ads, fake premium toggle) are
+   already defused; the remaining risk is reviewer confusion — use the
+   review notes field to say it's a fully local app with no accounts, and
+   mention the Zaim CSV import so they don't hunt for a login.
