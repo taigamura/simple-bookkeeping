@@ -22,6 +22,8 @@ export interface Strings {
     add: string;
     cancel: string;
     import: string;
+    on: string;
+    off: string;
   };
   nav: {
     calendar: string;
@@ -77,6 +79,13 @@ export interface Strings {
     title: string;
     message: string;
   };
+  lock: {
+    label: string;
+    unavailableExplanation: string;
+    prompt: string;
+    lockedTitle: string;
+    unlockButton: string;
+  };
   zaim: {
     notZaimTitle: string;
     notZaimMessage: string;
@@ -94,6 +103,8 @@ export const en: Strings = {
     add: 'Add',
     cancel: 'Cancel',
     import: 'Import',
+    on: 'On',
+    off: 'Off',
   },
   nav: {
     calendar: 'Calendar',
@@ -157,6 +168,13 @@ export const en: Strings = {
     message:
       "Your previous data couldn't be read; a backup copy was kept. You can export it from Settings.",
   },
+  lock: {
+    label: 'Lock',
+    unavailableExplanation: 'Set up Face ID, Touch ID, or a passcode on this device to use this.',
+    prompt: 'Unlock Kaji',
+    lockedTitle: 'Kaji is locked',
+    unlockButton: 'Unlock',
+  },
   zaim: {
     notZaimTitle: "Doesn't look like a Zaim export",
     notZaimMessage: 'No entries were imported.',
@@ -179,6 +197,8 @@ export const ja: Strings = {
     add: '追加',
     cancel: 'キャンセル',
     import: '読み込む',
+    on: 'オン',
+    off: 'オフ',
   },
   nav: {
     calendar: 'カレンダー',
@@ -240,6 +260,13 @@ export const ja: Strings = {
   corruptNotice: {
     title: 'バックアップを保持しました',
     message: '以前のデータを読み込めませんでした。バックアップは保持されています。設定から書き出せます。',
+  },
+  lock: {
+    label: 'ロック',
+    unavailableExplanation: 'この端末でFace ID・Touch ID・パスコードを設定すると使えます。',
+    prompt: 'Kajiのロックを解除',
+    lockedTitle: 'Kajiはロックされています',
+    unlockButton: '解除する',
   },
   zaim: {
     notZaimTitle: 'Zaimのエクスポートではないようです',

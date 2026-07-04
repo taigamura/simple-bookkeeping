@@ -25,6 +25,9 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         onImportZaim={() => {}}
         hasCorruptStash={false}
         onExportCorruptStash={() => {}}
+        lockEnabled={false}
+        lockAvailable={true}
+        onToggleLock={() => {}}
         onClose={() => {}}
         {...over}
       />
@@ -84,5 +87,24 @@ describe('SettingsSheet', () => {
     renderSheet({ hasCorruptStash: true, onExportCorruptStash });
     fireEvent.press(screen.getByLabelText('Export unreadable backup'));
     expect(onExportCorruptStash).toHaveBeenCalled();
+  });
+
+  it('fires onToggleLock when the Lock switch is available and pressed (#30)', () => {
+    const onToggleLock = jest.fn();
+    renderSheet({ lockEnabled: false, lockAvailable: true, onToggleLock });
+    fireEvent.press(screen.getByLabelText('Lock'));
+    expect(onToggleLock).toHaveBeenCalledWith(true);
+  });
+
+  it('disables the Lock switch and shows an explanation when unavailable on this device (#30)', () => {
+    const onToggleLock = jest.fn();
+    renderSheet({ lockEnabled: false, lockAvailable: false, onToggleLock });
+    const lockSwitch = screen.getByLabelText('Lock');
+    expect(lockSwitch.props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(lockSwitch);
+    expect(onToggleLock).not.toHaveBeenCalled();
+    expect(
+      screen.getByText('Set up Face ID, Touch ID, or a passcode on this device to use this.'),
+    ).toBeTruthy();
   });
 });

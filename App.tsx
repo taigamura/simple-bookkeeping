@@ -2,7 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
-import { Root } from './nav';
+import { LockGate, Root } from './nav';
 import { useStore } from './store';
 import { ThemeProvider } from './theme';
 import { useAppFonts } from './theme/useAppFonts';
@@ -39,13 +39,15 @@ export default function App() {
       onModeChange={(mode) => update({ theme: mode })}
     >
       <StatusBar style="auto" />
-      <Root
-        state={state}
-        update={update}
-        showCorruptNotice={showCorruptNotice}
-        hasCorruptStash={hasCorruptStash}
-        readCorruptStash={readCorruptStash}
-      />
+      <LockGate enabled={state.lockEnabled}>
+        <Root
+          state={state}
+          update={update}
+          showCorruptNotice={showCorruptNotice}
+          hasCorruptStash={hasCorruptStash}
+          readCorruptStash={readCorruptStash}
+        />
+      </LockGate>
     </ThemeProvider>
   );
 }

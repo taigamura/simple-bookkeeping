@@ -22,6 +22,8 @@ export interface AppState {
   incCats: string[];
   currency: Currency;
   premium: boolean;
+  /** Face ID / passcode gate on launch (#30); default off, web never gates. */
+  lockEnabled: boolean;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -31,6 +33,7 @@ export const DEFAULT_STATE: AppState = {
   incCats: DEFAULT_INC_CATS,
   currency: DEFAULT_CURRENCY,
   premium: false,
+  lockEnabled: false,
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */

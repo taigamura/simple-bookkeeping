@@ -25,6 +25,7 @@ import {
   type ZaimSkipTally,
 } from '../domain';
 import { strings } from '../i18n';
+import * as auth from '../platform/auth';
 import { shareTextFile } from '../platform/shareFile';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
@@ -109,6 +110,20 @@ function Shell({
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
   const symbol = state.currency.symbol;
+
+  // Whether this device can even satisfy the lock (#30) — checked once on
+  // mount so the Settings toggle can be disabled-with-explanation rather
+  // than let the user turn on a gate the device can't honor.
+  const [lockAvailable, setLockAvailable] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    auth.isAuthAvailable().then((available) => {
+      if (alive) setLockAvailable(available);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // One-time boot notice (#28): fires once per corrupt boot, off
   // `showCorruptNotice` (this session's load result), never off
@@ -269,6 +284,9 @@ function Shell({
             onImportZaim={importZaim}
             hasCorruptStash={hasCorruptStash}
             onExportCorruptStash={exportCorruptStash}
+            lockEnabled={state.lockEnabled}
+            lockAvailable={lockAvailable}
+            onToggleLock={(lockEnabled) => update({ lockEnabled })}
             onClose={closeSheet}
           />
         )}

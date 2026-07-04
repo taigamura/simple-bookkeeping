@@ -37,6 +37,10 @@ interface SettingsSheetProps {
   /** Whether a corrupt-stash blob exists (#28) — gates the recovery row. */
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
+  /** Face ID / passcode gate (#30). */
+  lockEnabled: boolean;
+  lockAvailable: boolean;
+  onToggleLock: (enabled: boolean) => void;
   onClose: () => void;
 }
 
@@ -57,6 +61,9 @@ export function SettingsSheet({
   onImportZaim,
   hasCorruptStash,
   onExportCorruptStash,
+  lockEnabled,
+  lockAvailable,
+  onToggleLock,
   onClose,
 }: SettingsSheetProps) {
   return (
@@ -80,6 +87,7 @@ export function SettingsSheet({
         showsVerticalScrollIndicator={false}
       >
         <Appearance />
+        <LockToggle enabled={lockEnabled} available={lockAvailable} onToggle={onToggleLock} />
         <CurrencyGrid value={currency} onChange={onChangeCurrency} />
         <Categories
           expCats={expCats}
@@ -119,6 +127,58 @@ function Appearance() {
         ))}
       </View>
     </Section>
+  );
+}
+
+/**
+ * Face ID / passcode lock toggle (#30). Disabled with an explanation when
+ * the device has no biometrics/passcode enrolled — never lets the user
+ * flip on a gate the device can't actually satisfy.
+ */
+function LockToggle({
+  enabled,
+  available,
+  onToggle,
+}: {
+  enabled: boolean;
+  available: boolean;
+  onToggle: (enabled: boolean) => void;
+}) {
+  const { colors } = useTheme();
+  const on = enabled && available;
+  return (
+    <View style={styles.section}>
+      <Txt variant="microLabel" tone="dim">
+        {strings.lock.label}
+      </Txt>
+      <View style={[styles.lockRow, { backgroundColor: colors.card2 }]}>
+        <View style={styles.lockCopy}>
+          <Txt variant="listItem" tone="ink">
+            {strings.lock.label}
+          </Txt>
+          {!available && (
+            <Txt variant="secondary" tone="dim">
+              {strings.lock.unavailableExplanation}
+            </Txt>
+          )}
+        </View>
+        <Pressable
+          onPress={() => onToggle(!on)}
+          disabled={!available}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: on, disabled: !available }}
+          accessibilityLabel={strings.lock.label}
+          style={[
+            styles.pill,
+            { backgroundColor: on ? accents.positive : colors.card3, opacity: available ? 1 : 0.5 },
+          ]}
+        >
+          <Txt variant="microLabel" tone={on ? 'onPositive' : 'muted'}>
+            {on ? strings.common.on : strings.common.off}
+          </Txt>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -413,6 +473,22 @@ const styles = StyleSheet.create({
   scroll: { maxHeight: 460 },
   scrollBody: { gap: 22, paddingBottom: 4 },
   section: { gap: 10 },
+  lockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: metrics.iconTileRadius,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  lockCopy: { flex: 1, gap: 2 },
+  pill: {
+    paddingHorizontal: 16,
+    height: 32,
+    borderRadius: metrics.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sampleBtn: {
     height: 46,
     borderRadius: metrics.iconTileRadius,

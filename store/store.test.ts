@@ -48,6 +48,14 @@ describe('createStore', () => {
     expect((await store.load()).entries).toEqual([sampleEntry]);
   });
 
+  it('round-trips lockEnabled (#30): saved true survives a reload', async () => {
+    const store = createStore(createMemoryPersistence());
+
+    await store.save(stateWith({ lockEnabled: true }));
+
+    expect((await store.load()).lockEnabled).toBe(true);
+  });
+
   it('round-trips through the default AsyncStorage-backed store', async () => {
     // No persistence arg → default asyncStoragePersistence (AsyncStorage mock).
     const store = createStore();
