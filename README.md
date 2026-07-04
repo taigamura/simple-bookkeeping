@@ -11,6 +11,8 @@ See [`initial-spec.md`](initial-spec.md) for the original scope/stack spec
 and [`docs/build-decisions.md`](docs/build-decisions.md) for the full set of
 design and implementation decisions.
 
+Privacy Policy: https://taigamura.github.io/simple-bookkeeping/privacy.html
+
 ## Requirements
 
 - **Node 20.** System Node may be older (18.x throws
