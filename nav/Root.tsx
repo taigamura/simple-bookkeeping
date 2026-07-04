@@ -26,6 +26,7 @@ import {
 } from '../domain';
 import { strings } from '../i18n';
 import * as auth from '../platform/auth';
+import { entrySaved } from '../platform/haptics';
 import { shareTextFile } from '../platform/shareFile';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
@@ -220,6 +221,7 @@ function Shell({
   // show the Calendar.
   const handleSave = (entries: Transaction[]) => {
     if (entries.length === 0) return;
+    entrySaved();
     update({ entries: [...state.entries, ...entries] });
     const days = new Set(entries.map((e) => e.day));
     setSelectedDay((d) => (days.has(d) ? d : entries[0].day));

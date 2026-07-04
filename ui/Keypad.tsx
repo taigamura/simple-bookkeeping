@@ -10,6 +10,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { KeypadKey } from '../domain';
 import { strings } from '../i18n';
+import { keypadTap } from '../platform/haptics';
 import { useTheme, metrics, Txt } from '../theme';
 
 const KEYS: KeypadKey[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', 'del'];
@@ -21,7 +22,10 @@ export function Keypad({ onKey }: { onKey: (key: KeypadKey) => void }) {
       {KEYS.map((key) => (
         <Pressable
           key={key}
-          onPress={() => onKey(key)}
+          onPress={() => {
+            keypadTap();
+            onKey(key);
+          }}
           accessibilityRole="button"
           accessibilityLabel={key === 'del' ? strings.keypad.delete : key}
           style={({ pressed }) => [
