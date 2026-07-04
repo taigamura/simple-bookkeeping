@@ -21,6 +21,7 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         onChangeExpCats={() => {}}
         onChangeIncCats={() => {}}
         onLoadSample={() => {}}
+        onExportData={() => {}}
         onImportZaim={() => {}}
         onClose={() => {}}
         {...over}
@@ -56,6 +57,13 @@ describe('SettingsSheet', () => {
     renderSheet({ onImportZaim });
     fireEvent.press(screen.getByLabelText('Import from Zaim'));
     expect(onImportZaim).toHaveBeenCalled();
+  });
+
+  it('renders an "Export data" action that fires its callback', () => {
+    const onExportData = jest.fn();
+    renderSheet({ onExportData });
+    fireEvent.press(screen.getByLabelText('Export data'));
+    expect(onExportData).toHaveBeenCalled();
   });
 
   it('renders no Premium/Remove-ads toggle (stripped for v1, #23)', () => {

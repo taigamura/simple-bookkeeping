@@ -5,7 +5,8 @@
  */
 import * as Encoding from 'encoding-japanese';
 
-import { decodeZaimBytes, parseZaimCsv, type ZaimExisting } from './zaim';
+import type { Transaction } from './types';
+import { decodeZaimBytes, parseZaimCsv, serializeZaimCsv, type ZaimExisting } from './zaim';
 
 const HEADER =
   '日付,方法,カテゴリ,カテゴリの内訳,支払元,入金先,品目,メモ,お店,通貨,収入,支出,振替,残高調整';
@@ -229,5 +230,93 @@ describe('decodeZaimBytes', () => {
       Encoding.convert(Encoding.stringToCode(notZaim), { to: 'SJIS', type: 'array' }),
     );
     expect(decodeZaimBytes(bytes)).toBeNull();
+  });
+});
+
+describe('serializeZaimCsv', () => {
+  const entry = (over: Partial<Transaction>): Transaction => ({
+    id: 'ignored',
+    y: 2026,
+    m: 6,
+    day: 1,
+    type: 'expense',
+    amount: 1200,
+    category: 'Food',
+    note: 'Food',
+    repeat: 'never',
+    ...over,
+  });
+
+  it('emits a header that passes decodeZaimBytes validation', () => {
+    const csv = serializeZaimCsv([]);
+    const bytes = new Uint8Array(Buffer.from(csv, 'utf-8'));
+    expect(decodeZaimBytes(bytes)).toBe(csv);
+  });
+
+  it('re-importing an exported ledger over itself yields zero new entries', () => {
+    const ledger = [
+      entry({ day: 1, type: 'expense', amount: 1200, category: 'Food', note: 'Lunch' }),
+      entry({ day: 2, type: 'income', amount: 300000, category: 'Salary', note: 'Salary' }),
+    ];
+    const csv = serializeZaimCsv(ledger);
+    const { entries, skipped } = parseZaimCsv(csv, cats({ entries: ledger }));
+    expect(entries).toHaveLength(0);
+    expect(skipped.duplicate).toBe(2);
+  });
+
+  it('re-importing into an empty ledger reproduces every entry and recreates its categories', () => {
+    const ledger = [
+      entry({ day: 1, type: 'expense', amount: 1200, category: 'Groceries', note: 'Lunch' }),
+      entry({ day: 15, type: 'income', amount: 50000, category: 'Freelance', note: 'Freelance' }),
+    ];
+    const csv = serializeZaimCsv(ledger);
+    const { entries, expCats, incCats } = parseZaimCsv(
+      csv,
+      cats({ expCats: [], incCats: [], entries: [] }),
+    );
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({
+      y: 2026,
+      m: 6,
+      day: 1,
+      type: 'expense',
+      amount: 1200,
+      category: 'Groceries',
+      note: 'Lunch',
+    });
+    expect(entries[1]).toMatchObject({
+      y: 2026,
+      m: 6,
+      day: 15,
+      type: 'income',
+      amount: 50000,
+      category: 'Freelance',
+      note: 'Freelance',
+    });
+    expect(expCats).toContain('Groceries');
+    expect(incCats).toContain('Freelance');
+  });
+
+  it('round-trips a note equal to its category (the no-note fallback case)', () => {
+    const ledger = [entry({ category: 'Rent', note: 'Rent' })];
+    const csv = serializeZaimCsv(ledger);
+    const { entries } = parseZaimCsv(csv, cats({ entries: [] }));
+    expect(entries[0]).toMatchObject({ category: 'Rent', note: 'Rent' });
+  });
+
+  it('quotes and round-trips commas, double quotes, and Japanese text', () => {
+    const ledger = [
+      entry({
+        category: '食費, 外食',
+        note: 'Lunch with "friends", 2 people — 日本語のメモ',
+      }),
+    ];
+    const csv = serializeZaimCsv(ledger);
+    const { entries } = parseZaimCsv(csv, cats({ expCats: [], entries: [] }));
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      category: '食費, 外食',
+      note: 'Lunch with "friends", 2 people — 日本語のメモ',
+    });
   });
 });

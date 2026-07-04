@@ -17,12 +17,14 @@ import {
   decodeZaimBytes,
   parseZaimCsv,
   sampleEntries,
+  serializeZaimCsv,
   shiftMonth,
   type Currency,
   type Transaction,
   type YM,
   type ZaimSkipTally,
 } from '../domain';
+import { shareTextFile } from '../platform/shareFile';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
 import { SettingsSheet } from '../screens/SettingsSheet';
@@ -109,6 +111,13 @@ function Shell({ state, update }: RootProps) {
     setSelectedDay(1);
     setTab('calendar');
     setSheet(null);
+  };
+
+  // exportData(): serialize the full ledger to a Zaim-format CSV and hand it
+  // to the share sheet. Restore is the existing "Import from Zaim" row below —
+  // an exported file round-trips through it unchanged, so no new import UI.
+  const exportData = () => {
+    shareTextFile('kaji-export.csv', serializeZaimCsv(state.entries));
   };
 
   // importZaim(): pick a Zaim CSV export → decode (Shift-JIS or UTF-8) →
@@ -230,6 +239,7 @@ function Shell({ state, update }: RootProps) {
             onChangeExpCats={(expCats) => update({ expCats })}
             onChangeIncCats={(incCats) => update({ incCats })}
             onLoadSample={loadSample}
+            onExportData={exportData}
             onImportZaim={importZaim}
             onClose={closeSheet}
           />

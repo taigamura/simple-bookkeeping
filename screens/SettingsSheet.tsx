@@ -31,6 +31,7 @@ interface SettingsSheetProps {
   onChangeExpCats: (list: string[]) => void;
   onChangeIncCats: (list: string[]) => void;
   onLoadSample: () => void;
+  onExportData: () => void;
   onImportZaim: () => void;
   onClose: () => void;
 }
@@ -48,6 +49,7 @@ export function SettingsSheet({
   onChangeExpCats,
   onChangeIncCats,
   onLoadSample,
+  onExportData,
   onImportZaim,
   onClose,
 }: SettingsSheetProps) {
@@ -79,7 +81,11 @@ export function SettingsSheet({
           onChangeExpCats={onChangeExpCats}
           onChangeIncCats={onChangeIncCats}
         />
-        <DataActions onLoadSample={onLoadSample} onImportZaim={onImportZaim} />
+        <DataActions
+          onLoadSample={onLoadSample}
+          onExportData={onExportData}
+          onImportZaim={onImportZaim}
+        />
       </ScrollView>
     </View>
   );
@@ -302,25 +308,31 @@ function Categories({
   );
 }
 
-/** Load-sample-data + Zaim import (decision 8, #12). Premium/ads stripped for v1 (#23). */
+/**
+ * Load-sample-data (decision 8, #12), Export/Import-from-Zaim (#24, #12).
+ * Premium/ads stripped for v1 (#23).
+ */
 function DataActions({
   onLoadSample,
+  onExportData,
   onImportZaim,
 }: {
   onLoadSample: () => void;
+  onExportData: () => void;
   onImportZaim: () => void;
 }) {
   const { colors } = useTheme();
+  const rowStyle = ({ pressed }: { pressed: boolean }) => [
+    styles.sampleBtn,
+    { backgroundColor: pressed ? colors.card3 : colors.card2 },
+  ];
   return (
     <Section label="Data">
       <Pressable
         onPress={onLoadSample}
         accessibilityRole="button"
         accessibilityLabel="Load sample data"
-        style={({ pressed }) => [
-          styles.sampleBtn,
-          { backgroundColor: pressed ? colors.card3 : colors.card2 },
-        ]}
+        style={rowStyle}
       >
         <Txt variant="listItem" tone="ink">
           Load sample data
@@ -328,13 +340,21 @@ function DataActions({
       </Pressable>
 
       <Pressable
+        onPress={onExportData}
+        accessibilityRole="button"
+        accessibilityLabel="Export data"
+        style={rowStyle}
+      >
+        <Txt variant="listItem" tone="ink">
+          Export data
+        </Txt>
+      </Pressable>
+
+      <Pressable
         onPress={onImportZaim}
         accessibilityRole="button"
         accessibilityLabel="Import from Zaim"
-        style={({ pressed }) => [
-          styles.sampleBtn,
-          { backgroundColor: pressed ? colors.card3 : colors.card2 },
-        ]}
+        style={rowStyle}
       >
         <Txt variant="listItem" tone="ink">
           Import from Zaim

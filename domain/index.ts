@@ -52,6 +52,7 @@ export { sampleEntries } from './sample';
 export {
   decodeZaimBytes,
   parseZaimCsv,
+  serializeZaimCsv,
   type ZaimExisting,
   type ZaimImportResult,
   type ZaimSkipReason,

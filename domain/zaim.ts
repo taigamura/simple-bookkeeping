@@ -252,6 +252,40 @@ function composeNote(row: ParsedRow): string {
   return parts.length > 0 ? parts.join(' / ') : row.category;
 }
 
+/**
+ * Serialize a ledger to a Zaim-format CSV (decision: #24's Export data row).
+ * The header is `ZAIM_HEADER` verbatim so the file passes `decodeZaimBytes`'s
+ * validation and re-imports through `parseZaimCsv` unchanged. Each entry's
+ * note is written to the メモ (memo) column alone — `composeNote` joins just
+ * that one non-empty part back into the original note, so the round trip
+ * holds whether or not the note happens to equal the category (`makeEntry`'s
+ * fallback case). `repeat` has no column and is not preserved; re-imported
+ * entries land as one-offs, matching existing Zaim-import behavior.
+ */
+export function serializeZaimCsv(entries: Transaction[]): string {
+  const lines = [ZAIM_HEADER.join(',')];
+  for (const t of entries) lines.push(toZaimRow(t).map(csvField).join(','));
+  return lines.join('\r\n');
+}
+
+function toZaimRow(t: Transaction): string[] {
+  const row = new Array<string>(ZAIM_HEADER.length).fill('');
+  row[COL.date] = `${t.y}-${pad2(t.m + 1)}-${pad2(t.day)}`;
+  row[COL.category] = t.category;
+  row[COL.memo] = t.note;
+  row[t.type === 'income' ? COL.income : COL.expense] = String(t.amount);
+  return row;
+}
+
+function pad2(n: number): string {
+  return n.toString().padStart(2, '0');
+}
+
+/** Quote a CSV field (RFC 4180) when it holds a comma, quote, or newline. */
+function csvField(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
 /** Minimal CSV line splitter: handles quoted fields, commas, and "" escapes. */
 function parseCsvLine(line: string): string[] {
   const out: string[] = [];
