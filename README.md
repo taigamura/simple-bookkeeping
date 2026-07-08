@@ -98,8 +98,8 @@ in order:
 **While Apple enrollment is pending (typically 24–48h):**
 
 1. **EAS build configuration** — the last unchecked code item:
-   - Create a free [Expo account](https://expo.dev), then `npx eas init`
-     and `npx eas build:configure`; commit `eas.json`.
+   - Create a free [Expo account](https://expo.dev), then `npx eas-cli init`
+     and `npx eas-cli build:configure`; commit `eas.json`.
    - Add to `app.json`: `ios.bundleIdentifier` (permanent once shipped —
      choose carefully), `ios.buildNumber: "1"`, and `android.package` for
      later.
@@ -114,17 +114,26 @@ in order:
    is simpler for v1. A GitHub Pages page in this repo works as the
    hosted URL.
 
+   > While Sentry is off, `eas.json` sets `SENTRY_DISABLE_AUTO_UPLOAD=true`
+   > on every build profile. The `@sentry/react-native/expo` config plugin
+   > adds an Xcode build phase that runs `sentry-cli` to upload source maps,
+   > and it fails the build without a Sentry org/project and
+   > `SENTRY_AUTH_TOKEN`. When you enable Sentry, set those up (add the token
+   > as an EAS secret) and remove the flag so symbolicated stack traces work.
+
 **Once Apple approves the account:**
 
 3. **Accept agreements** at
    [App Store Connect](https://appstoreconnect.apple.com) (Business →
    Paid/Free Apps). Builds can't be submitted until these are accepted.
-4. **First iOS build:** `npx eas build --platform ios`. Let EAS log into
+4. **First iOS build:** `npx eas-cli build --platform ios`. Let EAS log
+   into
    the Apple account when prompted — it creates the signing certificate,
    provisioning profile, and bundle ID registration automatically (no
    manual Xcode certificate work).
 5. **Create the app record + upload to TestFlight:**
-   `npx eas submit --platform ios` — it can create the App Store Connect
+   `npx eas-cli submit --platform ios` — it can create the App Store
+   Connect
    app record (this is where the name "Kaji" is claimed; have a fallback
    name ready). Add yourself as an internal tester in TestFlight and
    install on a real iPhone.
