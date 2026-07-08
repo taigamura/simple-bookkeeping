@@ -1,3 +1,7 @@
+// Gesture-handler side-effect import (#39). Must be the first import in the app
+// entry so react-native-gesture-handler installs its native handlers before any
+// component (including @gorhom/bottom-sheet's) mounts.
+import 'react-native-gesture-handler';
 import { registerRootComponent } from 'expo';
 
 import App from './App';

@@ -1,85 +1,94 @@
 /**
- * BottomSheet — the Entry and Settings sheets (decision 3). A plain RN `Modal`
- * (`animationType="slide"`, transparent) over a dimmed backdrop; tapping the
- * backdrop dismisses. The sheet is a rounded card pinned to the bottom with a
- * grab handle. No react-navigation — the root owns which sheet is open.
+ * BottomSheet — the Entry and Settings sheets (decision 3), migrated onto
+ * `@gorhom/bottom-sheet` in #39. Opens at content height with a softly fading
+ * dimmed backdrop and a spring-driven slide, replacing the old squared-off RN
+ * `Modal` (`animationType="slide"`). Tapping the backdrop — or dragging the
+ * sheet down — dismisses it; the rounded top corners are kept throughout.
+ *
+ * The parent still owns which sheet is open, so this stays a controlled
+ * component: the boolean `visible` prop is mirrored onto the modal's imperative
+ * present()/dismiss() below, and `onClose` fires whenever the sheet leaves.
  */
-import React from 'react';
 import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+  type BottomSheetBackdropProps,
+} from '@gorhom/bottom-sheet';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
-import { strings } from '../i18n';
 import { useTheme, metrics } from '../theme';
 
 export interface BottomSheetProps {
   visible: boolean;
   onClose: () => void;
   children?: React.ReactNode;
-  /** Extra style for the sheet card (e.g. min height). */
+  /** Extra style for the sheet content (e.g. min height). */
   style?: StyleProp<ViewStyle>;
 }
 
 export function BottomSheet({ visible, onClose, children, style }: BottomSheetProps) {
   const { colors } = useTheme();
+  const ref = useRef<BottomSheetModal>(null);
+
+  // Mirror the controlled `visible` prop onto the imperative modal. dismiss()
+  // animates out and then fires onDismiss (below); present() is a no-op if it's
+  // already up, and vice-versa, so re-runs are safe.
+  useEffect(() => {
+    if (visible) ref.current?.present();
+    else ref.current?.dismiss();
+  }, [visible]);
+
+  // Dimmed backdrop that fades in as the sheet rises and out as it leaves; a tap
+  // closes it, matching the old Pressable backdrop.
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    [],
+  );
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
+    <BottomSheetModal
+      ref={ref}
+      // No snapPoints → dynamic sizing measures the content and opens at its
+      // natural height (the sheets' single resting position; the two-detent
+      // drag-to-full snapping is a later slice).
+      enableDynamicSizing
+      enablePanDownToClose
+      onDismiss={onClose}
+      backdropComponent={renderBackdrop}
+      backgroundStyle={[
+        styles.sheet,
+        { backgroundColor: colors.card, borderColor: colors.border },
+      ]}
+      handleIndicatorStyle={{ backgroundColor: colors.line }}
     >
-      <View style={styles.root}>
-        {/* Backdrop: fills the frame behind the sheet; tap to dismiss. */}
-        <Pressable
-          style={styles.backdrop}
-          accessibilityRole="button"
-          accessibilityLabel={strings.nav.close}
-          onPress={onClose}
-        />
-        <View
-          style={[
-            styles.sheet,
-            { backgroundColor: colors.card, borderColor: colors.border },
-            style,
-          ]}
-        >
-          <View style={[styles.handle, { backgroundColor: colors.line }]} />
-          {children}
-        </View>
-      </View>
-    </Modal>
+      <BottomSheetView style={[styles.content, style]}>{children}</BottomSheetView>
+    </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,.5)',
-  },
+  // Rounded top corners only (kept through the animation via backgroundStyle),
+  // with the same hairline border the RN Modal card carried.
   sheet: {
     borderTopLeftRadius: metrics.sheetRadius,
     borderTopRightRadius: metrics.sheetRadius,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     borderWidth: 1,
-    paddingHorizontal: metrics.screenPadX,
-    paddingBottom: 28,
-    paddingTop: 10,
   },
-  handle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 5,
-    borderRadius: metrics.pill,
-    marginBottom: 14,
+  content: {
+    paddingHorizontal: metrics.screenPadX,
+    paddingTop: 4,
+    paddingBottom: 28,
   },
 });

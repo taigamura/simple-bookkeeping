@@ -1,6 +1,8 @@
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { LockGate, Root } from './nav';
 import { useStore } from './store';
@@ -34,20 +36,29 @@ export default function App() {
   if (!appReady) return null;
 
   return (
-    <ThemeProvider
-      initialMode={state.theme}
-      onModeChange={(mode) => update({ theme: mode })}
-    >
-      <StatusBar style="auto" />
-      <LockGate enabled={state.lockEnabled}>
-        <Root
-          state={state}
-          update={update}
-          showCorruptNotice={showCorruptNotice}
-          hasCorruptStash={hasCorruptStash}
-          readCorruptStash={readCorruptStash}
-        />
-      </LockGate>
-    </ThemeProvider>
+    // GestureHandlerRootView (#39) must wrap the whole app so gesture-handler —
+    // and the @gorhom/bottom-sheet drags it powers — receive touches. flex:1 so
+    // it fills, letting the web phone-frame still size the app below it.
+    <GestureHandlerRootView style={styles.root}>
+      <ThemeProvider
+        initialMode={state.theme}
+        onModeChange={(mode) => update({ theme: mode })}
+      >
+        <StatusBar style="auto" />
+        <LockGate enabled={state.lockEnabled}>
+          <Root
+            state={state}
+            update={update}
+            showCorruptNotice={showCorruptNotice}
+            hasCorruptStash={hasCorruptStash}
+            readCorruptStash={readCorruptStash}
+          />
+        </LockGate>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});

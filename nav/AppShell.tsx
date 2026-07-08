@@ -4,10 +4,12 @@
  * backdrop, so it reads as a phone. On native, fill the screen with a
  * `SafeAreaView`. No faux status bar / dynamic island / home indicator anywhere.
  *
- * Sheets (RN Modal) render at the window root, so on web they must be clipped
- * to the phone column: `overflow: hidden` on the card keeps the slide-up sheet
- * and its backdrop inside the 402px frame.
+ * Sheets (@gorhom/bottom-sheet) portal to the nearest `BottomSheetModalProvider`,
+ * so the provider is mounted *inside* the phone frame here (#39): on web the
+ * card's `overflow: hidden` then keeps the slide-up sheet and its backdrop
+ * clipped inside the 402px column, exactly as the old RN Modal was.
  */
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -35,7 +37,7 @@ function Frame({ children }: { children: React.ReactNode }) {
             shadows.card,
           ]}
         >
-          {children}
+          <BottomSheetModalProvider>{children}</BottomSheetModalProvider>
         </View>
       </View>
     );
@@ -43,7 +45,7 @@ function Frame({ children }: { children: React.ReactNode }) {
 
   return (
     <SafeAreaView style={[styles.native, { backgroundColor: colors.bg }]}>
-      {children}
+      <BottomSheetModalProvider>{children}</BottomSheetModalProvider>
     </SafeAreaView>
   );
 }
