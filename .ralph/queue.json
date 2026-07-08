@@ -1,0 +1,182 @@
+{
+  "version": "1.0",
+  "created_at": "2026-07-08T11:55:33+00:00",
+  "updated_at": "2026-07-08T12:09:28+00:00",
+  "repository": "",
+  "queue": [
+    {
+      "source": "github",
+      "issue_number": 39,
+      "title": "Gesture + animation foundation: migrate sheets to @gorhom/bottom-sheet",
+      "priority": "P0",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
+          "name": "P0",
+          "description": "Critical / must ship first",
+          "color": "B60205"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [],
+      "id": "github-39",
+      "status": "processing",
+      "added_at": "2026-07-08T12:01:13+00:00",
+      "started_at": "2026-07-08T12:09:28+00:00",
+      "completed_at": null,
+      "error_message": ""
+    },
+    {
+      "source": "github",
+      "issue_number": 40,
+      "title": "Calendar 7-column grid fix (Sunday-first, subpixel wrap)",
+      "priority": "P0",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
+          "name": "P0",
+          "description": "Critical / must ship first",
+          "color": "B60205"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [],
+      "id": "github-40",
+      "status": "pending",
+      "added_at": "2026-07-08T12:01:14+00:00",
+      "started_at": null,
+      "completed_at": null,
+      "error_message": ""
+    },
+    {
+      "source": "github",
+      "issue_number": 43,
+      "title": "Entry edit + delete flow (tap day-list row to edit/delete)",
+      "priority": "P0",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
+          "name": "P0",
+          "description": "Critical / must ship first",
+          "color": "B60205"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [
+        39
+      ],
+      "id": "github-43",
+      "status": "pending",
+      "added_at": "2026-07-08T12:01:16+00:00",
+      "started_at": null,
+      "completed_at": null,
+      "error_message": ""
+    },
+    {
+      "source": "github",
+      "issue_number": 41,
+      "title": "Anchor tab bar flush to the physical bottom edge",
+      "priority": "P1",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
+          "name": "P1",
+          "description": "Important",
+          "color": "D93F0B"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [],
+      "id": "github-41",
+      "status": "pending",
+      "added_at": "2026-07-08T12:01:15+00:00",
+      "started_at": null,
+      "completed_at": null,
+      "error_message": ""
+    },
+    {
+      "source": "github",
+      "issue_number": 44,
+      "title": "Sheet snap detents: drag-to-dismiss / drag-to-full",
+      "priority": "P1",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
+          "name": "P1",
+          "description": "Important",
+          "color": "D93F0B"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [
+        39
+      ],
+      "id": "github-44",
+      "status": "pending",
+      "added_at": "2026-07-08T12:01:17+00:00",
+      "started_at": null,
+      "completed_at": null,
+      "error_message": ""
+    },
+    {
+      "source": "github",
+      "issue_number": 45,
+      "title": "Finger-tracking month-swipe pager on the calendar",
+      "priority": "P1",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
+          "name": "P1",
+          "description": "Important",
+          "color": "D93F0B"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [
+        39
+      ],
+      "id": "github-45",
+      "status": "pending",
+      "added_at": "2026-07-08T12:01:18+00:00",
+      "started_at": null,
+      "completed_at": null,
+      "error_message": ""
+    }
+  ]
+}

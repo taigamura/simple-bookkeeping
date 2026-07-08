@@ -1,46 +1,47 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Ralph generated files (inside .ralph/ subfolder)
+.ralph/.call_count
+.ralph/.last_reset
+.ralph/.exit_signals
+.ralph/status.json
+.ralph/.ralph_session
+.ralph/.ralph_session_history
+.ralph/.claude_session_id
+.ralph/.response_analysis
+.ralph/.circuit_breaker_state
+.ralph/.circuit_breaker_history
 
-# dependencies
+# Ralph logs and generated docs
+.ralph/logs/*
+!.ralph/logs/.gitkeep
+.ralph/docs/generated/*
+!.ralph/docs/generated/.gitkeep
+
+# General logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+.temp/
+
+# Node modules (if using Node.js projects)
 node_modules/
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
+# Python cache (if using Python projects)
+__pycache__/
+*.pyc
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+# Rust build (if using Rust projects)
+target/
 
-# Metro
-.metro-health-check*
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-# generated native folders
-/ios
-/android
-
-# Ralph autonomous-dev control files
-.ralph/
-.ralphrc
-.ralph-tsc.sh
+# Ralph backup directories (created by migration)
+.ralph_backup_*
