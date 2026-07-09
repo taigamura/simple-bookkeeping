@@ -6,15 +6,26 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { ThemeProvider, accents } from '../theme';
+import { ThemeProvider, accents, metrics } from '../theme';
 import { TabBar } from './TabBar';
+
+// A device with a home-indicator bottom inset, so the bottom-edge anchoring
+// (#41) is exercised deterministically.
+const BOTTOM_INSET = 34;
+const initialMetrics = {
+  frame: { x: 0, y: 0, width: 402, height: 800 },
+  insets: { top: 52, left: 0, right: 0, bottom: BOTTOM_INSET },
+};
 
 const renderBar = (props: Partial<React.ComponentProps<typeof TabBar>> = {}) =>
   render(
-    <ThemeProvider>
-      <TabBar tab="calendar" onSelect={() => {}} onAdd={() => {}} {...props} />
-    </ThemeProvider>,
+    <SafeAreaProvider initialMetrics={initialMetrics}>
+      <ThemeProvider>
+        <TabBar tab="calendar" onSelect={() => {}} onAdd={() => {}} {...props} />
+      </ThemeProvider>
+    </SafeAreaProvider>,
   );
 
 describe('TabBar', () => {
@@ -56,5 +67,18 @@ describe('TabBar', () => {
     renderBar({ onSelect });
     fireEvent.press(screen.getByLabelText('Summary'));
     expect(onSelect).toHaveBeenCalledWith('summary');
+  });
+
+  it('anchors to the bottom edge: pads by and grows into the safe-area inset (#41)', () => {
+    renderBar();
+    // Climb from the FAB to the bar view — the one carrying the inset padding.
+    let node: ReturnType<typeof screen.getByLabelText> | null =
+      screen.getByLabelText('Add entry');
+    while (node && StyleSheet.flatten(node.props.style)?.paddingBottom === undefined) {
+      node = node.parent;
+    }
+    const bar = StyleSheet.flatten(node?.props.style);
+    expect(bar.paddingBottom).toBe(BOTTOM_INSET);
+    expect(bar.height).toBe(metrics.tabBarHeight + BOTTOM_INSET);
   });
 });

@@ -7,6 +7,7 @@
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { strings } from '../i18n';
 import { useTheme, metrics, accents, shadows, Txt } from '../theme';
@@ -31,11 +32,20 @@ const TABS: TabDef[] = [
 
 export function TabBar({ tab, onSelect, onAdd }: TabBarProps) {
   const { colors } = useTheme();
+  // Extend the bar's card flush to the physical bottom edge (#41): grow the
+  // height by the safe-area bottom inset and pad by the same, so the icons/labels
+  // clear the home indicator while the background reaches the device edge.
+  const insets = useSafeAreaInsets();
   return (
     <View
       style={[
         styles.bar,
-        { backgroundColor: colors.card, borderTopColor: colors.border },
+        {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          height: metrics.tabBarHeight + insets.bottom,
+          paddingBottom: insets.bottom,
+        },
       ]}
     >
       <TabButton def={TABS[0]} active={tab === 'calendar'} onPress={onSelect} />

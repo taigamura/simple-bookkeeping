@@ -2,7 +2,8 @@
  * AppShell — the outer frame (decision 10). On web, center the app in a
  * `maxWidth: 402` full-height rounded card with a subtle shadow on a neutral
  * backdrop, so it reads as a phone. On native, fill the screen with a
- * `SafeAreaView`. No faux status bar / dynamic island / home indicator anywhere.
+ * `SafeAreaView` that insets top/left/right only — the bottom edge is left to
+ * the TabBar (#41). No faux status bar / dynamic island / home indicator anywhere.
  *
  * Sheets (@gorhom/bottom-sheet) portal to the nearest `BottomSheetModalProvider`,
  * so the provider is mounted *inside* the phone frame here (#39): on web the
@@ -44,7 +45,13 @@ function Frame({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SafeAreaView style={[styles.native, { backgroundColor: colors.bg }]}>
+    // Bottom edge is deliberately NOT inset here (#41): the TabBar paints its own
+    // card background flush to the physical screen bottom and pads itself by the
+    // bottom inset, so the app reaches the device edge with no detached strip.
+    <SafeAreaView
+      edges={['top', 'left', 'right']}
+      style={[styles.native, { backgroundColor: colors.bg }]}
+    >
       <BottomSheetModalProvider>{children}</BottomSheetModalProvider>
     </SafeAreaView>
   );
