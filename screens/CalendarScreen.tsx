@@ -32,6 +32,8 @@ interface CalendarScreenProps {
   day: number;
   symbol: string;
   onSelectDay: (day: number) => void;
+  /** Tap a day-list row to edit that entry (#43). */
+  onEditEntry: (entry: Transaction) => void;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onSettings: () => void;
@@ -46,6 +48,7 @@ export function CalendarScreen({
   day,
   symbol,
   onSelectDay,
+  onEditEntry,
   onPrevMonth,
   onNextMonth,
   onSettings,
@@ -114,7 +117,13 @@ export function CalendarScreen({
         <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           <View style={[styles.dayCard, { backgroundColor: colors.card }]}>
             {rows.map((entry, i) => (
-              <ListRow key={entry.id} entry={entry} symbol={symbol} first={i === 0} />
+              <ListRow
+                key={entry.id}
+                entry={entry}
+                symbol={symbol}
+                first={i === 0}
+                onPress={() => onEditEntry(entry)}
+              />
             ))}
           </View>
         </ScrollView>

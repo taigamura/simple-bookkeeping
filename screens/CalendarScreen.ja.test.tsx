@@ -25,6 +25,7 @@ describe('CalendarScreen (ja locale)', () => {
           day={1}
           symbol="¥"
           onSelectDay={() => {}}
+          onEditEntry={() => {}}
           onPrevMonth={() => {}}
           onNextMonth={() => {}}
           onSettings={() => {}}

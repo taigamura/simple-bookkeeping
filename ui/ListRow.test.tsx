@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 
 import { type Transaction } from '../domain';
 import { ThemeProvider } from '../theme';
@@ -53,5 +53,17 @@ describe('ListRow', () => {
     renderRow({ first: true });
     const flat = StyleSheet.flatten(screen.getByText('Food').parent?.parent?.props.style);
     expect(flat?.borderTopWidth).toBeFalsy();
+  });
+
+  it('is a plain (non-pressable) row with no onPress', () => {
+    renderRow();
+    expect(screen.queryByLabelText('Edit Food')).toBeNull();
+  });
+
+  it('fires onPress (edit wiring) when tapped, exposing an Edit label', () => {
+    const onPress = jest.fn();
+    renderRow({ onPress });
+    fireEvent.press(screen.getByLabelText('Edit Food'));
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 });

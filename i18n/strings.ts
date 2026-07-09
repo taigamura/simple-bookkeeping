@@ -22,6 +22,7 @@ export interface Strings {
     add: string;
     cancel: string;
     import: string;
+    delete: string;
     on: string;
     off: string;
   };
@@ -55,6 +56,11 @@ export interface Strings {
     weekendLabels: { after: string; before: string; off: string };
     addExpense: string;
     addIncome: string;
+    save: string;
+    editEntry: (name: string) => string;
+    deleteEntry: string;
+    deleteConfirmTitle: string;
+    deleteConfirmMessage: string;
   };
   settings: {
     appearance: string;
@@ -103,6 +109,7 @@ export const en: Strings = {
     add: 'Add',
     cancel: 'Cancel',
     import: 'Import',
+    delete: 'Delete',
     on: 'On',
     off: 'Off',
   },
@@ -143,6 +150,11 @@ export const en: Strings = {
     },
     addExpense: 'Add expense',
     addIncome: 'Add income',
+    save: 'Save',
+    editEntry: (name) => `Edit ${name}`,
+    deleteEntry: 'Delete entry',
+    deleteConfirmTitle: 'Delete this entry?',
+    deleteConfirmMessage: 'This cannot be undone.',
   },
   settings: {
     appearance: 'Appearance',
@@ -197,6 +209,7 @@ export const ja: Strings = {
     add: '追加',
     cancel: 'キャンセル',
     import: '読み込む',
+    delete: '削除',
     on: 'オン',
     off: 'オフ',
   },
@@ -237,6 +250,11 @@ export const ja: Strings = {
     },
     addExpense: '支出を追加',
     addIncome: '収入を追加',
+    save: '保存',
+    editEntry: (name) => `${name}を編集`,
+    deleteEntry: '記録を削除',
+    deleteConfirmTitle: 'この記録を削除しますか？',
+    deleteConfirmMessage: 'この操作は取り消せません。',
   },
   settings: {
     appearance: '外観',

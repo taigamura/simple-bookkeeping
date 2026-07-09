@@ -15,12 +15,17 @@ import { Alert, Platform, StyleSheet, View } from 'react-native';
 import {
   clampDay,
   decodeZaimBytes,
+  materialize,
   parseZaimCsv,
+  removeEntry,
   sampleEntries,
   serializeZaimCsv,
   shiftMonth,
+  updateEntry,
   type Currency,
+  type EntryDraft,
   type Transaction,
+  type WeekendShift,
   type YM,
   type ZaimSkipTally,
 } from '../domain';
@@ -75,13 +80,19 @@ function skipSummary(skipped: ZaimSkipTally): string {
   return parts.length > 0 ? ` — ${parts.join(', ')}` : '';
 }
 
-function confirm(title: string, message: string, onConfirm: () => void) {
+function confirm(
+  title: string,
+  message: string,
+  onConfirm: () => void,
+  confirmLabel: string = strings.common.import,
+  destructive = false,
+) {
   if (Platform.OS === 'web') {
     if (window.confirm(`${title}\n${message}`)) onConfirm();
   } else {
     Alert.alert(title, message, [
       { text: strings.common.cancel, style: 'cancel' },
-      { text: strings.common.import, onPress: onConfirm },
+      { text: confirmLabel, style: destructive ? 'destructive' : 'default', onPress: onConfirm },
     ]);
   }
 }
@@ -103,6 +114,8 @@ function Shell({
 }: RootProps) {
   const [tab, setTab] = useState<Tab>('calendar');
   const [sheet, setSheet] = useState<Sheet>(null);
+  // Which entry the Entry sheet is editing (#43); null = create mode.
+  const [editing, setEditing] = useState<Transaction | null>(null);
 
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
   // real current month, with the selected day defaulting to today.
@@ -135,8 +148,25 @@ function Shell({
     }
   }, [showCorruptNotice]);
 
-  const closeSheet = () => setSheet(null);
+  const closeSheet = () => {
+    setSheet(null);
+    setEditing(null);
+  };
   const openSettings = () => setSheet('settings');
+
+  // openEntry(): the ＋ button — always create mode (clear any prior editing).
+  const openEntry = () => {
+    setEditing(null);
+    setSheet('entry');
+  };
+
+  // openEdit(): tap a day-list row → edit that entry. Re-select its day so the
+  // Calendar returns to it after save/delete.
+  const openEdit = (entry: Transaction) => {
+    setEditing(entry);
+    setSelectedDay(entry.day);
+    setSheet('entry');
+  };
 
   // loadSample(): replace the ledger with the July-2026 demo set (stable ids)
   // and jump the cursor there so the entries are immediately visible.
@@ -216,17 +246,44 @@ function Shell({
     setSelectedDay((d) => clampDay(d, next.y, next.m));
   };
 
-  // save(): append the materialized entries, land on and re-select the target
-  // day (keep the current selection if it's among them, e.g. daily fill), and
-  // show the Calendar.
-  const handleSave = (entries: Transaction[]) => {
-    if (entries.length === 0) return;
-    entrySaved();
-    update({ entries: [...state.entries, ...entries] });
-    const days = new Set(entries.map((e) => e.day));
-    setSelectedDay((d) => (days.has(d) ? d : entries[0].day));
+  // handleSubmit(): the Entry sheet's save. In edit mode, overwrite the entry by
+  // id (preserving id/y/m/day) via the pure `updateEntry`; otherwise materialize
+  // the draft and append. Either way land on the relevant day and show the
+  // Calendar.
+  const handleSubmit = (draft: EntryDraft, weekendShift: WeekendShift) => {
+    if (editing) {
+      entrySaved();
+      update({ entries: updateEntry(state.entries, editing.id, draft) });
+      setSelectedDay(editing.day);
+    } else {
+      const entries = materialize(draft, weekendShift);
+      if (entries.length === 0) return;
+      entrySaved();
+      update({ entries: [...state.entries, ...entries] });
+      const days = new Set(entries.map((e) => e.day));
+      setSelectedDay((d) => (days.has(d) ? d : entries[0].day));
+    }
     setTab('calendar');
+    setEditing(null);
     setSheet(null);
+  };
+
+  // handleDelete(): guarded by a native confirm (web window.confirm fallback);
+  // on confirm, drop the entry via the pure `removeEntry` and return to the
+  // Calendar with the same day still selected.
+  const handleDelete = (id: string) => {
+    confirm(
+      strings.entry.deleteConfirmTitle,
+      strings.entry.deleteConfirmMessage,
+      () => {
+        update({ entries: removeEntry(state.entries, id) });
+        setTab('calendar');
+        setEditing(null);
+        setSheet(null);
+      },
+      strings.common.delete,
+      true,
+    );
   };
 
   return (
@@ -240,6 +297,7 @@ function Shell({
             day={selectedDay}
             symbol={symbol}
             onSelectDay={setSelectedDay}
+            onEditEntry={openEdit}
             onPrevMonth={() => goMonth(-1)}
             onNextMonth={() => goMonth(1)}
             onSettings={openSettings}
@@ -255,7 +313,7 @@ function Shell({
         )}
       </View>
 
-      <TabBar tab={tab} onSelect={setTab} onAdd={() => setSheet('entry')} />
+      <TabBar tab={tab} onSelect={setTab} onAdd={openEntry} />
 
       <BottomSheet visible={sheet === 'entry'} onClose={closeSheet}>
         {sheet === 'entry' && (
@@ -266,7 +324,9 @@ function Shell({
             m={cursor.m}
             day={selectedDay}
             symbol={symbol}
-            onSave={handleSave}
+            editing={editing ?? undefined}
+            onSave={handleSubmit}
+            onDelete={handleDelete}
             onClose={closeSheet}
           />
         )}

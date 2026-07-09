@@ -6,7 +6,7 @@
  * first (`first` prop), so there is no rule above the first or below the last.
  */
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
   code,
@@ -15,6 +15,7 @@ import {
   DEFAULT_CURRENCY,
   type Transaction,
 } from '../domain';
+import { strings } from '../i18n';
 import { useTheme, metrics, Txt } from '../theme';
 
 interface ListRowProps {
@@ -22,23 +23,26 @@ interface ListRowProps {
   symbol?: string;
   /** First row in the card — omit the top divider. */
   first?: boolean;
+  /** When set, the row is pressable (tap to edit the entry, #43). */
+  onPress?: () => void;
 }
 
 export function ListRow({
   entry,
   symbol = DEFAULT_CURRENCY.symbol,
   first = false,
+  onPress,
 }: ListRowProps) {
   const { colors } = useTheme();
   const value = signedAmount(entry);
 
-  return (
-    <View
-      style={[
-        styles.row,
-        !first && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hair },
-      ]}
-    >
+  const rowStyle = [
+    styles.row,
+    !first && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hair },
+  ];
+
+  const content = (
+    <>
       <View style={[styles.tile, { backgroundColor: colors.card3 }]}>
         <Txt variant="microLabel" tone="muted">
           {code(entry.category)}
@@ -57,8 +61,23 @@ export function ListRow({
       <Txt variant="inlineAmount" tone={entry.type === 'income' ? 'positive' : 'negative'}>
         {signed(value, symbol)}
       </Txt>
-    </View>
+    </>
   );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={strings.entry.editEntry(entry.category)}
+        style={({ pressed }) => [...rowStyle, pressed && { opacity: 0.6 }]}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return <View style={rowStyle}>{content}</View>;
 }
 
 const styles = StyleSheet.create({

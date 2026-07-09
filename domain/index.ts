@@ -22,6 +22,8 @@ export {
   net,
   signedAmount,
   makeEntry,
+  updateEntry,
+  removeEntry,
   uid,
   type EntryDraft,
 } from './entries';

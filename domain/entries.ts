@@ -83,3 +83,37 @@ export function makeEntry(draft: EntryDraft): Transaction | null {
     repeat: draft.repeat ?? 'never',
   };
 }
+
+/**
+ * Overwrite the entry with `id` in-place (by value) from `draft`, applying the
+ * same amount/note rules as `makeEntry` but preserving the entry's identity and
+ * placement — `id`/`y`/`m`/`day` (and `repeat`/`accountId`) stay put, since edit
+ * operates on a single occurrence and never moves it (recurrence/date are
+ * create-only). Returns a new array; a missing `id` is a no-op (unchanged copy).
+ */
+export function updateEntry(
+  entries: Transaction[],
+  id: string,
+  draft: EntryDraft,
+): Transaction[] {
+  return entries.map((t) => {
+    if (t.id !== id) return t;
+    const trimmed = draft.note?.trim();
+    const note = !trimmed || trimmed === '—' ? draft.category : trimmed;
+    return {
+      ...t,
+      type: draft.type,
+      amount: amountValue(draft.amountStr),
+      category: draft.category,
+      note,
+    };
+  });
+}
+
+/**
+ * Drop the entry with `id`. Returns a new array; a missing `id` is a no-op
+ * (unchanged copy). Removes exactly the matching entry.
+ */
+export function removeEntry(entries: Transaction[], id: string): Transaction[] {
+  return entries.filter((t) => t.id !== id);
+}
