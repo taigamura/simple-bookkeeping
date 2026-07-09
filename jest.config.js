@@ -6,6 +6,11 @@
  */
 module.exports = {
   preset: 'jest-expo',
+  // Reanimated v4 pulls in react-native-worklets, whose `.native` entry throws
+  // when required under jest. This resolver (shipped by the package) strips the
+  // `.native` extension for worklets modules so its JS variant loads instead,
+  // letting the animation stack (MonthPager, #45) import cleanly in tests.
+  resolver: 'react-native-worklets/jest/resolver.js',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|@expo/vector-icons|react-native-safe-area-context|react-native-svg))',

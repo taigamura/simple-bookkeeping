@@ -21,7 +21,7 @@ import {
   type Transaction,
 } from '../domain';
 import { strings } from '../i18n';
-import { CalendarGrid, ListRow } from '../ui';
+import { ListRow, MonthPager } from '../ui';
 import { useTheme, metrics, mono, Txt, type Tone } from '../theme';
 import { IconButton } from '../nav/IconButton';
 
@@ -90,12 +90,13 @@ export function CalendarScreen({
         />
       </View>
 
-      <CalendarGrid
+      <MonthPager
+        entries={entries}
         y={y}
         m={m}
-        monthEntries={month}
         selectedDay={day}
         onSelectDay={onSelectDay}
+        onPageChange={(delta) => (delta === 1 ? onNextMonth() : onPrevMonth())}
       />
 
       <View style={[styles.dayHeader, { borderBottomColor: colors.line }]}>
