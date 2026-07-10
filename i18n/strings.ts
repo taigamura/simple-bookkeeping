@@ -78,6 +78,13 @@ export interface Strings {
     importFromZaim: string;
     exportUnreadableBackup: string;
   };
+  budgets: {
+    title: string;
+    /** Accessibility label for a category's amount field. */
+    budgetFor: (name: string) => string;
+    /** Placeholder shown in an amount field with no budget set. */
+    none: string;
+  };
   keypad: {
     delete: string;
   };
@@ -171,6 +178,11 @@ export const en: Strings = {
     exportData: 'Export data',
     importFromZaim: 'Import from Zaim',
     exportUnreadableBackup: 'Export unreadable backup',
+  },
+  budgets: {
+    title: 'Budgets',
+    budgetFor: (name) => `Budget for ${name}`,
+    none: 'None',
   },
   keypad: {
     delete: 'Delete',
@@ -271,6 +283,11 @@ export const ja: Strings = {
     exportData: 'データを書き出す',
     importFromZaim: 'Zaimから読み込む',
     exportUnreadableBackup: '読み取れないバックアップを書き出す',
+  },
+  budgets: {
+    title: '予算',
+    budgetFor: (name) => `${name}の予算`,
+    none: 'なし',
   },
   keypad: {
     delete: '削除',

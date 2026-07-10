@@ -50,6 +50,13 @@ export {
   removeCategory,
   moveCategory,
 } from './categories';
+export {
+  setBudget,
+  clearBudget,
+  hasAnyBudget,
+  pruneBudgets,
+  type Budgets,
+} from './budgets';
 export { sampleEntries } from './sample';
 export {
   decodeZaimBytes,

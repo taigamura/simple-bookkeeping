@@ -18,6 +18,7 @@ import {
   decodeZaimBytes,
   materialize,
   parseZaimCsv,
+  pruneBudgets,
   removeEntry,
   sampleEntries,
   serializeZaimCsv,
@@ -34,6 +35,7 @@ import { strings } from '../i18n';
 import * as auth from '../platform/auth';
 import { entrySaved } from '../platform/haptics';
 import { shareTextFile } from '../platform/shareFile';
+import { BudgetsSheet } from '../screens/BudgetsSheet';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
 import { SettingsSheet } from '../screens/SettingsSheet';
@@ -155,6 +157,16 @@ function Shell({
   // it explicitly instead (openEntry → null, openEdit → the entry).
   const closeSheet = () => setSheet(null);
   const openSettings = () => setSheet('settings');
+
+  // Settings ⇄ Budgets is a swap, never a stack (#49): the outgoing modal's
+  // dismiss fires *after* `sheet` already points at the incoming one, so each
+  // BottomSheet's onClose only clears the nav state if it is still the open
+  // sheet — otherwise the swap's trailing onDismiss would cancel the incoming
+  // present.
+  const sheetDismissed = (which: Sheet) => () =>
+    setSheet((s) => (s === which ? null : s));
+  const openBudgets = () => setSheet('budgets');
+  const backToSettings = () => setSheet('settings');
 
   // openEntry(): the ＋ button — always create mode (clear any prior editing).
   const openEntry = () => {
@@ -338,14 +350,18 @@ function Shell({
         />
       </BottomSheet>
 
-      <BottomSheet visible={sheet === 'settings'} onClose={closeSheet}>
+      <BottomSheet visible={sheet === 'settings'} onClose={sheetDismissed('settings')}>
         <SettingsSheet
           currency={state.currency}
           expCats={state.expCats}
           incCats={state.incCats}
           onChangeCurrency={(currency: Currency) => update({ currency })}
-          onChangeExpCats={(expCats) => update({ expCats })}
+          // Deleting an expense category silently drops its budget entry (#49).
+          onChangeExpCats={(expCats) =>
+            update({ expCats, budgets: pruneBudgets(state.budgets, expCats) })
+          }
           onChangeIncCats={(incCats) => update({ incCats })}
+          onOpenBudgets={openBudgets}
           onLoadSample={loadSample}
           onExportData={exportData}
           onImportZaim={importZaim}
@@ -355,6 +371,17 @@ function Shell({
           lockAvailable={lockAvailable}
           onToggleLock={(lockEnabled) => update({ lockEnabled })}
           onClose={closeSheet}
+          ScrollContainer={BottomSheetScrollView}
+        />
+      </BottomSheet>
+
+      <BottomSheet visible={sheet === 'budgets'} onClose={sheetDismissed('budgets')}>
+        <BudgetsSheet
+          expCats={state.expCats}
+          budgets={state.budgets}
+          symbol={symbol}
+          onChangeBudgets={(budgets) => update({ budgets })}
+          onDone={backToSettings}
           ScrollContainer={BottomSheetScrollView}
         />
       </BottomSheet>

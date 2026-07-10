@@ -56,6 +56,27 @@ describe('createStore', () => {
     expect((await store.load()).lockEnabled).toBe(true);
   });
 
+  it('round-trips budgets (#49): saved category budgets survive a reload', async () => {
+    const store = createStore(createMemoryPersistence());
+
+    await store.save(stateWith({ budgets: { Food: 30000, Rent: 80000 } }));
+
+    expect((await store.load()).budgets).toEqual({ Food: 30000, Rent: 80000 });
+  });
+
+  it('defaults budgets to empty when loading a pre-#49 blob without the field', async () => {
+    // A same-version blob persisted before the budgets field existed: the
+    // merge-by-known-keys load must fill it from defaults, no version bump.
+    const { budgets: _budgets, ...legacyState } = stateWith({ theme: 'light' });
+    const blob = JSON.stringify({ version: SCHEMA_VERSION, state: legacyState });
+    const store = createStore(createMemoryPersistence(blob));
+
+    const loaded = await store.load();
+
+    expect(loaded.budgets).toEqual({});
+    expect(loaded.theme).toBe('light');
+  });
+
   it('round-trips through the default AsyncStorage-backed store', async () => {
     // No persistence arg → default asyncStoragePersistence (AsyncStorage mock).
     const store = createStore();

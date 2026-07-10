@@ -20,6 +20,7 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         onChangeCurrency={() => {}}
         onChangeExpCats={() => {}}
         onChangeIncCats={() => {}}
+        onOpenBudgets={() => {}}
         onLoadSample={() => {}}
         onExportData={() => {}}
         onImportZaim={() => {}}
@@ -55,6 +56,13 @@ describe('SettingsSheet', () => {
     fireEvent.press(screen.getByLabelText('Income'));
     expect(screen.getByText('Salary')).toBeTruthy();
     expect(screen.queryByText('Food')).toBeNull();
+  });
+
+  it('renders a Budgets drill-in row that fires its callback (#49)', () => {
+    const onOpenBudgets = jest.fn();
+    renderSheet({ onOpenBudgets });
+    fireEvent.press(screen.getByLabelText('Budgets'));
+    expect(onOpenBudgets).toHaveBeenCalled();
   });
 
   it('renders an "Import from Zaim" action that fires its callback', () => {

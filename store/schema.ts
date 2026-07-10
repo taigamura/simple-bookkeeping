@@ -9,7 +9,7 @@
  * store merges by known keys, adding a field later is backward-compatible.
  */
 import { DEFAULT_EXP_CATS, DEFAULT_INC_CATS, DEFAULT_CURRENCY } from '../domain';
-import type { Currency, Transaction } from '../domain';
+import type { Budgets, Currency, Transaction } from '../domain';
 import type { ThemeMode } from '../theme/tokens';
 
 /** Bump when the shape changes incompatibly; `load()` falls back to defaults. */
@@ -24,6 +24,10 @@ export interface AppState {
   premium: boolean;
   /** Face ID / passcode gate on launch (#30); default off, web never gates. */
   lockEnabled: boolean;
+  /** Recurring monthly budget per expense category (#49); absent = no budget.
+   *  Added after v1 blobs shipped — the merge-by-known-keys load fills it with
+   *  the empty default, so no schema version bump. */
+  budgets: Budgets;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -34,6 +38,7 @@ export const DEFAULT_STATE: AppState = {
   currency: DEFAULT_CURRENCY,
   premium: false,
   lockEnabled: false,
+  budgets: {},
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */

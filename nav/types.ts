@@ -5,4 +5,5 @@
  */
 export type Tab = 'calendar' | 'summary';
 
-export type Sheet = 'entry' | 'settings' | null;
+/** Sheets never stack — Budgets (#49) swaps with Settings (drill-in / Done back). */
+export type Sheet = 'entry' | 'settings' | 'budgets' | null;

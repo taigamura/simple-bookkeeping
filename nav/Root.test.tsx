@@ -47,7 +47,8 @@ describe('Root sheet mounting (#47)', () => {
     // Entry sheet content (create-mode CTA) exists before any ＋ tap or
     // Settings open/close cycle — the exact regression from gated mounting.
     expect(await screen.findByText(strings.entry.addExpense)).toBeTruthy();
-    // Settings sheet content (Done button) likewise renders from the start.
-    expect(screen.getByText(strings.nav.done)).toBeTruthy();
+    // Settings and Budgets sheet content likewise renders from the start —
+    // each sheet carries its own Done button (#49 added the Budgets sheet).
+    expect(screen.getAllByText(strings.nav.done)).toHaveLength(2);
   });
 });

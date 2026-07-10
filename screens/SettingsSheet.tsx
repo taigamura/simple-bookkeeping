@@ -53,6 +53,8 @@ interface SettingsSheetProps {
   onChangeCurrency: (currency: Currency) => void;
   onChangeExpCats: (list: string[]) => void;
   onChangeIncCats: (list: string[]) => void;
+  /** Drill into the Budgets sheet (#49) — Settings dismisses, Budgets presents. */
+  onOpenBudgets: () => void;
   onLoadSample: () => void;
   onExportData: () => void;
   onImportZaim: () => void;
@@ -80,6 +82,7 @@ export function SettingsSheet({
   onChangeCurrency,
   onChangeExpCats,
   onChangeIncCats,
+  onOpenBudgets,
   onLoadSample,
   onExportData,
   onImportZaim,
@@ -120,6 +123,7 @@ export function SettingsSheet({
           onChangeExpCats={onChangeExpCats}
           onChangeIncCats={onChangeIncCats}
         />
+        <BudgetsLink onPress={onOpenBudgets} />
         <DataActions
           onLoadSample={onLoadSample}
           onExportData={onExportData}
@@ -402,6 +406,34 @@ function Categories({
 }
 
 /**
+ * Drill-in row to the Budgets sheet (#49): tapping swaps this sheet for the
+ * Budgets one (never stacked); its Done returns here.
+ */
+function BudgetsLink({ onPress }: { onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Section label={strings.budgets.title}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={strings.budgets.title}
+        style={({ pressed }) => [
+          styles.linkRow,
+          { backgroundColor: pressed ? colors.card3 : colors.card2 },
+        ]}
+      >
+        <Txt variant="listItem" tone="ink" style={styles.linkLabel}>
+          {strings.budgets.title}
+        </Txt>
+        <Txt variant="listItem" tone="dim">
+          ›
+        </Txt>
+      </Pressable>
+    </Section>
+  );
+}
+
+/**
  * Load-sample-data (decision 8, #12), Export/Import-from-Zaim (#24, #12), and
  * the conditional unreadable-backup recovery row (#28). Premium/ads stripped
  * for v1 (#23).
@@ -520,6 +552,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    height: 46,
+    borderRadius: metrics.iconTileRadius,
+    paddingHorizontal: 14,
+  },
+  linkLabel: { flex: 1 },
   optRow: { flexDirection: 'row', gap: 8 },
   optBox: {
     flex: 1,
