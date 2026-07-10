@@ -8,15 +8,24 @@
  * The parent still owns which sheet is open, so this stays a controlled
  * component: the boolean `visible` prop is mirrored onto the modal's imperative
  * present()/dismiss() below, and `onClose` fires whenever the sheet leaves.
+ *
+ * Snap detents (#44): every sheet now exposes two — content height (resting,
+ * dynamic) and full screen (`100%`) — so `enableDynamicSizing` pushes its
+ * measured content-height detent in alongside the fixed one. Dragging the
+ * handle up/down past a threshold snaps between them or dismisses; that's all
+ * built into `@gorhom/bottom-sheet`, no extra wiring needed here.
  */
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetView,
+  useBottomSheetInternal,
+  INITIAL_LAYOUT_VALUE,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
 import { useTheme, metrics } from '../theme';
 
@@ -26,9 +35,30 @@ export interface BottomSheetProps {
   children?: React.ReactNode;
   /** Extra style for the sheet content (e.g. min height). */
   style?: StyleProp<ViewStyle>;
+  /**
+   * Entry sheet only (#44): at full screen, slide the whole (otherwise
+   * untouched) content block down by however much taller the sheet has grown
+   * so the keypad/CTA/option rows stay pinned to the bottom and the revealed
+   * background above the amount/category area reads as breathing room — no
+   * reflow, nothing shifts under the thumb. A `transform`, not a layout
+   * change, so it never feeds back into the dynamic content-height
+   * measurement that sizes the resting detent.
+   */
+  anchorBottom?: boolean;
 }
 
-export function BottomSheet({ visible, onClose, children, style }: BottomSheetProps) {
+// The dynamic (content-height) detent from `enableDynamicSizing` is inserted
+// alongside this fixed one, sorted by position — giving every sheet its two
+// detents (resting + full) without hand-computing either.
+const SNAP_POINTS = ['100%'];
+
+export function BottomSheet({
+  visible,
+  onClose,
+  children,
+  style,
+  anchorBottom,
+}: BottomSheetProps) {
   const { colors } = useTheme();
   const ref = useRef<BottomSheetModal>(null);
 
@@ -58,11 +88,9 @@ export function BottomSheet({ visible, onClose, children, style }: BottomSheetPr
   return (
     <BottomSheetModal
       ref={ref}
-      // No snapPoints → dynamic sizing measures the content and opens at its
-      // natural height (the sheets' single resting position; the two-detent
-      // drag-to-full snapping is a later slice).
       enableDynamicSizing
       enablePanDownToClose
+      snapPoints={SNAP_POINTS}
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
       backgroundStyle={[
@@ -71,8 +99,45 @@ export function BottomSheet({ visible, onClose, children, style }: BottomSheetPr
       ]}
       handleIndicatorStyle={{ backgroundColor: colors.line }}
     >
-      <BottomSheetView style={[styles.content, style]}>{children}</BottomSheetView>
+      {anchorBottom ? (
+        <AnchoredContent style={[styles.content, style]}>{children}</AnchoredContent>
+      ) : (
+        <BottomSheetView style={[styles.content, style]}>{children}</BottomSheetView>
+      )}
     </BottomSheetModal>
+  );
+}
+
+function AnchoredContent({
+  style,
+  children,
+}: {
+  style: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+}) {
+  const { animatedPosition, animatedLayoutState } = useBottomSheetInternal();
+
+  // extra = how much taller the sheet currently is than its resting content
+  // height. 0 at rest (no-op), growing toward full screen as the handle is
+  // dragged up; sliding by this amount keeps the block's internal layout
+  // completely untouched.
+  const slide = useAnimatedStyle(() => {
+    const { containerHeight, handleHeight, contentHeight } = animatedLayoutState.get();
+    if (
+      containerHeight === INITIAL_LAYOUT_VALUE ||
+      handleHeight === INITIAL_LAYOUT_VALUE ||
+      contentHeight === INITIAL_LAYOUT_VALUE
+    ) {
+      return {};
+    }
+    const extra = containerHeight - animatedPosition.get() - handleHeight - contentHeight;
+    return { transform: [{ translateY: Math.max(0, extra) }] };
+  });
+
+  return (
+    <Animated.View style={[styles.anchoredWrap, slide]}>
+      <BottomSheetView style={style}>{children}</BottomSheetView>
+    </Animated.View>
   );
 }
 
@@ -90,5 +155,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: metrics.screenPadX,
     paddingTop: 4,
     paddingBottom: 28,
+  },
+  // Matches BottomSheetView's own default positioning (it's always absolute,
+  // top/left/right: 0) so the anchored variant lays out identically at rest;
+  // `slide` above then offsets it downward as the sheet grows past that.
+  anchoredWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
 });

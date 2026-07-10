@@ -7,9 +7,23 @@
  * Presentational only: currency and the two category lists come in as props and
  * changes are pushed straight back up via the callbacks (the parent persists).
  * Appearance still uses the theme context, which persists on its own.
+ *
+ * `ScrollContainer` (#44) defaults to RN's plain `ScrollView` (used by this
+ * file's own standalone tests, which render outside any bottom sheet), while
+ * the real app swaps in `@gorhom/bottom-sheet`'s `BottomSheetScrollView` so a
+ * handle drag still dismisses/resizes the sheet while dragging the rows
+ * scrolls them.
  */
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import React, { useState, type ComponentType, type ReactNode } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import {
   CURRENCIES,
@@ -23,6 +37,14 @@ import {
 import { strings } from '../i18n';
 import { IconButton } from '../nav/IconButton';
 import { useTheme, accents, metrics, Txt, type ThemeMode } from '../theme';
+
+/** Minimal shape shared by RN's `ScrollView` and gorhom's `BottomSheetScrollView`. */
+interface ScrollContainerProps {
+  style?: StyleProp<ViewStyle>;
+  contentContainerStyle?: StyleProp<ViewStyle>;
+  showsVerticalScrollIndicator?: boolean;
+  children: ReactNode;
+}
 
 interface SettingsSheetProps {
   currency: Currency;
@@ -42,6 +64,8 @@ interface SettingsSheetProps {
   lockAvailable: boolean;
   onToggleLock: (enabled: boolean) => void;
   onClose: () => void;
+  /** Scrollable wrapper for the rows below the header (#44); see file header. */
+  ScrollContainer?: ComponentType<ScrollContainerProps>;
 }
 
 const CAT_TABS = [
@@ -65,6 +89,7 @@ export function SettingsSheet({
   lockAvailable,
   onToggleLock,
   onClose,
+  ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
 }: SettingsSheetProps) {
   return (
     <View style={styles.container}>
@@ -81,7 +106,7 @@ export function SettingsSheet({
           </Txt>
         </Pressable>
       </View>
-      <ScrollView
+      <ScrollContainer
         style={styles.scroll}
         contentContainerStyle={styles.scrollBody}
         showsVerticalScrollIndicator={false}
@@ -102,7 +127,7 @@ export function SettingsSheet({
           hasCorruptStash={hasCorruptStash}
           onExportCorruptStash={onExportCorruptStash}
         />
-      </ScrollView>
+      </ScrollContainer>
     </View>
   );
 }

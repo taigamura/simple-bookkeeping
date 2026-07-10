@@ -107,4 +107,11 @@ describe('SettingsSheet', () => {
       screen.getByText('Set up Face ID, Touch ID, or a passcode on this device to use this.'),
     ).toBeTruthy();
   });
+
+  it('scrolls its rows through a custom ScrollContainer when one is supplied (#44)', () => {
+    const ScrollContainer = jest.fn(({ children }) => <>{children}</>);
+    renderSheet({ ScrollContainer });
+    expect(ScrollContainer).toHaveBeenCalled();
+    expect(screen.getByText('Food')).toBeTruthy();
+  });
 });

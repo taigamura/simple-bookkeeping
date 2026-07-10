@@ -7,6 +7,7 @@
  * the ledger and category seeds flow to the screens and new entries persist.
  * Month navigation is fixed to the current month here; it arrives in slice #4.
  */
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -315,7 +316,7 @@ function Shell({
 
       <TabBar tab={tab} onSelect={setTab} onAdd={openEntry} />
 
-      <BottomSheet visible={sheet === 'entry'} onClose={closeSheet}>
+      <BottomSheet visible={sheet === 'entry'} onClose={closeSheet} anchorBottom>
         {sheet === 'entry' && (
           <EntrySheet
             expCats={state.expCats}
@@ -350,6 +351,7 @@ function Shell({
             lockAvailable={lockAvailable}
             onToggleLock={(lockEnabled) => update({ lockEnabled })}
             onClose={closeSheet}
+            ScrollContainer={BottomSheetScrollView}
           />
         )}
       </BottomSheet>
