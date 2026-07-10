@@ -40,6 +40,8 @@ export interface Strings {
     in: string;
     out: string;
     net: string;
+    /** Strip label for the month's remaining budget (#50). */
+    budget: string;
     emptyDay: string;
   };
   summary: {
@@ -134,6 +136,7 @@ export const en: Strings = {
     in: 'In',
     out: 'Out',
     net: 'Net',
+    budget: 'Budget',
     emptyDay: 'No entries this day. Tap ＋ to add one.',
   },
   summary: {
@@ -239,6 +242,7 @@ export const ja: Strings = {
     in: '収入',
     out: '支出',
     net: '収支',
+    budget: '予算',
     emptyDay: 'この日の記録はありません。＋をタップして追加しましょう。',
   },
   summary: {

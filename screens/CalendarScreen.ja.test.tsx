@@ -20,6 +20,7 @@ describe('CalendarScreen (ja locale)', () => {
       <ThemeProvider>
         <CalendarScreen
           entries={[]}
+          budgets={{}}
           y={2026}
           m={6}
           day={1}

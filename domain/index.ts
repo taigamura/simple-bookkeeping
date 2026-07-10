@@ -54,6 +54,7 @@ export {
   setBudget,
   clearBudget,
   hasAnyBudget,
+  budgetRemaining,
   pruneBudgets,
   type Budgets,
 } from './budgets';

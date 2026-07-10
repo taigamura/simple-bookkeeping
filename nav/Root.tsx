@@ -306,6 +306,7 @@ function Shell({
         {tab === 'calendar' ? (
           <CalendarScreen
             entries={state.entries}
+            budgets={state.budgets}
             y={cursor.y}
             m={cursor.m}
             day={selectedDay}

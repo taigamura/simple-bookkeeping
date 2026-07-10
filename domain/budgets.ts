@@ -9,6 +9,9 @@
  * unchanged when there is nothing to do, matching `categories.ts`.
  */
 
+import { expense } from './entries';
+import type { Transaction } from './types';
+
 /** Category name → recurring monthly budget (positive integer, no minor units). */
 export type Budgets = Record<string, number>;
 
@@ -34,6 +37,18 @@ export function clearBudget(budgets: Budgets, category: string): Budgets {
 /** Whether any category has a budget set — gates budget display downstream (#50/#51). */
 export function hasAnyBudget(budgets: Budgets): boolean {
   return Object.keys(budgets).length > 0;
+}
+
+/**
+ * `budgetRemaining(budgets, entries)` — the month's remaining budget (#50):
+ * Σ(set category budgets) − total expenses over the given (already
+ * month-filtered) entries. Every expense counts against the total, including
+ * spending in unbudgeted categories; income never enters the math. Goes
+ * negative when overspent — never clamped to zero.
+ */
+export function budgetRemaining(budgets: Budgets, entries: Transaction[]): number {
+  const total = Object.values(budgets).reduce((sum, amount) => sum + amount, 0);
+  return total - expense(entries);
 }
 
 /**

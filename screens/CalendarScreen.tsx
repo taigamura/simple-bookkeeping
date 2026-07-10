@@ -1,23 +1,27 @@
 /**
  * CalendarScreen — the Calendar home (slice #4). Full month-at-a-glance:
  * header (month+year title, ‹ › nav, ⚙), an In/Out/Net strip bounded by
- * hairlines, the 7-column month grid, then the selected day's label + net and
- * its entries (or the empty state from the core slice).
+ * hairlines (plus a BUDGET remaining column once any budget is set, #50), the
+ * 7-column month grid, then the selected day's label + net and its entries
+ * (or the empty state from the core slice).
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   MONTH_NAMES,
+  budgetRemaining,
   dayLabel,
   dayEntries,
   dayNet,
   expense,
+  hasAnyBudget,
   income,
   monthEntries,
   net as monthNet,
   signed,
   yen,
+  type Budgets,
   type Transaction,
   type YM,
 } from '../domain';
@@ -28,6 +32,8 @@ import { IconButton } from '../nav/IconButton';
 
 interface CalendarScreenProps {
   entries: Transaction[];
+  /** Monthly budgets (#50) — the strip grows a BUDGET column when any is set. */
+  budgets: Budgets;
   y: number;
   m: number;
   day: number;
@@ -46,6 +52,7 @@ const netTone = (n: number): Tone => (n > 0 ? 'positive' : n < 0 ? 'negative' : 
 
 export function CalendarScreen({
   entries,
+  budgets,
   y,
   m,
   day,
@@ -61,6 +68,9 @@ export function CalendarScreen({
   const month = monthEntries(entries, { y, m });
   const rows = dayEntries(month, day);
   const dNet = dayNet(month, day);
+  // Derived from the same `month` slice as In/Out/Net, so it swaps in the same
+  // beat when the pager commits a new cursor (#48/#50).
+  const remaining = budgetRemaining(budgets, month);
 
   return (
     <View style={styles.screen}>
@@ -92,6 +102,17 @@ export function CalendarScreen({
           tone="ink"
           strong
         />
+        {/* BUDGET column (#50): only exists once any budget is set, so the
+            strip stays exactly three columns until the user opts in. Remaining
+            is a magnitude while positive; overspend shows the true negative
+            (signed, red), never clamped to zero. */}
+        {hasAnyBudget(budgets) && (
+          <StripCol
+            label={strings.calendar.budget}
+            value={remaining < 0 ? signed(remaining, symbol) : yen(remaining, symbol)}
+            tone={remaining < 0 ? 'negative' : 'ink'}
+          />
+        )}
       </View>
 
       <MonthPager
