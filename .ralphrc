@@ -10,6 +10,7 @@ PROJECT_TYPE="typescript"
 # If "claude" is not in your PATH, set to your installation:
 #   "npx @anthropic-ai/claude-code"  (uses npx, no global install needed)
 #   "/path/to/claude"                (custom path)
+# CLAUDE_CODE_CMD="aider-claude-shim"
 CLAUDE_CODE_CMD="claude"
 
 # Loop settings
@@ -26,7 +27,7 @@ CLAUDE_OUTPUT_FORMAT="json"
 ALLOWED_TOOLS="Write,Read,Edit,Bash(git add *),Bash(git commit *),Bash(git diff *),Bash(git log *),Bash(git status),Bash(git status *),Bash(git push *),Bash(git pull *),Bash(git fetch *),Bash(git checkout *),Bash(git branch *),Bash(git stash *),Bash(git merge *),Bash(git tag *),Bash(npm *),Bash(pytest)"
 
 # Session management
-SESSION_CONTINUITY=true
+SESSION_CONTINUITY=false
 SESSION_EXPIRY_HOURS=24
 
 # Task sources (for ralph enable --sync)
@@ -41,6 +42,7 @@ CB_SAME_ERROR_THRESHOLD=5
 CB_OUTPUT_DECLINE_THRESHOLD=70
 
 # Auto-update Claude CLI at startup
+# CLAUDE_AUTO_UPDATE=false
 CLAUDE_AUTO_UPDATE=true
 
 # Shell init file (optional)
