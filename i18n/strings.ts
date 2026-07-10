@@ -48,6 +48,8 @@ export interface Strings {
     netThisMonth: string;
     spendingByCategory: string;
     noSpending: string;
+    /** Net-card label for the month's remaining budget (#51). */
+    budgetLeft: string;
   };
   entry: {
     noteRowLabel: string;
@@ -143,6 +145,7 @@ export const en: Strings = {
     netThisMonth: 'Net this month',
     spendingByCategory: 'Spending by category',
     noSpending: 'No spending this month.',
+    budgetLeft: 'Budget left',
   },
   entry: {
     noteRowLabel: 'Note',
@@ -249,6 +252,7 @@ export const ja: Strings = {
     netThisMonth: '今月の収支',
     spendingByCategory: 'カテゴリ別の支出',
     noSpending: '今月の支出はありません。',
+    budgetLeft: '予算の残り',
   },
   entry: {
     noteRowLabel: 'メモ',

@@ -2,19 +2,24 @@
  * SummaryScreen — a month's cash-flow at a glance (slice #5). Net card (large
  * mono net + in/out SplitBar + legend) over the ranked spending-by-category
  * bars (expenses, highest-first, scaled to the max). Reads the same store
- * aggregation as Calendar.
+ * aggregation as Calendar. With any budget set (#51) the net card gains a
+ * budget-left line (same Σ budgets − expenses formula as the Calendar strip)
+ * and budgeted category bars show spent / budget, red when over.
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   MONTH_NAMES,
+  budgetRemaining,
   categoryBreakdown,
+  hasAnyBudget,
   monthEntries,
   net as monthNet,
   splitProportions,
   signed,
   yen,
+  type Budgets,
   type Transaction,
 } from '../domain';
 import { strings } from '../i18n';
@@ -24,18 +29,20 @@ import { IconButton } from '../nav/IconButton';
 
 interface SummaryScreenProps {
   entries: Transaction[];
+  budgets: Budgets;
   y: number;
   m: number;
   symbol: string;
   onSettings: () => void;
 }
 
-export function SummaryScreen({ entries, y, m, symbol, onSettings }: SummaryScreenProps) {
+export function SummaryScreen({ entries, budgets, y, m, symbol, onSettings }: SummaryScreenProps) {
   const { colors } = useTheme();
   const month = monthEntries(entries, { y, m });
   const total = monthNet(month);
   const split = splitProportions(month);
-  const breakdown = categoryBreakdown(month);
+  const breakdown = categoryBreakdown(month, budgets);
+  const remaining = budgetRemaining(budgets, month);
 
   return (
     <View style={styles.screen}>
@@ -71,6 +78,21 @@ export function SummaryScreen({ entries, y, m, symbol, onSettings }: SummaryScre
             <Legend label={strings.calendar.in} value={yen(split.income, symbol)} tone="positive" />
             <Legend label={strings.calendar.out} value={yen(split.expense, symbol)} tone="negative" />
           </View>
+
+          {/* Budget-left line (#51): only exists once any budget is set, so the
+              card stays unchanged until the user opts in. Same formula and
+              overspend formatting (signed, red, unclamped) as the Calendar
+              strip's BUDGET column. */}
+          {hasAnyBudget(budgets) && (
+            <View style={[styles.budgetRow, { borderTopColor: colors.line }]}>
+              <Txt variant="secondary" tone="muted">
+                {strings.summary.budgetLeft}
+              </Txt>
+              <Txt variant="inlineAmount" tone={remaining < 0 ? 'negative' : 'ink'}>
+                {remaining < 0 ? signed(remaining, symbol) : yen(remaining, symbol)}
+              </Txt>
+            </View>
+          )}
         </View>
 
         <Txt variant="microLabel" tone="dim" style={styles.sectionLabel}>
@@ -88,6 +110,7 @@ export function SummaryScreen({ entries, y, m, symbol, onSettings }: SummaryScre
               category={slice.category}
               total={slice.total}
               fraction={slice.fraction}
+              budget={slice.budget}
               symbol={symbol}
             />
           ))
@@ -132,6 +155,13 @@ const styles = StyleSheet.create({
   },
   net: { marginTop: -2 },
   legend: { flexDirection: 'row', gap: 20, flexWrap: 'wrap' },
+  budgetRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 12,
+  },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   sectionLabel: { marginBottom: 14 },

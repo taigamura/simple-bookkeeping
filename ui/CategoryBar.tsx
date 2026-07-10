@@ -2,7 +2,9 @@
  * CategoryBar — one ranked spending row on Summary: category label + amount on
  * top, a track bar below whose green fill is scaled to the largest category
  * (`fraction`). Track = `--card`, fill = `positive` per the design (§5); the
- * amount reads muted since these are all expenses.
+ * amount reads muted since these are all expenses. A budgeted category (#51)
+ * shows "spent / budget" instead, and both fill and amount flip to the
+ * negative accent once spending exceeds the budget.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -15,6 +17,8 @@ interface CategoryBarProps {
   total: number;
   /** Bar fill in [0, 1], scaled to the largest category. */
   fraction: number;
+  /** The category's monthly budget (#51); omit to render the plain bar. */
+  budget?: number;
   symbol?: string;
 }
 
@@ -22,24 +26,31 @@ export function CategoryBar({
   category,
   total,
   fraction,
+  budget,
   symbol = DEFAULT_CURRENCY.symbol,
 }: CategoryBarProps) {
   const { colors } = useTheme();
+  const overBudget = budget !== undefined && total > budget;
   return (
     <View style={styles.row}>
       <View style={styles.labelRow}>
         <Txt variant="listItem" numberOfLines={1} style={styles.label}>
           {category}
         </Txt>
-        <Txt variant="inlineAmount" tone="muted">
-          {yen(total, symbol)}
+        <Txt variant="inlineAmount" tone={overBudget ? 'negative' : 'muted'}>
+          {budget !== undefined
+            ? `${yen(total, symbol)} / ${yen(budget, symbol)}`
+            : yen(total, symbol)}
         </Txt>
       </View>
       <View style={[styles.track, { backgroundColor: colors.card }]}>
         <View
           style={[
             styles.fill,
-            { backgroundColor: accents.positive, width: `${Math.max(0, Math.min(1, fraction)) * 100}%` },
+            {
+              backgroundColor: overBudget ? accents.negative : accents.positive,
+              width: `${Math.max(0, Math.min(1, fraction)) * 100}%`,
+            },
           ]}
         />
       </View>

@@ -321,6 +321,7 @@ function Shell({
         ) : (
           <SummaryScreen
             entries={state.entries}
+            budgets={state.budgets}
             y={cursor.y}
             m={cursor.m}
             symbol={symbol}

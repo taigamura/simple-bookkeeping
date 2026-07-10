@@ -55,6 +55,44 @@ describe('categoryBreakdown', () => {
   });
 });
 
+describe('categoryBreakdown budget annotation (#51)', () => {
+  const entries = [
+    tx({ id: 'a', category: 'Food', amount: 12000 }),
+    tx({ id: 'b', category: 'Hobby', amount: 3000 }),
+  ];
+
+  it('annotates budgeted slices with budget and remaining = budget − spent', () => {
+    const [food] = categoryBreakdown(entries, { Food: 30000 });
+    expect(food.category).toBe('Food');
+    expect(food.budget).toBe(30000);
+    expect(food.remaining).toBe(18000);
+  });
+
+  it('goes negative when the category is over budget, never clamped', () => {
+    const [food] = categoryBreakdown(entries, { Food: 10000 });
+    expect(food.remaining).toBe(-2000);
+  });
+
+  it('leaves unbudgeted slices without budget fields', () => {
+    const bd = categoryBreakdown(entries, { Food: 30000 });
+    const hobby = bd.find((s) => s.category === 'Hobby')!;
+    expect('budget' in hobby).toBe(false);
+    expect('remaining' in hobby).toBe(false);
+  });
+
+  it('a budget for a category with no spending this month adds no slice', () => {
+    const bd = categoryBreakdown(entries, { Rent: 80000 });
+    expect(bd.some((s) => s.category === 'Rent')).toBe(false);
+  });
+
+  it('defaults to no annotation when budgets are omitted', () => {
+    for (const slice of categoryBreakdown(entries)) {
+      expect(slice.budget).toBeUndefined();
+      expect(slice.remaining).toBeUndefined();
+    }
+  });
+});
+
 describe('splitProportions', () => {
   it('splits income and expense proportional to their combined flow', () => {
     const s = splitProportions([
