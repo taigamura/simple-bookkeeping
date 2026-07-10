@@ -28,6 +28,7 @@ describe('CalendarScreen (ja locale)', () => {
           onEditEntry={() => {}}
           onPrevMonth={() => {}}
           onNextMonth={() => {}}
+          onMonthChange={() => {}}
           onSettings={() => {}}
         />
       </ThemeProvider>,

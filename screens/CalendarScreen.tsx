@@ -19,6 +19,7 @@ import {
   signed,
   yen,
   type Transaction,
+  type YM,
 } from '../domain';
 import { strings } from '../i18n';
 import { ListRow, MonthPager } from '../ui';
@@ -36,6 +37,8 @@ interface CalendarScreenProps {
   onEditEntry: (entry: Transaction) => void;
   onPrevMonth: () => void;
   onNextMonth: () => void;
+  /** Pager settle: adopt the absolute month it landed on (#48). */
+  onMonthChange: (ym: YM) => void;
   onSettings: () => void;
 }
 
@@ -51,6 +54,7 @@ export function CalendarScreen({
   onEditEntry,
   onPrevMonth,
   onNextMonth,
+  onMonthChange,
   onSettings,
 }: CalendarScreenProps) {
   const { colors } = useTheme();
@@ -96,7 +100,7 @@ export function CalendarScreen({
         m={m}
         selectedDay={day}
         onSelectDay={onSelectDay}
-        onPageChange={(delta) => (delta === 1 ? onNextMonth() : onPrevMonth())}
+        onMonthChange={onMonthChange}
       />
 
       <View style={[styles.dayHeader, { borderBottomColor: colors.line }]}>

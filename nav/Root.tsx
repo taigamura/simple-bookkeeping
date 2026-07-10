@@ -240,13 +240,15 @@ function Shell({
     });
   };
 
-  // Month navigation: shift the cursor and clamp the selected day into the new
-  // month (e.g. Jan 31 → Feb 28) so the selection stays valid.
-  const goMonth = (delta: number) => {
-    const next = shiftMonth(cursor, delta);
+  // Month navigation: move the cursor and clamp the selected day into the new
+  // month (e.g. Jan 31 → Feb 28) so the selection stays valid. `setMonth` takes
+  // the absolute month (the pager settle can land several months away after
+  // rapid flings, #48); the ‹ › chevrons shift by one via `goMonth`.
+  const setMonth = (next: YM) => {
     setCursor(next);
     setSelectedDay((d) => clampDay(d, next.y, next.m));
   };
+  const goMonth = (delta: number) => setMonth(shiftMonth(cursor, delta));
 
   // handleSubmit(): the Entry sheet's save. In edit mode, overwrite the entry by
   // id (preserving id/y/m/day) via the pure `updateEntry`; otherwise materialize
@@ -300,6 +302,7 @@ function Shell({
             onEditEntry={openEdit}
             onPrevMonth={() => goMonth(-1)}
             onNextMonth={() => goMonth(1)}
+            onMonthChange={setMonth}
             onSettings={openSettings}
           />
         ) : (
