@@ -9,6 +9,13 @@
  * component: the boolean `visible` prop is mirrored onto the modal's imperative
  * present()/dismiss() below, and `onClose` fires whenever the sheet leaves.
  *
+ * Mounting contract (#47): `children` must be passed unconditionally — never
+ * gated on `visible` by the parent. `enableDynamicSizing` measures the content
+ * at present() time to derive the resting detent, so content that mounts only
+ * after `visible` flips can present a blank, zero-height sheet. The modal
+ * itself portals children in on present() and unmounts them after dismiss, so
+ * each open still gets a fresh mount (state re-initializes per open).
+ *
  * Snap detents (#44): every sheet now exposes two — content height (resting,
  * dynamic) and full screen (`100%`) — so `enableDynamicSizing` pushes its
  * measured content-height detent in alongside the fixed one. Dragging the
@@ -26,6 +33,7 @@ import {
 import React, { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme, metrics } from '../theme';
 
@@ -61,6 +69,10 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const { colors } = useTheme();
   const ref = useRef<BottomSheetModal>(null);
+  // Keep the full-height detent below the status bar (#47): the modal's
+  // container spans the whole window, so without this the sheet's top row
+  // (e.g. Settings' Done button) lands under the status bar at `100%`.
+  const insets = useSafeAreaInsets();
 
   // Mirror the controlled `visible` prop onto the imperative modal. dismiss()
   // animates out and then fires onDismiss (below); present() is a no-op if it's
@@ -90,6 +102,7 @@ export function BottomSheet({
       ref={ref}
       enableDynamicSizing
       enablePanDownToClose
+      topInset={insets.top}
       snapPoints={SNAP_POINTS}
       onDismiss={onClose}
       backdropComponent={renderBackdrop}

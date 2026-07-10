@@ -149,10 +149,11 @@ function Shell({
     }
   }, [showCorruptNotice]);
 
-  const closeSheet = () => {
-    setSheet(null);
-    setEditing(null);
-  };
+  // Closing deliberately leaves `editing` alone (#47): the sheet body now stays
+  // mounted through the dismiss animation, so clearing it here would flip an
+  // edit-mode EntrySheet to create-mode chrome mid-slide. Every open path sets
+  // it explicitly instead (openEntry → null, openEdit → the entry).
+  const closeSheet = () => setSheet(null);
   const openSettings = () => setSheet('settings');
 
   // openEntry(): the ＋ button — always create mode (clear any prior editing).
@@ -265,7 +266,6 @@ function Shell({
       setSelectedDay((d) => (days.has(d) ? d : entries[0].day));
     }
     setTab('calendar');
-    setEditing(null);
     setSheet(null);
   };
 
@@ -279,7 +279,6 @@ function Shell({
       () => {
         update({ entries: removeEntry(state.entries, id) });
         setTab('calendar');
-        setEditing(null);
         setSheet(null);
       },
       strings.common.delete,
@@ -316,44 +315,45 @@ function Shell({
 
       <TabBar tab={tab} onSelect={setTab} onAdd={openEntry} />
 
+      {/* Sheet bodies are passed unconditionally (#47) — never gated on `sheet`.
+          BottomSheet's dynamic sizing measures the content at present() time, so
+          gating on the open state raced the measurement (blank first open,
+          collapsed initial detent). The modal only mounts children while
+          presented, so each open still gets a fresh EntrySheet/SettingsSheet. */}
       <BottomSheet visible={sheet === 'entry'} onClose={closeSheet} anchorBottom>
-        {sheet === 'entry' && (
-          <EntrySheet
-            expCats={state.expCats}
-            incCats={state.incCats}
-            y={cursor.y}
-            m={cursor.m}
-            day={selectedDay}
-            symbol={symbol}
-            editing={editing ?? undefined}
-            onSave={handleSubmit}
-            onDelete={handleDelete}
-            onClose={closeSheet}
-          />
-        )}
+        <EntrySheet
+          expCats={state.expCats}
+          incCats={state.incCats}
+          y={cursor.y}
+          m={cursor.m}
+          day={selectedDay}
+          symbol={symbol}
+          editing={editing ?? undefined}
+          onSave={handleSubmit}
+          onDelete={handleDelete}
+          onClose={closeSheet}
+        />
       </BottomSheet>
 
       <BottomSheet visible={sheet === 'settings'} onClose={closeSheet}>
-        {sheet === 'settings' && (
-          <SettingsSheet
-            currency={state.currency}
-            expCats={state.expCats}
-            incCats={state.incCats}
-            onChangeCurrency={(currency: Currency) => update({ currency })}
-            onChangeExpCats={(expCats) => update({ expCats })}
-            onChangeIncCats={(incCats) => update({ incCats })}
-            onLoadSample={loadSample}
-            onExportData={exportData}
-            onImportZaim={importZaim}
-            hasCorruptStash={hasCorruptStash}
-            onExportCorruptStash={exportCorruptStash}
-            lockEnabled={state.lockEnabled}
-            lockAvailable={lockAvailable}
-            onToggleLock={(lockEnabled) => update({ lockEnabled })}
-            onClose={closeSheet}
-            ScrollContainer={BottomSheetScrollView}
-          />
-        )}
+        <SettingsSheet
+          currency={state.currency}
+          expCats={state.expCats}
+          incCats={state.incCats}
+          onChangeCurrency={(currency: Currency) => update({ currency })}
+          onChangeExpCats={(expCats) => update({ expCats })}
+          onChangeIncCats={(incCats) => update({ incCats })}
+          onLoadSample={loadSample}
+          onExportData={exportData}
+          onImportZaim={importZaim}
+          hasCorruptStash={hasCorruptStash}
+          onExportCorruptStash={exportCorruptStash}
+          lockEnabled={state.lockEnabled}
+          lockAvailable={lockAvailable}
+          onToggleLock={(lockEnabled) => update({ lockEnabled })}
+          onClose={closeSheet}
+          ScrollContainer={BottomSheetScrollView}
+        />
       </BottomSheet>
     </View>
   );
