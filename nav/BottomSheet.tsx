@@ -114,6 +114,7 @@ export function BottomSheet({
       ref={ref}
       enableDynamicSizing
       enablePanDownToClose
+      enableHandlePanningGesture
       enableContentPanningGesture={false}
       topInset={insets.top}
       snapPoints={SNAP_POINTS}
