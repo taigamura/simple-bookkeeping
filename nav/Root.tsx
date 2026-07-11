@@ -333,7 +333,7 @@ function Shell({
           gating on the open state raced the measurement (blank first open,
           collapsed initial detent). The modal only mounts children while
           presented, so each open still gets a fresh EntrySheet/SettingsSheet. */}
-      <BottomSheet visible={sheet === 'entry'} onClose={closeSheet} anchorBottom>
+      <BottomSheet visible={sheet === 'entry'} onClose={closeSheet}>
         <EntrySheet
           expCats={state.expCats}
           incCats={state.incCats}
