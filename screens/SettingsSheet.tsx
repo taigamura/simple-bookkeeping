@@ -160,9 +160,11 @@ function Appearance() {
 }
 
 /**
- * Face ID / passcode lock toggle (#30). Disabled with an explanation when
- * the device has no biometrics/passcode enrolled — never lets the user
- * flip on a gate the device can't actually satisfy.
+ * Lock toggle (#30, #55): displays the persisted enabled state truthfully
+ * (not enabled-AND-available), and is disabled only when the lock is off
+ * AND availability is false — turning the lock off is always possible,
+ * preventing the trap where the toggle shows "off" while the lock is actually
+ * on (broken availability check).
  */
 function LockToggle({
   enabled,
@@ -174,7 +176,7 @@ function LockToggle({
   onToggle: (enabled: boolean) => void;
 }) {
   const { colors } = useTheme();
-  const on = enabled && available;
+  const disabled = !enabled && !available;
   return (
     <View style={styles.section}>
       <Txt variant="microLabel" tone="dim">
@@ -192,18 +194,18 @@ function LockToggle({
           )}
         </View>
         <Pressable
-          onPress={() => onToggle(!on)}
-          disabled={!available}
+          onPress={() => onToggle(!enabled)}
+          disabled={disabled}
           accessibilityRole="switch"
-          accessibilityState={{ checked: on, disabled: !available }}
+          accessibilityState={{ checked: enabled, disabled }}
           accessibilityLabel={strings.lock.label}
           style={[
             styles.pill,
-            { backgroundColor: on ? accents.positive : colors.card3, opacity: available ? 1 : 0.5 },
+            { backgroundColor: enabled ? accents.positive : colors.card3, opacity: disabled ? 0.5 : 1 },
           ]}
         >
-          <Txt variant="microLabel" tone={on ? 'onPositive' : 'muted'}>
-            {on ? strings.common.on : strings.common.off}
+          <Txt variant="microLabel" tone={enabled ? 'onPositive' : 'muted'}>
+            {enabled ? strings.common.on : strings.common.off}
           </Txt>
         </Pressable>
       </View>

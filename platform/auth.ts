@@ -8,12 +8,21 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Platform } from 'react-native';
 
-/** Whether the device can gate the app at all (biometrics or a passcode enrolled). */
+/** Whether the device can gate the app at all (#55: passcode-or-better enrollment). */
 export async function isAuthAvailable(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
-  const hasHardware = await LocalAuthentication.hasHardwareAsync();
-  if (!hasHardware) return false;
-  return LocalAuthentication.isEnrolledAsync();
+
+  try {
+    // Get the device's enrolled security level: NONE (0), SECRET (1, passcode/PIN),
+    // or BIOMETRIC (2+). Anything other than NONE means the device can authenticate.
+    const level = await LocalAuthentication.getEnrolledLevelAsync();
+    return level !== LocalAuthentication.SecurityLevel.NONE;
+  } catch {
+    // If getEnrolledLevelAsync is unavailable, fall back to biometric check only.
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    if (!hasHardware) return false;
+    return LocalAuthentication.isEnrolledAsync();
+  }
 }
 
 /** Prompt biometrics, falling back to the device passcode. Always true on web. */

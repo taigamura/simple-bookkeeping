@@ -122,4 +122,42 @@ describe('SettingsSheet', () => {
     expect(ScrollContainer).toHaveBeenCalled();
     expect(screen.getByText('Food')).toBeTruthy();
   });
+
+  it('shows the persisted enabled state truthfully even when availability is false (#55 never-trap)', () => {
+    const onToggleLock = jest.fn();
+    renderSheet({ lockEnabled: true, lockAvailable: false, onToggleLock });
+    const lockSwitch = screen.getByLabelText('Lock');
+    // Toggle shows ON state (enabled=true), despite availability=false
+    expect(lockSwitch.props.accessibilityState.checked).toBe(true);
+  });
+
+  it('allows turning off the lock even when availability is false (#55 never-trap)', () => {
+    const onToggleLock = jest.fn();
+    renderSheet({ lockEnabled: true, lockAvailable: false, onToggleLock });
+    const lockSwitch = screen.getByLabelText('Lock');
+    // Toggle is NOT disabled (can always turn off)
+    expect(lockSwitch.props.accessibilityState.disabled).toBe(false);
+    fireEvent.press(lockSwitch);
+    expect(onToggleLock).toHaveBeenCalledWith(false);
+  });
+
+  it('disables the toggle only when lock is off AND availability is false (#55 never-trap)', () => {
+    const onToggleLock = jest.fn();
+    renderSheet({ lockEnabled: false, lockAvailable: false, onToggleLock });
+    const lockSwitch = screen.getByLabelText('Lock');
+    // Toggle is disabled (can't turn on unavailable)
+    expect(lockSwitch.props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(lockSwitch);
+    expect(onToggleLock).not.toHaveBeenCalled();
+  });
+
+  it('enables the toggle when lock is on, regardless of availability (#55 never-trap)', () => {
+    const onToggleLock = jest.fn();
+    renderSheet({ lockEnabled: true, lockAvailable: true, onToggleLock });
+    const lockSwitch = screen.getByLabelText('Lock');
+    // Toggle is NOT disabled (can always turn off)
+    expect(lockSwitch.props.accessibilityState.disabled).toBe(false);
+    fireEvent.press(lockSwitch);
+    expect(onToggleLock).toHaveBeenCalledWith(false);
+  });
 });
