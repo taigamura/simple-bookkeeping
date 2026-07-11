@@ -44,7 +44,7 @@ const COLD_LOADS = 12;
 const DEAD_ZONE_TOLERANCE = 80;
 
 test.describe('cold-load first tap', () => {
-  test.fail(`＋ opens the Entry sheet on the first tap, ${COLD_LOADS}/${COLD_LOADS} fresh loads`, async ({ page }) => {
+  test(`＋ opens the Entry sheet on the first tap, ${COLD_LOADS}/${COLD_LOADS} fresh loads`, async ({ page }) => {
     for (let i = 1; i <= COLD_LOADS; i++) {
       const { fab } = await coldLoad(page);
       await tapAt(page, fab);
@@ -52,7 +52,7 @@ test.describe('cold-load first tap', () => {
     }
   });
 
-  test.fail(`⚙ opens the Settings sheet on the first tap, ${COLD_LOADS}/${COLD_LOADS} fresh loads`, async ({ page }) => {
+  test(`⚙ opens the Settings sheet on the first tap, ${COLD_LOADS}/${COLD_LOADS} fresh loads`, async ({ page }) => {
     for (let i = 1; i <= COLD_LOADS; i++) {
       const { gear } = await coldLoad(page);
       await tapAt(page, gear);
@@ -62,7 +62,7 @@ test.describe('cold-load first tap', () => {
 });
 
 test.describe('Budgets from Settings', () => {
-  test.fail('Budgets row opens the Budgets sheet, 10/10', async ({ page }) => {
+  test('Budgets row opens the Budgets sheet, 10/10', async ({ page }) => {
     for (let i = 1; i <= 10; i++) {
       const { gear } = await coldLoad(page);
       await tapAt(page, gear);
@@ -75,7 +75,7 @@ test.describe('Budgets from Settings', () => {
 });
 
 test.describe('dismiss → immediate reopen', () => {
-  test.fail('Entry: backdrop dismiss, then reopen', async ({ page }) => {
+  test('Entry: backdrop dismiss, then reopen', async ({ page }) => {
     const { fab } = await coldLoad(page);
     await tapAt(page, fab);
     await expectSheetOpen(page, 'entry-sheet');
@@ -88,7 +88,7 @@ test.describe('dismiss → immediate reopen', () => {
     await expectCalendarTappable(page, 'after Entry backdrop dismissals');
   });
 
-  test.fail('Entry: ✕ close, then reopen', async ({ page }) => {
+  test('Entry: ✕ close, then reopen', async ({ page }) => {
     const { fab } = await coldLoad(page);
     await tapAt(page, fab);
     await expectSheetOpen(page, 'entry-sheet');
@@ -102,7 +102,7 @@ test.describe('dismiss → immediate reopen', () => {
     await expectCalendarTappable(page, 'after Entry ✕ dismissals');
   });
 
-  test.fail('Settings: backdrop dismiss, then reopen', async ({ page }) => {
+  test('Settings: backdrop dismiss, then reopen', async ({ page }) => {
     const { gear } = await coldLoad(page);
     await tapAt(page, gear);
     await expectSheetOpen(page, 'settings-sheet');
@@ -115,7 +115,7 @@ test.describe('dismiss → immediate reopen', () => {
     await expectCalendarTappable(page, 'after Settings backdrop dismissals');
   });
 
-  test.fail('Settings: Done close, then reopen', async ({ page }) => {
+  test('Settings: Done close, then reopen', async ({ page }) => {
     const { gear } = await coldLoad(page);
     await tapAt(page, gear);
     await expectSheetOpen(page, 'settings-sheet');
@@ -142,7 +142,7 @@ test.describe('sheet swaps', () => {
     await expectSheetOpen(page, 'settings-sheet', 'swap entry→settings');
   });
 
-  test.fail('settings→entry: ＋ tapped right as the Settings sheet dismisses', async ({ page }) => {
+  test('settings→entry: ＋ tapped right as the Settings sheet dismisses', async ({ page }) => {
     const { fab, gear } = await coldLoad(page);
     await tapAt(page, gear);
     await expectSheetOpen(page, 'settings-sheet');
@@ -151,7 +151,7 @@ test.describe('sheet swaps', () => {
     await expectSheetOpen(page, 'entry-sheet', 'swap settings→entry');
   });
 
-  test.fail('settings⇄budgets: three round trips', async ({ page }) => {
+  test('settings⇄budgets: three round trips', async ({ page }) => {
     const { gear } = await coldLoad(page);
     await tapAt(page, gear);
     await expectSheetOpen(page, 'settings-sheet');
@@ -167,7 +167,7 @@ test.describe('sheet swaps', () => {
 });
 
 test.describe('ghost overlay', () => {
-  test.fail('calendar day taps register after every dismissal path', async ({ page }) => {
+  test('calendar day taps register after every dismissal path', async ({ page }) => {
     const { fab, gear } = await coldLoad(page);
 
     await tapAt(page, fab);
@@ -214,7 +214,7 @@ test.describe('sheet geometry', () => {
     });
   }
 
-  test.fail('budgets-sheet: content fills the sheet, no dead zone', async ({ page }) => {
+  test('budgets-sheet: content fills the sheet, no dead zone', async ({ page }) => {
     const { gear } = await coldLoad(page);
     await tapAt(page, gear);
     await expectSheetOpen(page, 'settings-sheet');

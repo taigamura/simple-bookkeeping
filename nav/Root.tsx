@@ -151,14 +151,10 @@ function Shell({
     }
   }, [showCorruptNotice]);
 
-  // Which-sheet-guarded dismissal (#53): the outgoing modal's dismiss fires
-  // *after* `sheet` already points at the incoming one, so each BottomSheet's
-  // onClose only clears the nav state if it is still the open sheet — otherwise
-  // late-landing dismisses from outgoing sheets would cancel incoming presents
-  // (entry→settings, settings→entry, settings⇄budgets).
-  const sheetDismissed = (which: Sheet) => () =>
-    setSheet((s) => (s === which ? null : s));
-  const closeSheet = sheetDismissed('entry');
+  // Single-sheet-host handlers (#60): the unified sheet host replaces the
+  // three separate modals. Sheet state is authoritative; dismissal while a sheet
+  // is still requested gets reconciled by re-presenting.
+  const closeSheet = () => setSheet(null);
 
   const openSettings = () => setSheet('settings');
   const openBudgets = () => setSheet('budgets');
@@ -328,68 +324,58 @@ function Shell({
 
       <TabBar tab={tab} onSelect={setTab} onAdd={openEntry} />
 
-      {/* Sheet bodies are passed unconditionally (#47) — never gated on `sheet`.
-          BottomSheet's dynamic sizing measures the content at present() time, so
-          gating on the open state raced the measurement (blank first open,
-          collapsed initial detent). The modal only mounts children while
-          presented, so each open still gets a fresh EntrySheet/SettingsSheet. */}
-      <BottomSheet visible={sheet === 'entry'} onClose={closeSheet} testID="entry-sheet">
-        <EntrySheet
-          expCats={state.expCats}
-          incCats={state.incCats}
-          y={cursor.y}
-          m={cursor.m}
-          day={selectedDay}
-          symbol={symbol}
-          editing={editing ?? undefined}
-          onSave={handleSubmit}
-          onDelete={handleDelete}
-          onClose={closeSheet}
-        />
-      </BottomSheet>
-
-      <BottomSheet
-        visible={sheet === 'settings'}
-        onClose={sheetDismissed('settings')}
-        testID="settings-sheet"
-      >
-        <SettingsSheet
-          currency={state.currency}
-          expCats={state.expCats}
-          incCats={state.incCats}
-          onChangeCurrency={(currency: Currency) => update({ currency })}
-          // Deleting an expense category silently drops its budget entry (#49).
-          onChangeExpCats={(expCats) =>
-            update({ expCats, budgets: pruneBudgets(state.budgets, expCats) })
-          }
-          onChangeIncCats={(incCats) => update({ incCats })}
-          onOpenBudgets={openBudgets}
-          onLoadSample={loadSample}
-          onExportData={exportData}
-          onImportZaim={importZaim}
-          hasCorruptStash={hasCorruptStash}
-          onExportCorruptStash={exportCorruptStash}
-          lockEnabled={state.lockEnabled}
-          lockAvailable={lockAvailable}
-          onToggleLock={(lockEnabled) => update({ lockEnabled })}
-          onClose={sheetDismissed('settings')}
-          ScrollContainer={BottomSheetScrollView}
-        />
-      </BottomSheet>
-
-      <BottomSheet
-        visible={sheet === 'budgets'}
-        onClose={sheetDismissed('budgets')}
-        testID="budgets-sheet"
-      >
-        <BudgetsSheet
-          expCats={state.expCats}
-          budgets={state.budgets}
-          symbol={symbol}
-          onChangeBudgets={(budgets) => update({ budgets })}
-          onDone={backToSettings}
-          ScrollContainer={BottomSheetScrollView}
-        />
+      {/* Unified sheet host (#60): single BottomSheetModal for entry/settings/budgets.
+          The sheet state selects which body renders. Transitions between non-null
+          values are content swaps inside the open sheet; only null→sheet and
+          sheet→null trigger present/dismiss. Sheet bodies mount unconditionally. */}
+      <BottomSheet visible={sheet !== null} onClose={closeSheet} testID={sheet ? `${sheet}-sheet` : undefined}>
+        {sheet === 'entry' && (
+          <EntrySheet
+            expCats={state.expCats}
+            incCats={state.incCats}
+            y={cursor.y}
+            m={cursor.m}
+            day={selectedDay}
+            symbol={symbol}
+            editing={editing ?? undefined}
+            onSave={handleSubmit}
+            onDelete={handleDelete}
+            onClose={closeSheet}
+          />
+        )}
+        {sheet === 'settings' && (
+          <SettingsSheet
+            currency={state.currency}
+            expCats={state.expCats}
+            incCats={state.incCats}
+            onChangeCurrency={(currency: Currency) => update({ currency })}
+            onChangeExpCats={(expCats) =>
+              update({ expCats, budgets: pruneBudgets(state.budgets, expCats) })
+            }
+            onChangeIncCats={(incCats) => update({ incCats })}
+            onOpenBudgets={openBudgets}
+            onLoadSample={loadSample}
+            onExportData={exportData}
+            onImportZaim={importZaim}
+            hasCorruptStash={hasCorruptStash}
+            onExportCorruptStash={exportCorruptStash}
+            lockEnabled={state.lockEnabled}
+            lockAvailable={lockAvailable}
+            onToggleLock={(lockEnabled) => update({ lockEnabled })}
+            onClose={closeSheet}
+            ScrollContainer={BottomSheetScrollView}
+          />
+        )}
+        {sheet === 'budgets' && (
+          <BudgetsSheet
+            expCats={state.expCats}
+            budgets={state.budgets}
+            symbol={symbol}
+            onChangeBudgets={(budgets) => update({ budgets })}
+            onDone={backToSettings}
+            ScrollContainer={BottomSheetScrollView}
+          />
+        )}
       </BottomSheet>
     </View>
   );

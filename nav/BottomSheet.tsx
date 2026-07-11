@@ -1,28 +1,25 @@
 /**
- * BottomSheet — the Entry and Settings sheets (decision 3), migrated onto
- * `@gorhom/bottom-sheet` in #39. Opens at content height with a softly fading
- * dimmed backdrop and a spring-driven slide, replacing the old squared-off RN
- * `Modal` (`animationType="slide"`). Tapping the backdrop — or dragging the
- * sheet handle down — dismisses it; the rounded top corners are kept throughout.
+ * BottomSheet — unified sheet host for entry/settings/budgets (#60), migrated
+ * onto `@gorhom/bottom-sheet` in #39. Opens at content height with a softly fading
+ * dimmed backdrop and a spring-driven slide. Tapping the backdrop — or dragging
+ * the sheet handle down — dismisses it; rounded top corners persist.
  *
- * The parent still owns which sheet is open, so this stays a controlled
- * component: the boolean `visible` prop is mirrored onto the modal's imperative
- * present()/dismiss() below, and `onClose` fires whenever the sheet leaves.
+ * Controlled component: the boolean `visible` prop mirrors onto present()/dismiss(),
+ * but transitions between non-null content (entry→settings, etc.) stay open —
+ * only null transitions trigger present/dismiss.
  *
- * Mounting contract (#47): `children` must be passed unconditionally — never
- * gated on `visible` by the parent. `enableDynamicSizing` measures the content
- * at present() time to derive the resting detent, so content that mounts only
- * after `visible` flips can present a blank, zero-height sheet. The modal
- * itself portals children in on present() and unmounts them after dismiss, so
- * each open still gets a fresh mount (state re-initializes per open).
+ * Mounting contract (#47): `children` must be passed unconditionally. The modal
+ * measures content at present() time for dynamic sizing, so content that mounts
+ * only after `visible` flips would present blank. The gorhom modal portals
+ * children while presented and unmounts after dismiss, refreshing state per open.
  *
- * Single content-height detent (#54): sheets now expose only the dynamic
- * content-height detent — no full-screen (100%) snap or grow gesture. Content
- * panning is disabled; sheets are dragged only via the grab handle or dismissed
- * via backdrop tap/Done buttons, so in-sheet scroll areas never compete with
- * pan recognizers. Scrollables (Settings/Budgets category lists, Data actions)
- * work at the top detent, making full content reachable within the kept ~460
- * scroll cap.
+ * Minimum height floor (#60): prevents a zero-measurement from presenting an
+ * invisible sheet. If content height falls below the floor, the sheet uses the
+ * floor instead, guaranteeing visibility.
+ *
+ * Single content-height detent (#54): only dynamic content-height, no full-screen
+ * snap. Content panning is disabled; sheets drag only via the handle or close
+ * via backdrop tap/Done buttons, so in-sheet scrollables never compete with pan.
  */
 import {
   BottomSheetBackdrop,
@@ -30,7 +27,7 @@ import {
   BottomSheetView,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -50,6 +47,10 @@ export interface BottomSheetProps {
 // `enableDynamicSizing` is used (#54). No fixed full-screen detent.
 const SNAP_POINTS: number[] = [];
 
+// Minimum content height (#60): if the sheet content measures below this,
+// use this floor instead to guarantee visibility. Prevents zero-height sheets.
+const MIN_CONTENT_HEIGHT = 200;
+
 export function BottomSheet({
   visible,
   onClose,
@@ -60,14 +61,21 @@ export function BottomSheet({
   const { colors } = useTheme();
   const ref = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
+  const [isPresented, setIsPresented] = useState(false);
 
-  // Mirror the controlled `visible` prop onto the imperative modal. dismiss()
-  // animates out and then fires onDismiss (below); present() is a no-op if it's
-  // already up, and vice-versa, so re-runs are safe.
+  // Content-swap handler (#60): only present/dismiss on visibility transitions.
+  // When sheet state changes from one non-null value to another (entry→settings),
+  // the sheet stays open and just re-measures the new content. This avoids the
+  // dismiss/present race that plagued the old three-modal setup (#53/#54).
   useEffect(() => {
-    if (visible) ref.current?.present();
-    else ref.current?.dismiss();
-  }, [visible]);
+    if (visible && !isPresented) {
+      ref.current?.present();
+      setIsPresented(true);
+    } else if (!visible && isPresented) {
+      ref.current?.dismiss();
+      setIsPresented(false);
+    }
+  }, [visible, isPresented]);
 
   // Dimmed backdrop that fades in as the sheet rises and out as it leaves; a tap
   // closes it, matching the old Pressable backdrop.
@@ -100,7 +108,7 @@ export function BottomSheet({
       ]}
       handleIndicatorStyle={{ backgroundColor: colors.line }}
     >
-      <BottomSheetView testID={testID} style={[styles.content, style]}>
+      <BottomSheetView testID={testID} style={[styles.content, { minHeight: MIN_CONTENT_HEIGHT }, style]}>
         {children}
       </BottomSheetView>
     </BottomSheetModal>

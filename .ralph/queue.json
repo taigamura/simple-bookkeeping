@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "created_at": "2026-07-08T11:55:33+00:00",
-  "updated_at": "2026-07-10T23:57:44+00:00",
+  "updated_at": "2026-07-11T17:05:23+00:00",
   "repository": "",
   "queue": [
     {
@@ -145,6 +145,64 @@
       "started_at": "2026-07-10T18:54:43+00:00",
       "completed_at": "2026-07-10T19:02:29+00:00",
       "error_message": "Committed in 36c683f. Device-only criteria (fling feel, sheet-open regression after swiping) deferred to human TestFlight pass."
+    },
+    {
+      "source": "github",
+      "issue_number": 58,
+      "title": "Red-first sheet regression suite + first CI (Playwright e2e, GitHub Actions)",
+      "priority": "P0",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
+          "name": "P0",
+          "description": "Critical / must ship first",
+          "color": "B60205"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [],
+      "id": "github-58",
+      "status": "completed",
+      "added_at": "2026-07-11T07:43:06+00:00",
+      "started_at": "2026-07-11T16:57:41+00:00",
+      "completed_at": "2026-07-11T17:05:23+00:00",
+      "error_message": ""
+    },
+    {
+      "source": "github",
+      "issue_number": 60,
+      "title": "Single sheet host: open reliability + Budgets root fix",
+      "priority": "P0",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
+          "name": "P0",
+          "description": "Critical / must ship first",
+          "color": "B60205"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [
+        58
+      ],
+      "id": "github-60",
+      "status": "processing",
+      "added_at": "2026-07-11T07:43:08+00:00",
+      "started_at": "2026-07-11T17:05:23+00:00",
+      "completed_at": null,
+      "error_message": ""
     },
     {
       "source": "github",
@@ -324,6 +382,94 @@
       "started_at": "2026-07-10T19:18:06+00:00",
       "completed_at": "2026-07-10T23:57:44+00:00",
       "error_message": "Committed in 1057e95. Device-only criterion (visual weight of the red over-budget bar fill) deferred to human TestFlight pass."
+    },
+    {
+      "source": "github",
+      "issue_number": 61,
+      "title": "Settings sheet sizing: no dead zone, full-height scroll",
+      "priority": "P1",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
+          "name": "P1",
+          "description": "Important",
+          "color": "D93F0B"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [
+        60
+      ],
+      "id": "github-61",
+      "status": "pending",
+      "added_at": "2026-07-11T07:43:09+00:00",
+      "started_at": null,
+      "completed_at": null,
+      "error_message": ""
+    },
+    {
+      "source": "github",
+      "issue_number": 62,
+      "title": "Grab bar: handle drag tracks the finger and dismisses on iOS",
+      "priority": "P1",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
+          "name": "P1",
+          "description": "Important",
+          "color": "D93F0B"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [
+        60
+      ],
+      "id": "github-62",
+      "status": "pending",
+      "added_at": "2026-07-11T07:43:09+00:00",
+      "started_at": null,
+      "completed_at": null,
+      "error_message": ""
+    },
+    {
+      "source": "github",
+      "issue_number": 59,
+      "title": "Close-button unification: ✕ on Entry/Settings, ‹ back chevron on Budgets",
+      "priority": "P2",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHrw",
+          "name": "P2",
+          "description": "Nice-to-have",
+          "color": "FBCA04"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [],
+      "id": "github-59",
+      "status": "pending",
+      "added_at": "2026-07-11T07:43:07+00:00",
+      "started_at": null,
+      "completed_at": null,
+      "error_message": ""
     }
   ]
 }
