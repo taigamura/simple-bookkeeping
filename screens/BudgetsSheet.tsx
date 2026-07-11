@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  scroll: { maxHeight: 460 },
+  scroll: { flex: 1 },
   scrollBody: { paddingBottom: 4 },
   card: {
     borderRadius: 14,
