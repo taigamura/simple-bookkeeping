@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "created_at": "2026-07-08T11:55:33+00:00",
-  "updated_at": "2026-07-10T11:22:44+00:00",
+  "updated_at": "2026-07-10T23:57:44+00:00",
   "repository": "",
   "queue": [
     {
@@ -92,6 +92,62 @@
     },
     {
       "source": "github",
+      "issue_number": 47,
+      "title": "Sheet presentation reliability: mount content before present, safe-area top inset",
+      "priority": "P0",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
+          "name": "P0",
+          "description": "Critical / must ship first",
+          "color": "B60205"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [],
+      "id": "github-47",
+      "status": "completed",
+      "added_at": "2026-07-10T14:11:39+00:00",
+      "started_at": "2026-07-10T14:12:43+00:00",
+      "completed_at": "2026-07-10T18:54:43+00:00",
+      "error_message": "Committed in 9734aff. Device-only criteria deferred to human TestFlight pass; sandbox blocked headless-web verify run."
+    },
+    {
+      "source": "github",
+      "issue_number": 48,
+      "title": "Calendar pager rework: native paged month list with synced header/strip/day-list",
+      "priority": "P0",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
+          "name": "P0",
+          "description": "Critical / must ship first",
+          "color": "B60205"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [],
+      "id": "github-48",
+      "status": "completed",
+      "added_at": "2026-07-10T14:11:40+00:00",
+      "started_at": "2026-07-10T18:54:43+00:00",
+      "completed_at": "2026-07-10T19:02:29+00:00",
+      "error_message": "Committed in 36c683f. Device-only criteria (fling feel, sheet-open regression after swiping) deferred to human TestFlight pass."
+    },
+    {
+      "source": "github",
       "issue_number": 41,
       "title": "Anchor tab bar flush to the physical bottom edge",
       "priority": "P1",
@@ -177,6 +233,97 @@
       "started_at": "2026-07-09T01:15:00+00:00",
       "completed_at": "2026-07-09T01:21:47+00:00",
       "error_message": "Already implemented in 01ff474 (2026-07-09); issue was closed on GitHub. Reconciled stale queue state on 2026-07-10."
+    },
+    {
+      "source": "github",
+      "issue_number": 49,
+      "title": "Budgets end-to-end: domain model, persistence, drill-in Budgets sheet",
+      "priority": "P1",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
+          "name": "P1",
+          "description": "Important",
+          "color": "D93F0B"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [
+        47
+      ],
+      "id": "github-49",
+      "status": "completed",
+      "added_at": "2026-07-10T14:11:42+00:00",
+      "started_at": "2026-07-10T19:02:29+00:00",
+      "completed_at": "2026-07-10T19:11:29+00:00",
+      "error_message": ""
+    },
+    {
+      "source": "github",
+      "issue_number": 50,
+      "title": "Calendar strip BUDGET column: month remaining alongside In/Out/Net",
+      "priority": "P1",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
+          "name": "P1",
+          "description": "Important",
+          "color": "D93F0B"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [
+        48,
+        49
+      ],
+      "id": "github-50",
+      "status": "completed",
+      "added_at": "2026-07-10T14:11:43+00:00",
+      "started_at": "2026-07-10T19:11:29+00:00",
+      "completed_at": "2026-07-10T19:18:06+00:00",
+      "error_message": "Committed in de48fae. Device-only criterion (visual beat of the strip swap mid-fling) deferred to human TestFlight pass."
+    },
+    {
+      "source": "github",
+      "issue_number": 51,
+      "title": "Summary screen budget display: remaining on the net card, spent/budget on category bars",
+      "priority": "P1",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
+          "name": "P1",
+          "description": "Important",
+          "color": "D93F0B"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [
+        49
+      ],
+      "id": "github-51",
+      "status": "completed",
+      "added_at": "2026-07-10T14:11:43+00:00",
+      "started_at": "2026-07-10T19:18:06+00:00",
+      "completed_at": "2026-07-10T23:57:44+00:00",
+      "error_message": "Committed in 1057e95. Device-only criterion (visual weight of the red over-budget bar fill) deferred to human TestFlight pass."
     }
   ]
 }
