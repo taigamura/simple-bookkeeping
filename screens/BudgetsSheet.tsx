@@ -31,6 +31,7 @@ import {
   type Budgets,
 } from '../domain';
 import { strings } from '../i18n';
+import { IconButton } from '../nav/IconButton';
 import { useTheme, metrics, Txt } from '../theme';
 
 /** Minimal shape shared by RN's `ScrollView` and gorhom's `BottomSheetScrollView`. */
@@ -64,17 +65,8 @@ export function BudgetsSheet({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <IconButton name="chevron-left" accessibilityLabel={strings.nav.back} onPress={onDone} />
         <Txt variant="screenTitle">{strings.budgets.title}</Txt>
-        <Pressable
-          onPress={onDone}
-          accessibilityRole="button"
-          accessibilityLabel={strings.nav.done}
-          hitSlop={8}
-        >
-          <Txt variant="listItem" tone="positive">
-            {strings.nav.done}
-          </Txt>
-        </Pressable>
       </View>
       <ScrollContainer
         style={styles.scroll}

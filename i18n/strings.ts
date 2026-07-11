@@ -33,6 +33,7 @@ export interface Strings {
     addEntry: string;
     done: string;
     close: string;
+    back: string;
   };
   calendar: {
     previousMonth: string;
@@ -131,6 +132,7 @@ export const en: Strings = {
     addEntry: 'Add entry',
     done: 'Done',
     close: 'Close',
+    back: 'Back',
   },
   calendar: {
     previousMonth: 'Previous month',
@@ -238,6 +240,7 @@ export const ja: Strings = {
     addEntry: '入力を追加',
     done: '完了',
     close: '閉じる',
+    back: '戻る',
   },
   calendar: {
     previousMonth: '前の月',

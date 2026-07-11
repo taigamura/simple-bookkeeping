@@ -115,18 +115,18 @@ test.describe('dismiss → immediate reopen', () => {
     await expectCalendarTappable(page, 'after Settings backdrop dismissals');
   });
 
-  test('Settings: Done close, then reopen', async ({ page }) => {
+  test('Settings: ✕ close, then reopen (#59)', async ({ page }) => {
     const { gear } = await coldLoad(page);
     await tapAt(page, gear);
     await expectSheetOpen(page, 'settings-sheet');
-    const done = sheet(page, 'settings-sheet').getByLabel('Done', { exact: true });
-    await tapAt(page, await center(done));
+    const close = sheet(page, 'settings-sheet').getByLabel('Close', { exact: true });
+    await tapAt(page, await center(close));
     await expectSheetGone(page, 'settings-sheet');
     await tapAt(page, gear);
-    await expectSheetOpen(page, 'settings-sheet', 'reopen after Done close');
-    await tapAt(page, await center(sheet(page, 'settings-sheet').getByLabel('Done', { exact: true })));
+    await expectSheetOpen(page, 'settings-sheet', 'reopen after ✕ close');
+    await tapAt(page, await center(sheet(page, 'settings-sheet').getByLabel('Close', { exact: true })));
     await expectSheetGone(page, 'settings-sheet');
-    await expectCalendarTappable(page, 'after Settings Done dismissals');
+    await expectCalendarTappable(page, 'after Settings ✕ dismissals');
   });
 });
 
@@ -151,7 +151,7 @@ test.describe('sheet swaps', () => {
     await expectSheetOpen(page, 'entry-sheet', 'swap settings→entry');
   });
 
-  test('settings⇄budgets: three round trips', async ({ page }) => {
+  test('settings⇄budgets: three round trips (#59)', async ({ page }) => {
     const { gear } = await coldLoad(page);
     await tapAt(page, gear);
     await expectSheetOpen(page, 'settings-sheet');
@@ -159,8 +159,8 @@ test.describe('sheet swaps', () => {
       const row = sheet(page, 'settings-sheet').getByLabel('Budgets', { exact: true });
       await tapAt(page, await center(row));
       await expectSheetOpen(page, 'budgets-sheet', `round trip #${i}`);
-      const done = sheet(page, 'budgets-sheet').getByLabel('Done', { exact: true });
-      await tapAt(page, await center(done));
+      const back = sheet(page, 'budgets-sheet').getByLabel('Back', { exact: true });
+      await tapAt(page, await center(back));
       await expectSheetOpen(page, 'settings-sheet', `back to Settings, round trip #${i}`);
     }
   });
@@ -190,9 +190,9 @@ test.describe('ghost overlay', () => {
 
     await tapAt(page, gear);
     await expectSheetOpen(page, 'settings-sheet');
-    await tapAt(page, await center(sheet(page, 'settings-sheet').getByLabel('Done', { exact: true })));
+    await tapAt(page, await center(sheet(page, 'settings-sheet').getByLabel('Close', { exact: true })));
     await expectSheetGone(page, 'settings-sheet');
-    await expectCalendarTappable(page, 'after Settings Done close');
+    await expectCalendarTappable(page, 'after Settings ✕ close');
   });
 });
 

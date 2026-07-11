@@ -1,8 +1,8 @@
 /**
  * BudgetsSheet standalone tests (#49): every expense category gets an amount
  * field, typing stores a budget, blanking clears it, existing amounts show,
- * and Done fires the drill-out callback. Rendered outside any bottom sheet via
- * the default ScrollContainer, like the SettingsSheet suite.
+ * and the back chevron button fires the drill-out callback (#59). Rendered
+ * outside any bottom sheet via the default ScrollContainer, like the SettingsSheet suite.
  */
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
@@ -33,10 +33,10 @@ describe('BudgetsSheet', () => {
     }
   });
 
-  it('fires onDone from the green Done button (returns to Settings)', () => {
+  it('fires onDone from the back chevron button (returns to Settings, #59)', () => {
     const onDone = jest.fn();
     renderSheet({ onDone });
-    fireEvent.press(screen.getByLabelText('Done'));
+    fireEvent.press(screen.getByLabelText('Back'));
     expect(onDone).toHaveBeenCalled();
   });
 

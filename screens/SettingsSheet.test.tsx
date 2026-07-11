@@ -1,7 +1,7 @@
 /**
- * SettingsSheet fidelity test (design §9–§11): a green "Done" text button (not an
- * ✕ icon), single-line currency optBox tiles ("¥ JPY"), and the Categories
- * sub-tab as a right-aligned pill group that switches the edited list.
+ * SettingsSheet fidelity test (design §9–§11): ✕ icon button for close (#59),
+ * single-line currency optBox tiles ("¥ JPY"), and the Categories sub-tab as a
+ * right-aligned pill group that switches the edited list.
  */
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
@@ -36,13 +36,13 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
   );
 
 describe('SettingsSheet', () => {
-  it('closes via a green "Done" text button instead of an ✕ icon', () => {
+  it('closes via an ✕ icon button (#59)', () => {
     const onClose = jest.fn();
     renderSheet({ onClose });
-    const done = screen.getByLabelText('Done');
-    fireEvent.press(done);
+    const closeButton = screen.getByLabelText('Close');
+    fireEvent.press(closeButton);
     expect(onClose).toHaveBeenCalled();
-    expect(screen.queryByLabelText('Close')).toBeNull();
+    expect(screen.queryByLabelText('Done')).toBeNull();
   });
 
   it('renders single-line currency tiles as "symbol code"', () => {

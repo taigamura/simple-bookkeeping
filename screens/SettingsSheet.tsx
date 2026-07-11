@@ -98,16 +98,7 @@ export function SettingsSheet({
     <View style={styles.container}>
       <View style={styles.header}>
         <Txt variant="screenTitle">{strings.nav.settings}</Txt>
-        <Pressable
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel={strings.nav.done}
-          hitSlop={8}
-        >
-          <Txt variant="listItem" tone="positive">
-            {strings.nav.done}
-          </Txt>
-        </Pressable>
+        <IconButton name="x" accessibilityLabel={strings.nav.close} onPress={onClose} />
       </View>
       <ScrollContainer
         style={styles.scroll}
