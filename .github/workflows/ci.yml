@@ -1,0 +1,53 @@
+# kaji CI (#58) — the repo's first and only pipeline: typecheck, jest, and the
+# Playwright sheet-regression suite on every push to main and every PR.
+#
+# RED-FIRST CONTRACT: e2e/sheets.spec.ts contains tests marked `test.fail()`
+# that reproduce real, currently-shipping Build 7 bugs (#60/#61/#62). They keep
+# this workflow green only while the bug exists, and turn CI red the moment a
+# fix lands without flipping the marker to a plain passing test. Removing,
+# skipping, or weakening those tests is treated exactly like deleting the unit
+# suite — never do it. See the header of e2e/sheets.spec.ts.
+#
+# No paid services (#57): web Playwright + GitHub Actions only — no EAS
+# Workflows, no Maestro, no device clouds.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests (jest)
+        run: npm test
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Sheet-regression suite (Playwright e2e)
+        run: npm run e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

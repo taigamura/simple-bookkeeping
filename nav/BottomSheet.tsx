@@ -42,6 +42,8 @@ export interface BottomSheetProps {
   children?: React.ReactNode;
   /** Extra style for the sheet content (e.g. min height). */
   style?: StyleProp<ViewStyle>;
+  /** Anchor for the e2e suite (#58) — lands on the sheet's content view. */
+  testID?: string;
 }
 
 // Empty snap points array: only the dynamic content-height detent from
@@ -53,6 +55,7 @@ export function BottomSheet({
   onClose,
   children,
   style,
+  testID,
 }: BottomSheetProps) {
   const { colors } = useTheme();
   const ref = useRef<BottomSheetModal>(null);
@@ -97,7 +100,9 @@ export function BottomSheet({
       ]}
       handleIndicatorStyle={{ backgroundColor: colors.line }}
     >
-      <BottomSheetView style={[styles.content, style]}>{children}</BottomSheetView>
+      <BottomSheetView testID={testID} style={[styles.content, style]}>
+        {children}
+      </BottomSheetView>
     </BottomSheetModal>
   );
 }

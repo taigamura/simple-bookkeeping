@@ -46,3 +46,12 @@ target/
 # Ralph backup directories (created by migration)
 .ralph_backup_*
 .aider*
+
+# Playwright e2e (#58): per-run web export + reports + local ALSA stub
+e2e/.web-build/
+e2e/.alsa-stub/
+# Failure artifacts (traces/screenshots) if a run drops them next to the specs
+e2e/sheets-*/
+test-results/
+playwright-report/
+.expo/

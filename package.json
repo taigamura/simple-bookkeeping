@@ -32,6 +32,7 @@
     "react-native-worklets": "^0.10.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@react-native/jest-preset": "^0.86.0",
     "@testing-library/react-native": "^13.3.3",
     "@types/encoding-japanese": "^2.2.1",
@@ -49,7 +50,12 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "e2e:export": "expo export --platform web --output-dir e2e/.web-build",
+    "e2e:install": "playwright install",
+    "e2e:test": "playwright test",
+    "e2e:test:firefox": "node e2e/run-firefox.mjs",
+    "e2e": "npm run e2e:export && npm run e2e:test"
   },
   "private": true
 }

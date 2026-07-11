@@ -52,12 +52,37 @@ before any App Store submission.
 ```bash
 npm test          # jest (jest-expo preset)
 npm run typecheck # tsc --noEmit
+npm run e2e       # Playwright sheet-regression suite (exports the web build, then tests it)
 ```
 
 Tests live alongside the code they cover (`*.test.ts` / `*.test.tsx`) across
 `domain/`, `store/`, `nav/`, `ui/`, and `screens/`. Run both `npm test` and
 `npm run typecheck` before considering a change complete — the design
 fidelity work in particular has to keep both green.
+
+### Sheet-regression e2e suite (red-first)
+
+`e2e/` holds a permanent Playwright suite that drives the exported Expo web
+build the way a user does — fresh cold page loads, real first taps on ＋ and
+⚙, dismiss/reopen sequences, ghost-overlay probes, and sheet-geometry checks.
+`npm run e2e` exports the web build and runs it in one step (first time:
+`npm run e2e:install -- chromium`); CI (`.github/workflows/ci.yml`) runs it
+on every push to main and every PR alongside typecheck and jest.
+
+Chromium is the canonical browser (it's what CI runs). If the browser system
+libraries can't be installed (e.g. bare WSL2 without sudo —
+`libasound.so.2` missing), use Firefox instead:
+`npm run e2e:install -- firefox`, then `npm run e2e:test:firefox` (that
+script also skips Playwright's pre-launch host validation, which rejects the
+machine even though Firefox loads the audio libs dynamically).
+
+**Red-first contract:** tests marked `test.fail()` reproduce real,
+currently-shipping bugs (#60/#61/#62). They keep CI green only while the bug
+exists, and turn CI red the moment a fix lands without flipping the marker to
+a plain passing test — so the fix PR must flip them. Removing, skipping, or
+weakening these tests is treated exactly like deleting the unit suite. A
+marked test that "passes unexpectedly" means the scenario drifted off the
+real bug: rewrite it, never delete it.
 
 ## Project structure
 

@@ -333,7 +333,7 @@ function Shell({
           gating on the open state raced the measurement (blank first open,
           collapsed initial detent). The modal only mounts children while
           presented, so each open still gets a fresh EntrySheet/SettingsSheet. */}
-      <BottomSheet visible={sheet === 'entry'} onClose={closeSheet}>
+      <BottomSheet visible={sheet === 'entry'} onClose={closeSheet} testID="entry-sheet">
         <EntrySheet
           expCats={state.expCats}
           incCats={state.incCats}
@@ -348,7 +348,11 @@ function Shell({
         />
       </BottomSheet>
 
-      <BottomSheet visible={sheet === 'settings'} onClose={sheetDismissed('settings')}>
+      <BottomSheet
+        visible={sheet === 'settings'}
+        onClose={sheetDismissed('settings')}
+        testID="settings-sheet"
+      >
         <SettingsSheet
           currency={state.currency}
           expCats={state.expCats}
@@ -373,7 +377,11 @@ function Shell({
         />
       </BottomSheet>
 
-      <BottomSheet visible={sheet === 'budgets'} onClose={sheetDismissed('budgets')}>
+      <BottomSheet
+        visible={sheet === 'budgets'}
+        onClose={sheetDismissed('budgets')}
+        testID="budgets-sheet"
+      >
         <BudgetsSheet
           expCats={state.expCats}
           budgets={state.budgets}
