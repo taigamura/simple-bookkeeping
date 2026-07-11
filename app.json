@@ -36,6 +36,12 @@
           "backgroundColor": "#0E1116"
         }
       ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "This app needs Face ID to keep your finances secure. You can use your passcode as a backup."
+        }
+      ],
       "@sentry/react-native/expo"
     ],
     "extra": {
