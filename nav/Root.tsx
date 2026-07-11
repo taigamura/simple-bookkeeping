@@ -151,20 +151,16 @@ function Shell({
     }
   }, [showCorruptNotice]);
 
-  // Closing deliberately leaves `editing` alone (#47): the sheet body now stays
-  // mounted through the dismiss animation, so clearing it here would flip an
-  // edit-mode EntrySheet to create-mode chrome mid-slide. Every open path sets
-  // it explicitly instead (openEntry → null, openEdit → the entry).
-  const closeSheet = () => setSheet(null);
-  const openSettings = () => setSheet('settings');
-
-  // Settings ⇄ Budgets is a swap, never a stack (#49): the outgoing modal's
-  // dismiss fires *after* `sheet` already points at the incoming one, so each
-  // BottomSheet's onClose only clears the nav state if it is still the open
-  // sheet — otherwise the swap's trailing onDismiss would cancel the incoming
-  // present.
+  // Which-sheet-guarded dismissal (#53): the outgoing modal's dismiss fires
+  // *after* `sheet` already points at the incoming one, so each BottomSheet's
+  // onClose only clears the nav state if it is still the open sheet — otherwise
+  // late-landing dismisses from outgoing sheets would cancel incoming presents
+  // (entry→settings, settings→entry, settings⇄budgets).
   const sheetDismissed = (which: Sheet) => () =>
     setSheet((s) => (s === which ? null : s));
+  const closeSheet = sheetDismissed('entry');
+
+  const openSettings = () => setSheet('settings');
   const openBudgets = () => setSheet('budgets');
   const backToSettings = () => setSheet('settings');
 
@@ -280,7 +276,7 @@ function Shell({
       setSelectedDay((d) => (days.has(d) ? d : entries[0].day));
     }
     setTab('calendar');
-    setSheet(null);
+    closeSheet();
   };
 
   // handleDelete(): guarded by a native confirm (web window.confirm fallback);
@@ -293,7 +289,7 @@ function Shell({
       () => {
         update({ entries: removeEntry(state.entries, id) });
         setTab('calendar');
-        setSheet(null);
+        closeSheet();
       },
       strings.common.delete,
       true,
@@ -372,7 +368,7 @@ function Shell({
           lockEnabled={state.lockEnabled}
           lockAvailable={lockAvailable}
           onToggleLock={(lockEnabled) => update({ lockEnabled })}
-          onClose={closeSheet}
+          onClose={sheetDismissed('settings')}
           ScrollContainer={BottomSheetScrollView}
         />
       </BottomSheet>

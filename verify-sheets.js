@@ -123,6 +123,60 @@ const pause = (ms) => new Promise((r) => setTimeout(r, ms));
     await page.screenshot({ path: shot('06-create-after-edit') });
   });
 
+  // 7. Sheet-swap dismissal guard (#53): entry→settings swap.
+  // Open entry, dismiss with backstroke, then immediately open settings.
+  await step('sheet-swap: entry dismiss does not cancel settings open', async () => {
+    await page.getByLabel('Add entry').click();
+    await pause(150); // very short animation
+    await page.mouse.click(210, 80); // rapid backdrop dismiss
+    await pause(50);
+    await page.getByLabel('Settings').click(); // settings open before entry dismiss completes
+    await pause(900);
+    const done = page.getByText('Done');
+    await done.waitFor({ timeout: 3000 });
+    const box = await done.boundingBox();
+    if (!box || box.height < 5) throw new Error(`Done button not visible in settings: ${JSON.stringify(box)}`);
+    await page.screenshot({ path: shot('07-entry-to-settings-swap') });
+    await page.mouse.click(210, 80); // dismiss via backdrop
+    await pause(900);
+  });
+
+  // 8. Sheet-swap dismissal guard (#53): settings→entry swap.
+  // Open settings, dismiss via Done, then immediately open entry.
+  await step('sheet-swap: settings dismiss does not cancel entry open', async () => {
+    await page.getByLabel('Settings').click();
+    await pause(150);
+    await page.getByText('Done').click(); // rapid done (dismiss)
+    await pause(50);
+    await page.getByLabel('Add entry').click(); // entry open before settings dismiss completes
+    await pause(900);
+    await page.getByText('Add expense').waitFor({ timeout: 3000 });
+    const box = await page.getByText('Add expense').boundingBox();
+    if (!box || box.y > 900 || box.height < 5) throw new Error(`Add expense not visible in entry: ${JSON.stringify(box)}`);
+    await page.screenshot({ path: shot('08-settings-to-entry-swap') });
+    await page.mouse.click(210, 80); // dismiss via backdrop
+    await pause(900);
+  });
+
+  // 9. Sheet-swap dismissal guard (#53): settings⇄budgets swap.
+  // Open settings, tap Budgets (swap to budgets), then tap Done to swap back to settings.
+  await step('sheet-swap: budgets dismiss does not cancel settings reopen', async () => {
+    await page.getByLabel('Settings').click();
+    await pause(900);
+    const budgetsLink = page.getByText('Budgets', { exact: false }).first(); // Drill-in row text
+    await budgetsLink.click();
+    await pause(150); // very short animation
+    await page.getByText('Done').click(); // rapid done (dismiss budgets, reopen settings)
+    await pause(900);
+    const done = page.getByText('Done');
+    await done.waitFor({ timeout: 3000 });
+    const box = await done.boundingBox();
+    if (!box || box.height < 5) throw new Error(`Done button not visible after swap back: ${JSON.stringify(box)}`);
+    await page.screenshot({ path: shot('09-budgets-to-settings-swap') });
+    await page.mouse.click(210, 80); // dismiss via backdrop
+    await pause(900);
+  });
+
   const errors = logs.filter((l) => l.startsWith('[pageerror]') || l.includes('[console.error]'));
   if (errors.length) console.log('CONSOLE ERRORS:\n' + errors.join('\n'));
   else console.log('No page errors captured.');

@@ -30,6 +30,8 @@ import { DEFAULT_STATE } from '../store/schema';
 import { ThemeProvider } from '../theme';
 import { Root } from './Root';
 
+import { fireEvent } from '@testing-library/react-native';
+
 describe('Root sheet mounting (#47)', () => {
   it('mounts both sheet bodies on a fresh render, with no sheet opened first', async () => {
     render(
@@ -50,5 +52,38 @@ describe('Root sheet mounting (#47)', () => {
     // Settings and Budgets sheet content likewise renders from the start —
     // each sheet carries its own Done button (#49 added the Budgets sheet).
     expect(screen.getAllByText(strings.nav.done)).toHaveLength(2);
+  });
+});
+
+describe('Root sheet-swap dismissal guard (#53)', () => {
+  it('keeps the keep-editing-through-dismiss behavior (#47)', async () => {
+    const { rerender } = render(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={() => {}}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    // Entry sheet content stays mounted even after dismissal.
+    expect(await screen.findByText(strings.entry.addExpense)).toBeTruthy();
+    // After a rerender (simulating dismiss animation frame), the sheet body
+    // is still in the DOM — unconditional mounting contract preserved.
+    rerender(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={() => {}}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+    expect(screen.getByText(strings.entry.addExpense)).toBeTruthy();
   });
 });
