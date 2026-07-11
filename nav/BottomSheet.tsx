@@ -77,6 +77,23 @@ export function BottomSheet({
     }
   }, [visible, isPresented]);
 
+  // Reconciliation handler (#60): if the modal dismisses while nav state still
+  // says the sheet should be open, re-present it. This ensures nav state is
+  // authoritative and prevents the dead state where sheet→null but the modal
+  // closed, leaving re-taps silent.
+  const handleDismiss = useCallback(() => {
+    setIsPresented(false);
+    // If visible is still true, the nav state says the sheet should be open.
+    // The dismissal was spurious (not user-initiated), so re-present.
+    if (visible) {
+      setTimeout(() => ref.current?.present(), 0);
+      setIsPresented(true);
+    } else {
+      // User-initiated dismissal: call the callback.
+      onClose();
+    }
+  }, [visible, onClose]);
+
   // Dimmed backdrop that fades in as the sheet rises and out as it leaves; a tap
   // closes it, matching the old Pressable backdrop.
   const renderBackdrop = useCallback(
@@ -100,7 +117,7 @@ export function BottomSheet({
       enableContentPanningGesture={false}
       topInset={insets.top}
       snapPoints={SNAP_POINTS}
-      onDismiss={onClose}
+      onDismiss={handleDismiss}
       backdropComponent={renderBackdrop}
       backgroundStyle={[
         styles.sheet,
