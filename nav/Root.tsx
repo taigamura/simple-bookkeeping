@@ -129,11 +129,22 @@ function Shell({
   // Cold-launch behavior for openTo (#68): on first mount, if openTo is 'entry',
   // auto-present the Entry sheet in create mode for today. This effect runs once
   // on mount; in-session Calendar navigation does not re-trigger it.
+  //
+  // Deferred by a frame on purpose: setting `sheet` synchronously at mount makes
+  // BottomSheet call gorhom's present() before its BottomSheetView has had a
+  // layout pass, so `enableDynamicSizing` has no measured content height. That
+  // presents a broken sheet — backdrop dims but the body never resolves (the
+  // "transparent gray box"), and because gorhom never completes the present it
+  // never fires onDismiss, so `sheet` stays 'entry' and every later ＋ tap is a
+  // no-op (setSheet('entry') can't change an already-'entry' value). Waiting one
+  // frame lets the modal + content lay out first, so present() lands cleanly.
   useEffect(() => {
-    if (state.openTo === 'entry') {
+    if (state.openTo !== 'entry') return;
+    const raf = requestAnimationFrame(() => {
       setEditing(null);
       setSheet('entry');
-    }
+    });
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   const symbol = state.currency.symbol;

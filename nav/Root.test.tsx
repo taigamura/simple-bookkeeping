@@ -29,7 +29,7 @@ jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 jest.mock('expo-file-system', () => ({ File: class {} }));
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { strings } from '../i18n';
 import { DEFAULT_STATE } from '../store/schema';
@@ -183,7 +183,7 @@ describe('Root sheet state management (#60)', () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it('auto-presents the Entry sheet on cold launch when openTo is "entry" (#68)', () => {
+  it('auto-presents the Entry sheet on cold launch when openTo is "entry" (#68)', async () => {
     render(
       <ThemeProvider>
         <Root
@@ -196,8 +196,10 @@ describe('Root sheet state management (#60)', () => {
       </ThemeProvider>,
     );
 
-    // Entry sheet is auto-presented on cold launch when openTo='entry'
-    expect(screen.getByTestId('entry-sheet')).toBeTruthy();
+    // Entry sheet is auto-presented on cold launch when openTo='entry'. The
+    // present is deferred a frame (so gorhom lays out before present() runs, see
+    // Root's openTo effect), hence waitFor rather than a synchronous assertion.
+    await waitFor(() => expect(screen.getByTestId('entry-sheet')).toBeTruthy());
   });
 
   it('does not auto-present the Entry sheet when openTo is "calendar" (#68)', () => {
