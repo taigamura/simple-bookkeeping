@@ -1,13 +1,15 @@
 /**
- * BudgetsSheet — the Budgets sheet body (#49), reached by drilling in from the
- * Settings sheet (the sheets swap; they never stack). One row per *expense*
- * category: code tile + label + the chosen currency symbol + a numeric amount
- * field. Typing an amount stores that category's recurring monthly budget;
- * blanking the field clears it. "Done" returns to Settings via `onDone`.
+ * BudgetsSheet — the Budgets sheet body (#49/#66), reached by drilling in from
+ * the Settings sheet (the sheets swap; they never stack). A toggle at the top
+ * switches between per-category mode (one row per *expense* category: code tile +
+ * label + currency symbol + amount field) and total mode (a single amount field
+ * for the whole month). Typing an amount stores the budget; blanking clears it.
+ * "Done" returns to Settings via `onDone`. Switching modes preserves both the
+ * per-category map and the total amount.
  *
- * Presentational only: `budgets` comes in as a prop and every edit is pushed
- * straight back up through `onChangeBudgets` (the parent persists), using the
- * pure `setBudget`/`clearBudget` domain transforms.
+ * Presentational only: budgets/mode/totalBudget come in as props and every edit
+ * is pushed up through callbacks (the parent persists), using the pure
+ * `setBudget`/`clearBudget` domain transforms.
  *
  * `ScrollContainer` defaults to RN's plain `ScrollView` for standalone tests;
  * the real app swaps in `BottomSheetScrollView` (same seam as SettingsSheet).
@@ -45,8 +47,12 @@ interface ScrollContainerProps {
 interface BudgetsSheetProps {
   expCats: string[];
   budgets: Budgets;
+  budgetMode: 'category' | 'total';
+  totalBudget: number;
   symbol: string;
   onChangeBudgets: (budgets: Budgets) => void;
+  onChangeBudgetMode: (mode: 'category' | 'total') => void;
+  onChangeTotalBudget: (amount: number) => void;
   /** The Done button — returns to the Settings sheet, not plain close. */
   onDone: () => void;
   /** Scrollable wrapper for the rows below the header; see file header. */
@@ -56,8 +62,12 @@ interface BudgetsSheetProps {
 export function BudgetsSheet({
   expCats,
   budgets,
+  budgetMode,
+  totalBudget,
   symbol,
   onChangeBudgets,
+  onChangeBudgetMode,
+  onChangeTotalBudget,
   onDone,
   ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
 }: BudgetsSheetProps) {
@@ -73,24 +83,70 @@ export function BudgetsSheet({
         contentContainerStyle={styles.scrollBody}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.card, { backgroundColor: colors.card2 }]}>
-          {expCats.map((cat, i) => (
-            <BudgetRow
-              key={cat}
-              category={cat}
-              amount={budgets[cat]}
-              symbol={symbol}
-              divider={i > 0}
-              onChange={(amount) =>
-                onChangeBudgets(
-                  amount === null
-                    ? clearBudget(budgets, cat)
-                    : setBudget(budgets, cat, amount),
-                )
-              }
-            />
-          ))}
+        <View style={[styles.toggleCard, { backgroundColor: colors.card2 }]}>
+          <View style={styles.toggleRow}>
+            <Pressable
+              style={[
+                styles.toggleOption,
+                budgetMode === 'category' && { backgroundColor: colors.card3 },
+              ]}
+              onPress={() => onChangeBudgetMode('category')}
+              accessible
+              accessibilityRole="radio"
+              accessibilityState={{ selected: budgetMode === 'category' }}
+            >
+              <Txt
+                variant="listItem"
+                tone={budgetMode === 'category' ? 'ink' : 'muted'}
+              >
+                {strings.budgets.perCategory}
+              </Txt>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.toggleOption,
+                budgetMode === 'total' && { backgroundColor: colors.card3 },
+              ]}
+              onPress={() => onChangeBudgetMode('total')}
+              accessible
+              accessibilityRole="radio"
+              accessibilityState={{ selected: budgetMode === 'total' }}
+            >
+              <Txt variant="listItem" tone={budgetMode === 'total' ? 'ink' : 'muted'}>
+                {strings.budgets.total}
+              </Txt>
+            </Pressable>
+          </View>
         </View>
+
+        {budgetMode === 'category' ? (
+          <View style={[styles.card, { backgroundColor: colors.card2 }]}>
+            {expCats.map((cat, i) => (
+              <BudgetRow
+                key={cat}
+                category={cat}
+                amount={budgets[cat]}
+                symbol={symbol}
+                divider={i > 0}
+                onChange={(amount) =>
+                  onChangeBudgets(
+                    amount === null
+                      ? clearBudget(budgets, cat)
+                      : setBudget(budgets, cat, amount),
+                  )
+                }
+              />
+            ))}
+          </View>
+        ) : (
+          <View style={[styles.card, { backgroundColor: colors.card2 }]}>
+            <TotalBudgetRow
+              amount={totalBudget}
+              symbol={symbol}
+              onChange={(amount) => onChangeTotalBudget(amount === null ? 0 : amount)}
+            />
+          </View>
+        )}
       </ScrollContainer>
     </View>
   );
@@ -154,6 +210,49 @@ function BudgetRow({
   );
 }
 
+/**
+ * Total budget row in total mode — a single amount field for the whole month.
+ * Uses the same digits-only, blank-clears convention as per-category rows.
+ */
+function TotalBudgetRow({
+  amount,
+  symbol,
+  onChange,
+}: {
+  amount: number;
+  symbol: string;
+  onChange: (amount: number | null) => void;
+}) {
+  const { colors } = useTheme();
+  const [draft, setDraft] = useState(amount > 0 ? String(amount) : '');
+
+  const handleChange = (text: string) => {
+    const digits = text.replace(/\D/g, '').slice(0, AMOUNT_MAX_DIGITS);
+    setDraft(digits);
+    onChange(digits === '' ? null : parseInt(digits, 10));
+  };
+
+  return (
+    <View style={styles.row}>
+      <Txt variant="listItem" tone="ink" style={styles.totalLabel}>
+        {strings.budgets.totalAmount}
+      </Txt>
+      <Txt variant="listItem" tone={draft === '' ? 'dim' : 'muted'}>
+        {symbol}
+      </Txt>
+      <TextInput
+        value={draft}
+        onChangeText={handleChange}
+        keyboardType="number-pad"
+        placeholder={strings.budgets.none}
+        placeholderTextColor={colors.dim}
+        accessibilityLabel={strings.budgets.totalBudgetLabel}
+        style={[styles.input, { backgroundColor: colors.card3, color: colors.ink }]}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   // flexShrink + minHeight:0 let this body cap to the sheet host's maxHeight
   // (#63) so the scroll region below the header bounds and scrolls, instead of
@@ -166,7 +265,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   scroll: { flex: 1, minHeight: 0 },
-  scrollBody: { paddingBottom: 4 },
+  scrollBody: { paddingBottom: 4, gap: 12 },
+  toggleCard: {
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  toggleOption: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: metrics.iconTileRadius,
+    alignItems: 'center',
+  },
   card: {
     borderRadius: 14,
     paddingHorizontal: 10,
@@ -185,6 +300,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: { flex: 1 },
+  totalLabel: { flex: 1 },
   input: {
     width: 104,
     height: 38,

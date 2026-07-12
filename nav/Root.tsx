@@ -299,6 +299,8 @@ function Shell({
           <CalendarScreen
             entries={state.entries}
             budgets={state.budgets}
+            budgetMode={state.budgetMode}
+            totalBudget={state.totalBudget}
             y={cursor.y}
             m={cursor.m}
             day={selectedDay}
@@ -314,6 +316,8 @@ function Shell({
           <SummaryScreen
             entries={state.entries}
             budgets={state.budgets}
+            budgetMode={state.budgetMode}
+            totalBudget={state.totalBudget}
             y={cursor.y}
             m={cursor.m}
             symbol={symbol}
@@ -370,8 +374,12 @@ function Shell({
           <BudgetsSheet
             expCats={state.expCats}
             budgets={state.budgets}
+            budgetMode={state.budgetMode}
+            totalBudget={state.totalBudget}
             symbol={symbol}
             onChangeBudgets={(budgets) => update({ budgets })}
+            onChangeBudgetMode={(budgetMode) => update({ budgetMode })}
+            onChangeTotalBudget={(totalBudget) => update({ totalBudget })}
             onDone={backToSettings}
             ScrollContainer={BottomSheetScrollView}
           />

@@ -28,6 +28,12 @@ export interface AppState {
    *  Added after v1 blobs shipped — the merge-by-known-keys load fills it with
    *  the empty default, so no schema version bump. */
   budgets: Budgets;
+  /** Budget mode (#66): 'category' for per-category, 'total' for a single monthly amount.
+   *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
+  budgetMode: 'category' | 'total';
+  /** Total monthly budget amount in total mode (#66); 0 = no total budget.
+   *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
+  totalBudget: number;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -39,6 +45,8 @@ export const DEFAULT_STATE: AppState = {
   premium: false,
   lockEnabled: false,
   budgets: {},
+  budgetMode: 'category',
+  totalBudget: 0,
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */

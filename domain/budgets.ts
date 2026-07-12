@@ -64,3 +64,38 @@ export function pruneBudgets(budgets: Budgets, categories: string[]): Budgets {
   for (const c of orphaned) delete next[c];
   return next;
 }
+
+/**
+ * `isBudgetActive(mode, budgets, totalBudget)` — whether any budget is active
+ * in the given mode. In category mode, true iff any category has a budget set.
+ * In total mode, true iff totalBudget > 0. Gates budget display in Calendar
+ * and Summary (#66).
+ */
+export function isBudgetActive(
+  mode: 'category' | 'total',
+  budgets: Budgets,
+  totalBudget: number,
+): boolean {
+  return mode === 'total' ? totalBudget > 0 : hasAnyBudget(budgets);
+}
+
+/**
+ * `getRemainingBudget(mode, budgets, totalBudget, entries)` — the month's
+ * remaining budget in the given mode. In category mode, Σ(set category
+ * budgets) − total expenses. In total mode, totalBudget − total expenses.
+ * Every expense counts, including unbudgeted categories. Income never enters.
+ * Goes negative when overspent, never clamped (#66).
+ */
+export function getRemainingBudget(
+  mode: 'category' | 'total',
+  budgets: Budgets,
+  totalBudget: number,
+  entries: Transaction[],
+): number {
+  const totalExpense = expense(entries);
+  if (mode === 'total') {
+    return totalBudget - totalExpense;
+  }
+  // category mode: same as the existing budgetRemaining
+  return budgetRemaining(budgets, entries);
+}

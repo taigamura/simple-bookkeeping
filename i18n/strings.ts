@@ -85,6 +85,14 @@ export interface Strings {
   };
   budgets: {
     title: string;
+    /** Toggle option for per-category budget mode (#66). */
+    perCategory: string;
+    /** Toggle option for total budget mode (#66). */
+    total: string;
+    /** Label for the total budget amount field in total mode (#66). */
+    totalAmount: string;
+    /** Accessibility label for the total budget field (#66). */
+    totalBudgetLabel: string;
     /** Accessibility label for a category's amount field. */
     budgetFor: (name: string) => string;
     /** Placeholder shown in an amount field with no budget set. */
@@ -189,6 +197,10 @@ export const en: Strings = {
   },
   budgets: {
     title: 'Budgets',
+    perCategory: 'Per category',
+    total: 'Total',
+    totalAmount: 'Monthly budget',
+    totalBudgetLabel: 'Total budget',
     budgetFor: (name) => `Budget for ${name}`,
     none: 'None',
   },
@@ -297,6 +309,10 @@ export const ja: Strings = {
   },
   budgets: {
     title: '予算',
+    perCategory: 'カテゴリ別',
+    total: '合計',
+    totalAmount: '月間予算',
+    totalBudgetLabel: '合計予算',
     budgetFor: (name) => `${name}の予算`,
     none: 'なし',
   },

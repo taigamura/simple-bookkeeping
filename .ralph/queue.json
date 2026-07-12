@@ -1,213 +1,13 @@
 {
   "version": "1.0",
   "created_at": "2026-07-08T11:55:33+00:00",
-  "updated_at": "2026-07-11T18:00:57+00:00",
+  "updated_at": "2026-07-12T12:28:45+00:00",
   "repository": "",
   "queue": [
     {
       "source": "github",
-      "issue_number": 39,
-      "title": "Gesture + animation foundation: migrate sheets to @gorhom/bottom-sheet",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [],
-      "id": "github-39",
-      "status": "completed",
-      "added_at": "2026-07-08T12:01:13+00:00",
-      "started_at": "2026-07-10T10:40:31+00:00",
-      "completed_at": "2026-07-10T10:55:35+00:00",
-      "error_message": "Already implemented in 420dc85 (2026-07-08); issue was left open on GitHub causing requeue. Closed #39 and marked resolved on 2026-07-10."
-    },
-    {
-      "source": "github",
-      "issue_number": 40,
-      "title": "Calendar 7-column grid fix (Sunday-first, subpixel wrap)",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [],
-      "id": "github-40",
-      "status": "completed",
-      "added_at": "2026-07-08T12:01:14+00:00",
-      "started_at": "2026-07-10T11:02:15+00:00",
-      "completed_at": "2026-07-10T11:12:43+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 43,
-      "title": "Entry edit + delete flow (tap day-list row to edit/delete)",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        39
-      ],
-      "id": "github-43",
-      "status": "completed",
-      "added_at": "2026-07-08T12:01:16+00:00",
-      "started_at": "2026-07-10T11:12:43+00:00",
-      "completed_at": "2026-07-10T11:22:44+00:00",
-      "error_message": "Already implemented in 50fb553 (2026-07-09); issue was closed on GitHub. Reconciled stale queue state on 2026-07-10."
-    },
-    {
-      "source": "github",
-      "issue_number": 47,
-      "title": "Sheet presentation reliability: mount content before present, safe-area top inset",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [],
-      "id": "github-47",
-      "status": "completed",
-      "added_at": "2026-07-10T14:11:39+00:00",
-      "started_at": "2026-07-10T14:12:43+00:00",
-      "completed_at": "2026-07-10T18:54:43+00:00",
-      "error_message": "Committed in 9734aff. Device-only criteria deferred to human TestFlight pass; sandbox blocked headless-web verify run."
-    },
-    {
-      "source": "github",
-      "issue_number": 48,
-      "title": "Calendar pager rework: native paged month list with synced header/strip/day-list",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [],
-      "id": "github-48",
-      "status": "completed",
-      "added_at": "2026-07-10T14:11:40+00:00",
-      "started_at": "2026-07-10T18:54:43+00:00",
-      "completed_at": "2026-07-10T19:02:29+00:00",
-      "error_message": "Committed in 36c683f. Device-only criteria (fling feel, sheet-open regression after swiping) deferred to human TestFlight pass."
-    },
-    {
-      "source": "github",
-      "issue_number": 58,
-      "title": "Red-first sheet regression suite + first CI (Playwright e2e, GitHub Actions)",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [],
-      "id": "github-58",
-      "status": "completed",
-      "added_at": "2026-07-11T07:43:06+00:00",
-      "started_at": "2026-07-11T16:57:41+00:00",
-      "completed_at": "2026-07-11T17:05:23+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 60,
-      "title": "Single sheet host: open reliability + Budgets root fix",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        58
-      ],
-      "id": "github-60",
-      "status": "completed",
-      "added_at": "2026-07-11T07:43:08+00:00",
-      "started_at": "2026-07-11T17:05:23+00:00",
-      "completed_at": "2026-07-11T17:28:45+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 41,
-      "title": "Anchor tab bar flush to the physical bottom edge",
+      "issue_number": 66,
+      "title": "Total vs. per-category budget toggle",
       "priority": "P1",
       "labels": [
         {
@@ -225,107 +25,17 @@
       ],
       "milestone": null,
       "dependencies": [],
-      "id": "github-41",
-      "status": "completed",
-      "added_at": "2026-07-08T12:01:15+00:00",
-      "started_at": "2026-07-09T01:00:00+00:00",
-      "completed_at": "2026-07-09T01:06:48+00:00",
-      "error_message": "Already implemented in 2c8bd7f (2026-07-09); issue was closed on GitHub. Reconciled stale queue state on 2026-07-10."
-    },
-    {
-      "source": "github",
-      "issue_number": 44,
-      "title": "Sheet snap detents: drag-to-dismiss / drag-to-full",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        39
-      ],
-      "id": "github-44",
-      "status": "completed",
-      "added_at": "2026-07-08T12:01:17+00:00",
-      "started_at": "2026-07-10T20:00:00+00:00",
-      "completed_at": "2026-07-10T20:07:41+00:00",
-      "error_message": "Already implemented in 4e09cff (2026-07-10); issue was closed on GitHub. Reconciled stale queue state on 2026-07-10."
-    },
-    {
-      "source": "github",
-      "issue_number": 45,
-      "title": "Finger-tracking month-swipe pager on the calendar",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        39
-      ],
-      "id": "github-45",
-      "status": "completed",
-      "added_at": "2026-07-08T12:01:18+00:00",
-      "started_at": "2026-07-09T01:15:00+00:00",
-      "completed_at": "2026-07-09T01:21:47+00:00",
-      "error_message": "Already implemented in 01ff474 (2026-07-09); issue was closed on GitHub. Reconciled stale queue state on 2026-07-10."
-    },
-    {
-      "source": "github",
-      "issue_number": 49,
-      "title": "Budgets end-to-end: domain model, persistence, drill-in Budgets sheet",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        47
-      ],
-      "id": "github-49",
-      "status": "completed",
-      "added_at": "2026-07-10T14:11:42+00:00",
-      "started_at": "2026-07-10T19:02:29+00:00",
-      "completed_at": "2026-07-10T19:11:29+00:00",
+      "id": "github-66",
+      "status": "processing",
+      "added_at": "2026-07-12T12:26:45+00:00",
+      "started_at": "2026-07-12T12:28:45+00:00",
+      "completed_at": null,
       "error_message": ""
     },
     {
       "source": "github",
-      "issue_number": 50,
-      "title": "Calendar strip BUDGET column: month remaining alongside In/Out/Net",
+      "issue_number": 67,
+      "title": "Delete all data action in Settings",
       "priority": "P1",
       "labels": [
         {
@@ -343,110 +53,19 @@
       ],
       "milestone": null,
       "dependencies": [
-        48,
-        49
+        66
       ],
-      "id": "github-50",
-      "status": "completed",
-      "added_at": "2026-07-10T14:11:43+00:00",
-      "started_at": "2026-07-10T19:11:29+00:00",
-      "completed_at": "2026-07-10T19:18:06+00:00",
-      "error_message": "Committed in de48fae. Device-only criterion (visual beat of the strip swap mid-fling) deferred to human TestFlight pass."
-    },
-    {
-      "source": "github",
-      "issue_number": 51,
-      "title": "Summary screen budget display: remaining on the net card, spent/budget on category bars",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        49
-      ],
-      "id": "github-51",
-      "status": "completed",
-      "added_at": "2026-07-10T14:11:43+00:00",
-      "started_at": "2026-07-10T19:18:06+00:00",
-      "completed_at": "2026-07-10T23:57:44+00:00",
-      "error_message": "Committed in 1057e95. Device-only criterion (visual weight of the red over-budget bar fill) deferred to human TestFlight pass."
-    },
-    {
-      "source": "github",
-      "issue_number": 61,
-      "title": "Settings sheet sizing: no dead zone, full-height scroll",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        60
-      ],
-      "id": "github-61",
-      "status": "completed",
-      "added_at": "2026-07-11T07:43:09+00:00",
-      "started_at": "2026-07-11T17:28:45+00:00",
-      "completed_at": "2026-07-11T17:34:51+00:00",
+      "id": "github-67",
+      "status": "pending",
+      "added_at": "2026-07-12T12:26:46+00:00",
+      "started_at": null,
+      "completed_at": null,
       "error_message": ""
     },
     {
       "source": "github",
-      "issue_number": 62,
-      "title": "Grab bar: handle drag tracks the finger and dismisses on iOS",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        60
-      ],
-      "id": "github-62",
-      "status": "completed",
-      "added_at": "2026-07-11T07:43:09+00:00",
-      "started_at": "2026-07-11T17:34:51+00:00",
-      "completed_at": "2026-07-11T17:54:04+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 59,
-      "title": "Close-button unification: ✕ on Entry/Settings, ‹ back chevron on Budgets",
+      "issue_number": 68,
+      "title": "Open-to setting (Calendar or Entry) on launch",
       "priority": "P2",
       "labels": [
         {
@@ -464,11 +83,67 @@
       ],
       "milestone": null,
       "dependencies": [],
-      "id": "github-59",
-      "status": "completed",
-      "added_at": "2026-07-11T07:43:07+00:00",
-      "started_at": "2026-07-11T17:54:04+00:00",
-      "completed_at": "2026-07-11T18:00:57+00:00",
+      "id": "github-68",
+      "status": "pending",
+      "added_at": "2026-07-12T12:26:47+00:00",
+      "started_at": null,
+      "completed_at": null,
+      "error_message": ""
+    },
+    {
+      "source": "github",
+      "issue_number": 69,
+      "title": "Sheet feel: forgiving drag handle + bottom safe-area margin",
+      "priority": "P2",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHrw",
+          "name": "P2",
+          "description": "Nice-to-have",
+          "color": "FBCA04"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [],
+      "id": "github-69",
+      "status": "pending",
+      "added_at": "2026-07-12T12:26:47+00:00",
+      "started_at": null,
+      "completed_at": null,
+      "error_message": ""
+    },
+    {
+      "source": "github",
+      "issue_number": 70,
+      "title": "Calendar: tighten dead space between grid and day list",
+      "priority": "P2",
+      "labels": [
+        {
+          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
+          "name": "ready-for-agent",
+          "description": "PRD ready for an agent to implement",
+          "color": "0E8A16"
+        },
+        {
+          "id": "LA_kwDOTLNNfs8AAAACquIHrw",
+          "name": "P2",
+          "description": "Nice-to-have",
+          "color": "FBCA04"
+        }
+      ],
+      "milestone": null,
+      "dependencies": [],
+      "id": "github-70",
+      "status": "pending",
+      "added_at": "2026-07-12T12:26:48+00:00",
+      "started_at": null,
+      "completed_at": null,
       "error_message": ""
     }
   ]

@@ -10,13 +10,13 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   MONTH_NAMES,
-  budgetRemaining,
   dayLabel,
   dayEntries,
   dayNet,
   expense,
-  hasAnyBudget,
+  getRemainingBudget,
   income,
+  isBudgetActive,
   monthEntries,
   net as monthNet,
   signed,
@@ -34,6 +34,10 @@ interface CalendarScreenProps {
   entries: Transaction[];
   /** Monthly budgets (#50) — the strip grows a BUDGET column when any is set. */
   budgets: Budgets;
+  /** Budget mode (#66): 'category' for per-category, 'total' for single monthly amount. */
+  budgetMode: 'category' | 'total';
+  /** Total monthly budget in total mode (#66); 0 = no total budget. */
+  totalBudget: number;
   y: number;
   m: number;
   day: number;
@@ -53,6 +57,8 @@ const netTone = (n: number): Tone => (n > 0 ? 'positive' : n < 0 ? 'negative' : 
 export function CalendarScreen({
   entries,
   budgets,
+  budgetMode,
+  totalBudget,
   y,
   m,
   day,
@@ -68,9 +74,9 @@ export function CalendarScreen({
   const month = monthEntries(entries, { y, m });
   const rows = dayEntries(month, day);
   const dNet = dayNet(month, day);
-  // Derived from the same `month` slice as In/Out/Net, so it swaps in the same
-  // beat when the pager commits a new cursor (#48/#50).
-  const remaining = budgetRemaining(budgets, month);
+  // Mode-aware budget logic: check if any budget is active and calculate remaining.
+  const budgetActive = isBudgetActive(budgetMode, budgets, totalBudget);
+  const remaining = getRemainingBudget(budgetMode, budgets, totalBudget, month);
 
   return (
     <View style={styles.screen}>
@@ -102,11 +108,11 @@ export function CalendarScreen({
           tone="ink"
           strong
         />
-        {/* BUDGET column (#50): only exists once any budget is set, so the
-            strip stays exactly three columns until the user opts in. Remaining
-            is a magnitude while positive; overspend shows the true negative
-            (signed, red), never clamped to zero. */}
-        {hasAnyBudget(budgets) && (
+        {/* BUDGET column (#50/#66): only exists once any budget is active in the
+            current mode, so the strip stays three columns until opted in.
+            Remaining is a magnitude while positive; overspend shows the true
+            negative (signed, red), never clamped to zero. */}
+        {budgetActive && (
           <StripCol
             label={strings.calendar.budget}
             value={remaining < 0 ? signed(remaining, symbol) : yen(remaining, symbol)}

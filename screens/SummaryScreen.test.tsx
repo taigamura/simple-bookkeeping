@@ -1,8 +1,8 @@
 /**
- * SummaryScreen budget display (#51): the net card's budget-left line (hidden
- * until any budget is set, same Σ budgets − expenses formula as the Calendar
- * strip) and the category bars' spent / budget annotation (red when over
- * budget, unbudgeted bars unchanged).
+ * SummaryScreen budget display (#51/#66): the net card's budget-left line
+ * (hidden until any budget is active in the current mode, mode-aware remaining
+ * calculation, same as Calendar strip) and the category bars' spent / budget
+ * annotation (red when over budget, in total mode all bars show spend only).
  */
 import React from 'react';
 import { StyleSheet } from 'react-native';
@@ -25,12 +25,19 @@ const tx = (over: Partial<Transaction>): Transaction => ({
   ...over,
 });
 
-const renderSummary = (entries: Transaction[], budgets: Budgets) =>
+const renderSummary = (
+  entries: Transaction[],
+  budgets: Budgets,
+  budgetMode: 'category' | 'total' = 'category',
+  totalBudget: number = 0,
+) =>
   render(
     <ThemeProvider>
       <SummaryScreen
         entries={entries}
         budgets={budgets}
+        budgetMode={budgetMode}
+        totalBudget={totalBudget}
         y={2026}
         m={6}
         symbol="¥"

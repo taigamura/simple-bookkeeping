@@ -1,8 +1,9 @@
 /**
- * BudgetsSheet standalone tests (#49): every expense category gets an amount
- * field, typing stores a budget, blanking clears it, existing amounts show,
- * and the back chevron button fires the drill-out callback (#59). Rendered
- * outside any bottom sheet via the default ScrollContainer, like the SettingsSheet suite.
+ * BudgetsSheet standalone tests (#49/#66): in category mode, every expense
+ * category gets an amount field; in total mode, a single amount field for the
+ * month. Typing stores a budget, blanking clears it, amounts persist, and the
+ * back chevron fires the drill-out callback. Toggle switches modes losslessly.
+ * Rendered outside any bottom sheet via the default ScrollContainer.
  */
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
@@ -16,8 +17,12 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof BudgetsSheet>> = 
       <BudgetsSheet
         expCats={['Food', 'Rent', 'Transport']}
         budgets={{}}
+        budgetMode="category"
+        totalBudget={0}
         symbol="¥"
         onChangeBudgets={() => {}}
+        onChangeBudgetMode={() => {}}
+        onChangeTotalBudget={() => {}}
         onDone={() => {}}
         {...over}
       />
@@ -77,5 +82,46 @@ describe('BudgetsSheet', () => {
     renderSheet({ ScrollContainer });
     expect(ScrollContainer).toHaveBeenCalled();
     expect(screen.getByText('Food')).toBeTruthy();
+  });
+
+  it('shows the toggle with per-category and total options', () => {
+    renderSheet();
+    expect(screen.getByText('Per category')).toBeTruthy();
+    expect(screen.getByText('Total')).toBeTruthy();
+  });
+
+  it('in category mode, displays per-category amount fields', () => {
+    renderSheet({ budgetMode: 'category' });
+    for (const cat of ['Food', 'Rent', 'Transport']) {
+      expect(screen.getByLabelText(`Budget for ${cat}`)).toBeTruthy();
+    }
+  });
+
+  it('in total mode, displays a single total amount field', () => {
+    renderSheet({ budgetMode: 'total', totalBudget: 50000 });
+    expect(screen.getByLabelText('Total budget')).toBeTruthy();
+    expect(screen.getByLabelText('Total budget').props.value).toBe('50000');
+    expect(screen.queryByLabelText('Budget for Food')).toBeNull();
+  });
+
+  it('fires onChangeBudgetMode when toggling mode', () => {
+    const onChangeBudgetMode = jest.fn();
+    renderSheet({ onChangeBudgetMode });
+    fireEvent.press(screen.getByText('Total'));
+    expect(onChangeBudgetMode).toHaveBeenCalledWith('total');
+  });
+
+  it('stores a total budget when an amount is typed in total mode', () => {
+    const onChangeTotalBudget = jest.fn();
+    renderSheet({ budgetMode: 'total', onChangeTotalBudget });
+    fireEvent.changeText(screen.getByLabelText('Total budget'), '100000');
+    expect(onChangeTotalBudget).toHaveBeenCalledWith(100000);
+  });
+
+  it('clears the total budget when the field is blanked in total mode', () => {
+    const onChangeTotalBudget = jest.fn();
+    renderSheet({ budgetMode: 'total', totalBudget: 50000, onChangeTotalBudget });
+    fireEvent.changeText(screen.getByLabelText('Total budget'), '');
+    expect(onChangeTotalBudget).toHaveBeenCalledWith(0);
   });
 });

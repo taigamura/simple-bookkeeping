@@ -11,9 +11,9 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   MONTH_NAMES,
-  budgetRemaining,
   categoryBreakdown,
-  hasAnyBudget,
+  getRemainingBudget,
+  isBudgetActive,
   monthEntries,
   net as monthNet,
   splitProportions,
@@ -30,19 +30,34 @@ import { IconButton } from '../nav/IconButton';
 interface SummaryScreenProps {
   entries: Transaction[];
   budgets: Budgets;
+  /** Budget mode (#66): 'category' for per-category, 'total' for single monthly amount. */
+  budgetMode: 'category' | 'total';
+  /** Total monthly budget in total mode (#66); 0 = no total budget. */
+  totalBudget: number;
   y: number;
   m: number;
   symbol: string;
   onSettings: () => void;
 }
 
-export function SummaryScreen({ entries, budgets, y, m, symbol, onSettings }: SummaryScreenProps) {
+export function SummaryScreen({
+  entries,
+  budgets,
+  budgetMode,
+  totalBudget,
+  y,
+  m,
+  symbol,
+  onSettings,
+}: SummaryScreenProps) {
   const { colors } = useTheme();
   const month = monthEntries(entries, { y, m });
   const total = monthNet(month);
   const split = splitProportions(month);
   const breakdown = categoryBreakdown(month, budgets);
-  const remaining = budgetRemaining(budgets, month);
+  // Mode-aware budget logic: check if any budget is active and calculate remaining.
+  const budgetActive = isBudgetActive(budgetMode, budgets, totalBudget);
+  const remaining = getRemainingBudget(budgetMode, budgets, totalBudget, month);
 
   return (
     <View style={styles.screen}>
@@ -79,11 +94,11 @@ export function SummaryScreen({ entries, budgets, y, m, symbol, onSettings }: Su
             <Legend label={strings.calendar.out} value={yen(split.expense, symbol)} tone="negative" />
           </View>
 
-          {/* Budget-left line (#51): only exists once any budget is set, so the
-              card stays unchanged until the user opts in. Same formula and
-              overspend formatting (signed, red, unclamped) as the Calendar
-              strip's BUDGET column. */}
-          {hasAnyBudget(budgets) && (
+          {/* Budget-left line (#51/#66): only exists once any budget is active
+              in the current mode, so the card stays unchanged until opted in.
+              Same formula and overspend formatting (signed, red, unclamped) as
+              the Calendar strip's BUDGET column. */}
+          {budgetActive && (
             <View style={[styles.budgetRow, { borderTopColor: colors.line }]}>
               <Txt variant="secondary" tone="muted">
                 {strings.summary.budgetLeft}

@@ -1,9 +1,9 @@
 /**
- * CalendarScreen strip BUDGET column (#50): hidden until any budget is set,
- * remaining = Σ budgets − month expenses, true negative when overspent, and
- * the value tracks the displayed month (the swipe-sync contract — the strip
- * re-reads the cursor when the pager commits, so all four columns move in the
- * same render).
+ * CalendarScreen strip BUDGET column (#50/#66): hidden until any budget is
+ * active in the current mode, remaining logic is mode-aware (per-category sum or
+ * total), overspent shows as true negative, and the value tracks the displayed
+ * month (the swipe-sync contract — the strip re-reads the cursor when the pager
+ * commits, so all four columns move in the same render).
  */
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
@@ -28,15 +28,18 @@ const tx = (over: Partial<Transaction>): Transaction => ({
 const renderCalendar = (
   entries: Transaction[],
   budgets: Budgets,
-  ym: { y: number; m: number } = { y: 2026, m: 6 },
+  budgetMode: 'category' | 'total' = 'category',
+  totalBudget: number = 0,
 ) =>
   render(
     <ThemeProvider>
       <CalendarScreen
         entries={entries}
         budgets={budgets}
-        y={ym.y}
-        m={ym.m}
+        budgetMode={budgetMode}
+        totalBudget={totalBudget}
+        y={2026}
+        m={6}
         day={1}
         symbol="¥"
         onSelectDay={() => {}}
@@ -79,7 +82,7 @@ describe('CalendarScreen strip BUDGET column (#50)', () => {
       tx({ id: 'jul', m: 6, amount: 10000 }),
       tx({ id: 'aug', m: 7, amount: 25000 }),
     ];
-    const view = renderCalendar(entries, { Food: 30000 }, { y: 2026, m: 6 });
+    const view = renderCalendar(entries, { Food: 30000 });
     expect(screen.getByText('¥20,000')).toBeTruthy();
 
     view.rerender(
@@ -87,6 +90,8 @@ describe('CalendarScreen strip BUDGET column (#50)', () => {
         <CalendarScreen
           entries={entries}
           budgets={{ Food: 30000 }}
+          budgetMode="category"
+          totalBudget={0}
           y={2026}
           m={7}
           day={1}
