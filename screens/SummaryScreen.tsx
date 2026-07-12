@@ -54,7 +54,8 @@ export function SummaryScreen({
   const month = monthEntries(entries, { y, m });
   const total = monthNet(month);
   const split = splitProportions(month);
-  const breakdown = categoryBreakdown(month, budgets);
+  // In total mode, category rows show spend only; in category mode, show per-category budgets.
+  const breakdown = categoryBreakdown(month, budgets, budgetMode);
   // Mode-aware budget logic: check if any budget is active and calculate remaining.
   const budgetActive = isBudgetActive(budgetMode, budgets, totalBudget);
   const remaining = getRemainingBudget(budgetMode, budgets, totalBudget, month);
