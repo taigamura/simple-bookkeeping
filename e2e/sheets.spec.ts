@@ -68,6 +68,9 @@ test.describe('Budgets from Settings', () => {
       await tapAt(page, gear);
       await expectSheetOpen(page, 'settings-sheet', `attempt #${i}`);
       const row = sheet(page, 'settings-sheet').getByLabel('Budgets', { exact: true });
+      // Settings scrolls on this viewport (#61/#63); bring the row fully into the
+      // sheet before tapping so its center isn't in the clipped bottom padding.
+      await row.scrollIntoViewIfNeeded();
       await tapAt(page, await center(row));
       await expectSheetOpen(page, 'budgets-sheet', `attempt #${i}`);
     }
@@ -157,6 +160,9 @@ test.describe('sheet swaps', () => {
     await expectSheetOpen(page, 'settings-sheet');
     for (let i = 1; i <= 3; i++) {
       const row = sheet(page, 'settings-sheet').getByLabel('Budgets', { exact: true });
+      // Settings scrolls on this viewport (#61/#63); bring the row fully into the
+      // sheet before tapping so its center isn't in the clipped bottom padding.
+      await row.scrollIntoViewIfNeeded();
       await tapAt(page, await center(row));
       await expectSheetOpen(page, 'budgets-sheet', `round trip #${i}`);
       const back = sheet(page, 'budgets-sheet').getByLabel('Back', { exact: true });
@@ -219,6 +225,9 @@ test.describe('sheet geometry', () => {
     await tapAt(page, gear);
     await expectSheetOpen(page, 'settings-sheet');
     const row = sheet(page, 'settings-sheet').getByLabel('Budgets', { exact: true });
+    // Settings scrolls on this viewport (#61/#63); bring the row fully into the
+    // sheet before tapping so its center isn't in the clipped bottom padding.
+    await row.scrollIntoViewIfNeeded();
     await tapAt(page, await center(row));
     await expectSheetOpen(page, 'budgets-sheet');
     const box = (await sheet(page, 'budgets-sheet').boundingBox())!;
