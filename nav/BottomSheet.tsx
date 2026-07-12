@@ -77,22 +77,23 @@ export function BottomSheet({
     }
   }, [visible, isPresented]);
 
-  // Reconciliation handler (#60): if the modal dismisses while nav state still
-  // says the sheet should be open, re-present it. This ensures nav state is
-  // authoritative and prevents the dead state where sheet→null but the modal
-  // closed, leaving re-taps silent.
+  // Dismiss handler: a gorhom dismiss is authoritative. Whatever closed the
+  // sheet — the ✕ button, a backdrop tap, a pan-down, or gorhom's own
+  // lifecycle — sync nav state to match by closing it. `onClose()` →
+  // `setSheet(null)` is idempotent, so the ✕ path (which already set nav to
+  // null before the dismiss animation finished) is a harmless no-op here.
+  //
+  // We must NOT re-present from here (the old #60 "reconciliation" did). gorhom
+  // fires onDismiss from a render captured before the ✕ tap updated nav, so its
+  // `visible` reads stale-true; branching on that re-presented the modal just
+  // as the effect was dismissing it — popping an *empty* sheet (content had
+  // already unmounted) that the user had to close again, and leaving the modal
+  // wedged so the next open silently failed (#63). Reading nav state here at
+  // all is the trap, so this handler no longer depends on `visible`.
   const handleDismiss = useCallback(() => {
     setIsPresented(false);
-    // If visible is still true, the nav state says the sheet should be open.
-    // The dismissal was spurious (not user-initiated), so re-present.
-    if (visible) {
-      setTimeout(() => ref.current?.present(), 0);
-      setIsPresented(true);
-    } else {
-      // User-initiated dismissal: call the callback.
-      onClose();
-    }
-  }, [visible, onClose]);
+    onClose();
+  }, [onClose]);
 
   // Dimmed backdrop that fades in as the sheet rises and out as it leaves; a tap
   // closes it, matching the old Pressable backdrop.
