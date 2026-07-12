@@ -65,6 +65,8 @@ interface SettingsSheetProps {
   lockEnabled: boolean;
   lockAvailable: boolean;
   onToggleLock: (enabled: boolean) => void;
+  /** Delete all entries and budgets (#67). */
+  onDeleteAllData: () => void;
   onClose: () => void;
   /** Scrollable wrapper for the rows below the header (#44); see file header. */
   ScrollContainer?: ComponentType<ScrollContainerProps>;
@@ -91,6 +93,7 @@ export function SettingsSheet({
   lockEnabled,
   lockAvailable,
   onToggleLock,
+  onDeleteAllData,
   onClose,
   ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
 }: SettingsSheetProps) {
@@ -121,6 +124,7 @@ export function SettingsSheet({
           onImportZaim={onImportZaim}
           hasCorruptStash={hasCorruptStash}
           onExportCorruptStash={onExportCorruptStash}
+          onDeleteAllData={onDeleteAllData}
         />
       </ScrollContainer>
     </View>
@@ -427,9 +431,9 @@ function BudgetsLink({ onPress }: { onPress: () => void }) {
 }
 
 /**
- * Load-sample-data (decision 8, #12), Export/Import-from-Zaim (#24, #12), and
- * the conditional unreadable-backup recovery row (#28). Premium/ads stripped
- * for v1 (#23).
+ * Load-sample-data (decision 8, #12), Export/Import-from-Zaim (#24, #12),
+ * the conditional unreadable-backup recovery row (#28), and
+ * the Delete all data action (#67). Premium/ads stripped for v1 (#23).
  */
 function DataActions({
   onLoadSample,
@@ -437,12 +441,14 @@ function DataActions({
   onImportZaim,
   hasCorruptStash,
   onExportCorruptStash,
+  onDeleteAllData,
 }: {
   onLoadSample: () => void;
   onExportData: () => void;
   onImportZaim: () => void;
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
+  onDeleteAllData: () => void;
 }) {
   const { colors } = useTheme();
   const rowStyle = ({ pressed }: { pressed: boolean }) => [
@@ -496,6 +502,17 @@ function DataActions({
           </Txt>
         </Pressable>
       )}
+
+      <Pressable
+        onPress={onDeleteAllData}
+        accessibilityRole="button"
+        accessibilityLabel={strings.settings.deleteAllData}
+        style={rowStyle}
+      >
+        <Txt variant="listItem" tone="negative">
+          {strings.settings.deleteAllData}
+        </Txt>
+      </Pressable>
     </Section>
   );
 }

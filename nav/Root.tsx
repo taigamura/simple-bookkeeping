@@ -292,6 +292,22 @@ function Shell({
     );
   };
 
+  // deleteAllData(): wipe entries and budgets (#67), preserving categories,
+  // currency, theme, lock, and open-to preference; guarded by destructive
+  // confirm (web window.confirm fallback).
+  const deleteAllData = () => {
+    confirm(
+      strings.settings.deleteAllData,
+      strings.settings.deleteAllDataConfirmMessage,
+      () => {
+        update({ entries: [], budgets: {}, totalBudget: 0 });
+        closeSheet();
+      },
+      strings.common.delete,
+      true,
+    );
+  };
+
   return (
     <View style={styles.flex}>
       <View style={styles.body}>
@@ -366,6 +382,7 @@ function Shell({
             lockEnabled={state.lockEnabled}
             lockAvailable={lockAvailable}
             onToggleLock={(lockEnabled) => update({ lockEnabled })}
+            onDeleteAllData={deleteAllData}
             onClose={closeSheet}
             ScrollContainer={BottomSheetScrollView}
           />

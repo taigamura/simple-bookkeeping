@@ -82,6 +82,8 @@ export interface Strings {
     exportData: string;
     importFromZaim: string;
     exportUnreadableBackup: string;
+    deleteAllData: string;
+    deleteAllDataConfirmMessage: string;
   };
   budgets: {
     title: string;
@@ -194,6 +196,8 @@ export const en: Strings = {
     exportData: 'Export data',
     importFromZaim: 'Import from Zaim',
     exportUnreadableBackup: 'Export unreadable backup',
+    deleteAllData: 'Delete all data',
+    deleteAllDataConfirmMessage: 'This will permanently delete all entries and budgets. Categories, currency, and settings will be preserved.',
   },
   budgets: {
     title: 'Budgets',
@@ -306,6 +310,8 @@ export const ja: Strings = {
     exportData: 'データを書き出す',
     importFromZaim: 'Zaimから読み込む',
     exportUnreadableBackup: '読み取れないバックアップを書き出す',
+    deleteAllData: 'すべてのデータを削除',
+    deleteAllDataConfirmMessage: 'すべての支出と予算が永遠に削除されます。カテゴリ、通貨、および設定は保持されます。',
   },
   budgets: {
     title: '予算',
