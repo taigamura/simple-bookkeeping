@@ -56,6 +56,8 @@ export {
   hasAnyBudget,
   budgetRemaining,
   pruneBudgets,
+  isBudgetActive,
+  getRemainingBudget,
   type Budgets,
 } from './budgets';
 export { sampleEntries } from './sample';

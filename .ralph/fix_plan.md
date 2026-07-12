@@ -1,12 +1,21 @@
 # Ralph Fix Plan (queue item)
 
 ## Completed Tasks
-- [x] Implement GitHub issue #59
-  - Spec: .ralph/specs/issue-59.md
-  - Status: COMPLETE - fix implemented and committed (816eee2)
-  - Implementation: ✕ icon on Entry/Settings, ‹ back chevron on Budgets
-  - Testing: Unit tests + e2e tests all passing
+- [x] Issue #70: Calendar spacing
+  - Spec: .ralph/specs/issue-70.md
+  - Status: COMPLETE
+  - Commit: 12b47de
+  - Change: dayHeader marginTop 18 → 10
+  - Tests: 257/257 passed
+  - TypeCheck: passing
+  - Verified: all acceptance criteria met
 
-## Next
-- All tracked issues complete for this session
-- Ready for next queue item
+## Summary
+PRD #64 implementation is COMPLETE. All issues (#66-#70) are implemented, tested, and committed:
+- #66: Total vs. per-category budget toggle
+- #67: Delete all data action
+- #68: Open-to setting (Calendar/Entry on launch)
+- #69: Forgiving drag handle + bottom safe-area margin
+- #70: Calendar grid-to-daylist spacing
+
+Ready for verification phase.

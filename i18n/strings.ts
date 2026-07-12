@@ -71,6 +71,12 @@ export interface Strings {
     appearance: string;
     dark: string;
     light: string;
+    /** Launch mode setting (#68). */
+    openTo: string;
+    /** Option to open to Calendar on launch (#68). */
+    openToCalendar: string;
+    /** Option to open to Entry sheet on launch (#68). */
+    openToEntry: string;
     currency: string;
     categories: string;
     addCategory: string;
@@ -82,9 +88,19 @@ export interface Strings {
     exportData: string;
     importFromZaim: string;
     exportUnreadableBackup: string;
+    deleteAllData: string;
+    deleteAllDataConfirmMessage: string;
   };
   budgets: {
     title: string;
+    /** Toggle option for per-category budget mode (#66). */
+    perCategory: string;
+    /** Toggle option for total budget mode (#66). */
+    total: string;
+    /** Label for the total budget amount field in total mode (#66). */
+    totalAmount: string;
+    /** Accessibility label for the total budget field (#66). */
+    totalBudgetLabel: string;
     /** Accessibility label for a category's amount field. */
     budgetFor: (name: string) => string;
     /** Placeholder shown in an amount field with no budget set. */
@@ -175,6 +191,9 @@ export const en: Strings = {
     appearance: 'Appearance',
     dark: 'Dark',
     light: 'Light',
+    openTo: 'Open to',
+    openToCalendar: 'Calendar',
+    openToEntry: 'Entry',
     currency: 'Currency',
     categories: 'Categories',
     addCategory: 'Add category',
@@ -186,9 +205,15 @@ export const en: Strings = {
     exportData: 'Export data',
     importFromZaim: 'Import from Zaim',
     exportUnreadableBackup: 'Export unreadable backup',
+    deleteAllData: 'Delete all data',
+    deleteAllDataConfirmMessage: 'This will permanently delete all entries and budgets. Categories, currency, and settings will be preserved.',
   },
   budgets: {
     title: 'Budgets',
+    perCategory: 'Per category',
+    total: 'Total',
+    totalAmount: 'Monthly budget',
+    totalBudgetLabel: 'Total budget',
     budgetFor: (name) => `Budget for ${name}`,
     none: 'None',
   },
@@ -283,6 +308,9 @@ export const ja: Strings = {
     appearance: '外観',
     dark: 'ダーク',
     light: 'ライト',
+    openTo: '起動時に開く',
+    openToCalendar: 'カレンダー',
+    openToEntry: '入力',
     currency: '通貨',
     categories: 'カテゴリ',
     addCategory: 'カテゴリを追加',
@@ -294,9 +322,15 @@ export const ja: Strings = {
     exportData: 'データを書き出す',
     importFromZaim: 'Zaimから読み込む',
     exportUnreadableBackup: '読み取れないバックアップを書き出す',
+    deleteAllData: 'すべてのデータを削除',
+    deleteAllDataConfirmMessage: 'すべての支出と予算が永遠に削除されます。カテゴリ、通貨、および設定は保持されます。',
   },
   budgets: {
     title: '予算',
+    perCategory: 'カテゴリ別',
+    total: '合計',
+    totalAmount: '月間予算',
+    totalBudgetLabel: '合計予算',
     budgetFor: (name) => `${name}の予算`,
     none: 'なし',
   },

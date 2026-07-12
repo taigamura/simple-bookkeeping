@@ -22,10 +22,15 @@ export interface CategorySlice {
 /**
  * Expense totals per category, highest-first, each with a `fraction` scaled to
  * the largest category (for bar widths). Income is ignored; an all-income or
- * empty month yields `[]`. Slices for budgeted categories carry `budget` and
- * `remaining` (#51); unbudgeted slices omit both fields entirely.
+ * empty month yields `[]`. In category mode, slices for budgeted categories
+ * carry `budget` and `remaining` (#51); unbudgeted slices omit both. In total
+ * mode, no per-category budgets are shown (#66).
  */
-export function categoryBreakdown(entries: Transaction[], budgets: Budgets = {}): CategorySlice[] {
+export function categoryBreakdown(
+  entries: Transaction[],
+  budgets: Budgets = {},
+  budgetMode: 'category' | 'total' = 'category',
+): CategorySlice[] {
   const totals = new Map<string, number>();
   for (const t of entries) {
     if (t.type !== 'expense') continue;
@@ -38,7 +43,8 @@ export function categoryBreakdown(entries: Transaction[], budgets: Budgets = {})
 
   const max = ranked.length > 0 ? ranked[0].total : 0;
   return ranked.map((slice) => {
-    const budget = budgets[slice.category];
+    // In total mode, never show per-category budgets — all rows render spend only.
+    const budget = budgetMode === 'category' ? budgets[slice.category] : undefined;
     return {
       ...slice,
       fraction: max > 0 ? slice.total / max : 0,

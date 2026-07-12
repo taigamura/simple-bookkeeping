@@ -65,6 +65,11 @@ interface SettingsSheetProps {
   lockEnabled: boolean;
   lockAvailable: boolean;
   onToggleLock: (enabled: boolean) => void;
+  /** Delete all entries and budgets (#67). */
+  onDeleteAllData: () => void;
+  /** What the app opens to on launch (#68). */
+  openTo: 'calendar' | 'entry';
+  onChangeOpenTo: (openTo: 'calendar' | 'entry') => void;
   onClose: () => void;
   /** Scrollable wrapper for the rows below the header (#44); see file header. */
   ScrollContainer?: ComponentType<ScrollContainerProps>;
@@ -91,6 +96,9 @@ export function SettingsSheet({
   lockEnabled,
   lockAvailable,
   onToggleLock,
+  onDeleteAllData,
+  openTo,
+  onChangeOpenTo,
   onClose,
   ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
 }: SettingsSheetProps) {
@@ -106,6 +114,7 @@ export function SettingsSheet({
         showsVerticalScrollIndicator={false}
       >
         <Appearance />
+        <OpenTo value={openTo} onChange={onChangeOpenTo} />
         <LockToggle enabled={lockEnabled} available={lockAvailable} onToggle={onToggleLock} />
         <CurrencyGrid value={currency} onChange={onChangeCurrency} />
         <Categories
@@ -121,6 +130,7 @@ export function SettingsSheet({
           onImportZaim={onImportZaim}
           hasCorruptStash={hasCorruptStash}
           onExportCorruptStash={onExportCorruptStash}
+          onDeleteAllData={onDeleteAllData}
         />
       </ScrollContainer>
     </View>
@@ -143,6 +153,34 @@ function Appearance() {
             label={m.label}
             active={mode === m.value}
             onPress={() => setMode(m.value)}
+          />
+        ))}
+      </View>
+    </Section>
+  );
+}
+
+/** Open-to selector: Calendar or Entry on launch (#68). */
+function OpenTo({
+  value,
+  onChange,
+}: {
+  value: 'calendar' | 'entry';
+  onChange: (openTo: 'calendar' | 'entry') => void;
+}) {
+  const OPTIONS: { value: 'calendar' | 'entry'; label: string }[] = [
+    { value: 'calendar', label: strings.settings.openToCalendar },
+    { value: 'entry', label: strings.settings.openToEntry },
+  ];
+  return (
+    <Section label={strings.settings.openTo}>
+      <View style={styles.optRow}>
+        {OPTIONS.map((o) => (
+          <OptBox
+            key={o.value}
+            label={o.label}
+            active={value === o.value}
+            onPress={() => onChange(o.value)}
           />
         ))}
       </View>
@@ -427,9 +465,9 @@ function BudgetsLink({ onPress }: { onPress: () => void }) {
 }
 
 /**
- * Load-sample-data (decision 8, #12), Export/Import-from-Zaim (#24, #12), and
- * the conditional unreadable-backup recovery row (#28). Premium/ads stripped
- * for v1 (#23).
+ * Load-sample-data (decision 8, #12), Export/Import-from-Zaim (#24, #12),
+ * the conditional unreadable-backup recovery row (#28), and
+ * the Delete all data action (#67). Premium/ads stripped for v1 (#23).
  */
 function DataActions({
   onLoadSample,
@@ -437,12 +475,14 @@ function DataActions({
   onImportZaim,
   hasCorruptStash,
   onExportCorruptStash,
+  onDeleteAllData,
 }: {
   onLoadSample: () => void;
   onExportData: () => void;
   onImportZaim: () => void;
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
+  onDeleteAllData: () => void;
 }) {
   const { colors } = useTheme();
   const rowStyle = ({ pressed }: { pressed: boolean }) => [
@@ -496,6 +536,17 @@ function DataActions({
           </Txt>
         </Pressable>
       )}
+
+      <Pressable
+        onPress={onDeleteAllData}
+        accessibilityRole="button"
+        accessibilityLabel={strings.settings.deleteAllData}
+        style={rowStyle}
+      >
+        <Txt variant="listItem" tone="negative">
+          {strings.settings.deleteAllData}
+        </Txt>
+      </Pressable>
     </Section>
   );
 }

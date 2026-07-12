@@ -1,7 +1,7 @@
 /**
- * Summary domain tests (slice #5 acceptance criteria): the expense category
- * breakdown (sorting + bar widths scaled to the max) and the in/out split
- * proportions.
+ * Summary domain tests (slice #5/#66 acceptance criteria): the expense category
+ * breakdown (sorting + bar widths scaled to the max, mode-aware budget display)
+ * and the in/out split proportions.
  */
 import { categoryBreakdown, splitProportions } from './summary';
 import type { Transaction } from './types';
@@ -90,6 +90,27 @@ describe('categoryBreakdown budget annotation (#51)', () => {
       expect(slice.budget).toBeUndefined();
       expect(slice.remaining).toBeUndefined();
     }
+  });
+
+  it('in total mode (#66), never shows per-category budgets even if set', () => {
+    const bd = categoryBreakdown(entries, { Food: 30000, Hobby: 20000 }, 'total');
+    for (const slice of bd) {
+      expect('budget' in slice).toBe(false);
+      expect('remaining' in slice).toBe(false);
+    }
+  });
+
+  it('in category mode (#66), shows per-category budgets (existing behavior)', () => {
+    const bd = categoryBreakdown(entries, { Food: 30000 }, 'category');
+    const food = bd.find((s) => s.category === 'Food')!;
+    expect(food.budget).toBe(30000);
+    expect(food.remaining).toBe(18000);
+  });
+
+  it('defaults to category mode when budgetMode is omitted', () => {
+    const bd = categoryBreakdown(entries, { Food: 30000 });
+    const food = bd.find((s) => s.category === 'Food')!;
+    expect(food.budget).toBe(30000);
   });
 });
 

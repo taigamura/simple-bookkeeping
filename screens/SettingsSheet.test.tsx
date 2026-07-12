@@ -29,6 +29,9 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         lockEnabled={false}
         lockAvailable={true}
         onToggleLock={() => {}}
+        onDeleteAllData={() => {}}
+        openTo="calendar"
+        onChangeOpenTo={() => {}}
         onClose={() => {}}
         {...over}
       />
@@ -159,5 +162,20 @@ describe('SettingsSheet', () => {
     expect(lockSwitch.props.accessibilityState.disabled).toBe(false);
     fireEvent.press(lockSwitch);
     expect(onToggleLock).toHaveBeenCalledWith(false);
+  });
+
+  it('renders a "Delete all data" action that fires its callback (#67)', () => {
+    const onDeleteAllData = jest.fn();
+    renderSheet({ onDeleteAllData });
+    fireEvent.press(screen.getByLabelText('Delete all data'));
+    expect(onDeleteAllData).toHaveBeenCalled();
+  });
+
+  it('renders Open to option group reflecting the current value and fires callback on change (#68)', () => {
+    const onChangeOpenTo = jest.fn();
+    renderSheet({ openTo: 'calendar', onChangeOpenTo });
+    expect(screen.getByText('Calendar')).toBeTruthy();
+    fireEvent.press(screen.getByText('Entry'));
+    expect(onChangeOpenTo).toHaveBeenCalledWith('entry');
   });
 });

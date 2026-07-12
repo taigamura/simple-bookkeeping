@@ -21,6 +21,8 @@ describe('CalendarScreen (ja locale)', () => {
         <CalendarScreen
           entries={[]}
           budgets={{}}
+          budgetMode="category"
+          totalBudget={0}
           y={2026}
           m={6}
           day={1}

@@ -126,6 +126,27 @@ function Shell({
   const [cursor, setCursor] = useState<YM>({ y: today.getFullYear(), m: today.getMonth() });
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
+  // Cold-launch behavior for openTo (#68): on first mount, if openTo is 'entry',
+  // auto-present the Entry sheet in create mode for today. This effect runs once
+  // on mount; in-session Calendar navigation does not re-trigger it.
+  //
+  // Deferred by a frame on purpose: setting `sheet` synchronously at mount makes
+  // BottomSheet call gorhom's present() before its BottomSheetView has had a
+  // layout pass, so `enableDynamicSizing` has no measured content height. That
+  // presents a broken sheet — backdrop dims but the body never resolves (the
+  // "transparent gray box"), and because gorhom never completes the present it
+  // never fires onDismiss, so `sheet` stays 'entry' and every later ＋ tap is a
+  // no-op (setSheet('entry') can't change an already-'entry' value). Waiting one
+  // frame lets the modal + content lay out first, so present() lands cleanly.
+  useEffect(() => {
+    if (state.openTo !== 'entry') return;
+    const raf = requestAnimationFrame(() => {
+      setEditing(null);
+      setSheet('entry');
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   const symbol = state.currency.symbol;
 
   // Whether this device can even satisfy the lock (#30) — checked once on
@@ -292,6 +313,22 @@ function Shell({
     );
   };
 
+  // deleteAllData(): wipe entries and budgets (#67), preserving categories,
+  // currency, theme, lock, and open-to preference; guarded by destructive
+  // confirm (web window.confirm fallback).
+  const deleteAllData = () => {
+    confirm(
+      strings.settings.deleteAllData,
+      strings.settings.deleteAllDataConfirmMessage,
+      () => {
+        update({ entries: [], budgets: {}, totalBudget: 0 });
+        closeSheet();
+      },
+      strings.common.delete,
+      true,
+    );
+  };
+
   return (
     <View style={styles.flex}>
       <View style={styles.body}>
@@ -299,6 +336,8 @@ function Shell({
           <CalendarScreen
             entries={state.entries}
             budgets={state.budgets}
+            budgetMode={state.budgetMode}
+            totalBudget={state.totalBudget}
             y={cursor.y}
             m={cursor.m}
             day={selectedDay}
@@ -314,6 +353,8 @@ function Shell({
           <SummaryScreen
             entries={state.entries}
             budgets={state.budgets}
+            budgetMode={state.budgetMode}
+            totalBudget={state.totalBudget}
             y={cursor.y}
             m={cursor.m}
             symbol={symbol}
@@ -362,6 +403,9 @@ function Shell({
             lockEnabled={state.lockEnabled}
             lockAvailable={lockAvailable}
             onToggleLock={(lockEnabled) => update({ lockEnabled })}
+            onDeleteAllData={deleteAllData}
+            openTo={state.openTo}
+            onChangeOpenTo={(openTo) => update({ openTo })}
             onClose={closeSheet}
             ScrollContainer={BottomSheetScrollView}
           />
@@ -370,8 +414,12 @@ function Shell({
           <BudgetsSheet
             expCats={state.expCats}
             budgets={state.budgets}
+            budgetMode={state.budgetMode}
+            totalBudget={state.totalBudget}
             symbol={symbol}
             onChangeBudgets={(budgets) => update({ budgets })}
+            onChangeBudgetMode={(budgetMode) => update({ budgetMode })}
+            onChangeTotalBudget={(totalBudget) => update({ totalBudget })}
             onDone={backToSettings}
             ScrollContainer={BottomSheetScrollView}
           />
