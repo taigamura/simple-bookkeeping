@@ -126,7 +126,14 @@ export function BottomSheet({
       ]}
       handleIndicatorStyle={{ backgroundColor: colors.line }}
     >
-      <BottomSheetView testID={testID} style={[styles.content, { minHeight: MIN_CONTENT_HEIGHT }, style]}>
+      {/* Pre-flattened to ONE object: gorhom spreads array styles into
+          StyleSheet.compose(...), which react-native-web throws on in dev when
+          given >2 elements and native/prod silently truncates to 2 — either
+          way a 3-element array here breaks every sheet open on web. */}
+      <BottomSheetView
+        testID={testID}
+        style={StyleSheet.flatten([styles.content, { minHeight: MIN_CONTENT_HEIGHT }, style])}
+      >
         {children}
       </BottomSheetView>
     </BottomSheetModal>
