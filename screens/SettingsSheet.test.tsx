@@ -30,6 +30,8 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         lockAvailable={true}
         onToggleLock={() => {}}
         onDeleteAllData={() => {}}
+        openTo="calendar"
+        onChangeOpenTo={() => {}}
         onClose={() => {}}
         {...over}
       />
@@ -167,5 +169,13 @@ describe('SettingsSheet', () => {
     renderSheet({ onDeleteAllData });
     fireEvent.press(screen.getByLabelText('Delete all data'));
     expect(onDeleteAllData).toHaveBeenCalled();
+  });
+
+  it('renders Open to option group reflecting the current value and fires callback on change (#68)', () => {
+    const onChangeOpenTo = jest.fn();
+    renderSheet({ openTo: 'calendar', onChangeOpenTo });
+    expect(screen.getByText('Calendar')).toBeTruthy();
+    fireEvent.press(screen.getByText('Entry'));
+    expect(onChangeOpenTo).toHaveBeenCalledWith('entry');
   });
 });

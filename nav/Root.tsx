@@ -126,6 +126,16 @@ function Shell({
   const [cursor, setCursor] = useState<YM>({ y: today.getFullYear(), m: today.getMonth() });
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
+  // Cold-launch behavior for openTo (#68): on first mount, if openTo is 'entry',
+  // auto-present the Entry sheet in create mode for today. This effect runs once
+  // on mount; in-session Calendar navigation does not re-trigger it.
+  useEffect(() => {
+    if (state.openTo === 'entry') {
+      setEditing(null);
+      setSheet('entry');
+    }
+  }, []);
+
   const symbol = state.currency.symbol;
 
   // Whether this device can even satisfy the lock (#30) — checked once on
@@ -383,6 +393,8 @@ function Shell({
             lockAvailable={lockAvailable}
             onToggleLock={(lockEnabled) => update({ lockEnabled })}
             onDeleteAllData={deleteAllData}
+            openTo={state.openTo}
+            onChangeOpenTo={(openTo) => update({ openTo })}
             onClose={closeSheet}
             ScrollContainer={BottomSheetScrollView}
           />

@@ -67,6 +67,9 @@ interface SettingsSheetProps {
   onToggleLock: (enabled: boolean) => void;
   /** Delete all entries and budgets (#67). */
   onDeleteAllData: () => void;
+  /** What the app opens to on launch (#68). */
+  openTo: 'calendar' | 'entry';
+  onChangeOpenTo: (openTo: 'calendar' | 'entry') => void;
   onClose: () => void;
   /** Scrollable wrapper for the rows below the header (#44); see file header. */
   ScrollContainer?: ComponentType<ScrollContainerProps>;
@@ -94,6 +97,8 @@ export function SettingsSheet({
   lockAvailable,
   onToggleLock,
   onDeleteAllData,
+  openTo,
+  onChangeOpenTo,
   onClose,
   ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
 }: SettingsSheetProps) {
@@ -109,6 +114,7 @@ export function SettingsSheet({
         showsVerticalScrollIndicator={false}
       >
         <Appearance />
+        <OpenTo value={openTo} onChange={onChangeOpenTo} />
         <LockToggle enabled={lockEnabled} available={lockAvailable} onToggle={onToggleLock} />
         <CurrencyGrid value={currency} onChange={onChangeCurrency} />
         <Categories
@@ -147,6 +153,34 @@ function Appearance() {
             label={m.label}
             active={mode === m.value}
             onPress={() => setMode(m.value)}
+          />
+        ))}
+      </View>
+    </Section>
+  );
+}
+
+/** Open-to selector: Calendar or Entry on launch (#68). */
+function OpenTo({
+  value,
+  onChange,
+}: {
+  value: 'calendar' | 'entry';
+  onChange: (openTo: 'calendar' | 'entry') => void;
+}) {
+  const OPTIONS: { value: 'calendar' | 'entry'; label: string }[] = [
+    { value: 'calendar', label: strings.settings.openToCalendar },
+    { value: 'entry', label: strings.settings.openToEntry },
+  ];
+  return (
+    <Section label={strings.settings.openTo}>
+      <View style={styles.optRow}>
+        {OPTIONS.map((o) => (
+          <OptBox
+            key={o.value}
+            label={o.label}
+            active={value === o.value}
+            onPress={() => onChange(o.value)}
           />
         ))}
       </View>

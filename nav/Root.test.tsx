@@ -182,4 +182,38 @@ describe('Root sheet state management (#60)', () => {
     // (currency changes, entry edits, budget updates, etc.)
     expect(mockUpdate).not.toHaveBeenCalled();
   });
+
+  it('auto-presents the Entry sheet on cold launch when openTo is "entry" (#68)', () => {
+    render(
+      <ThemeProvider>
+        <Root
+          state={{ ...DEFAULT_STATE, openTo: 'entry' }}
+          update={jest.fn()}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    // Entry sheet is auto-presented on cold launch when openTo='entry'
+    expect(screen.getByTestId('entry-sheet')).toBeTruthy();
+  });
+
+  it('does not auto-present the Entry sheet when openTo is "calendar" (#68)', () => {
+    render(
+      <ThemeProvider>
+        <Root
+          state={{ ...DEFAULT_STATE, openTo: 'calendar' }}
+          update={jest.fn()}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    // Entry sheet is not auto-presented when openTo='calendar'
+    expect(screen.queryByTestId('entry-sheet')).toBeNull();
+  });
 });

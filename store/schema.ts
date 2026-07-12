@@ -34,6 +34,9 @@ export interface AppState {
   /** Total monthly budget amount in total mode (#66); 0 = no total budget.
    *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
   totalBudget: number;
+  /** What the app opens to on launch (#68): 'calendar' for Calendar, 'entry' for Entry sheet.
+   *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
+  openTo: 'calendar' | 'entry';
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -47,6 +50,7 @@ export const DEFAULT_STATE: AppState = {
   budgets: {},
   budgetMode: 'category',
   totalBudget: 0,
+  openTo: 'calendar',
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */

@@ -71,6 +71,12 @@ export interface Strings {
     appearance: string;
     dark: string;
     light: string;
+    /** Launch mode setting (#68). */
+    openTo: string;
+    /** Option to open to Calendar on launch (#68). */
+    openToCalendar: string;
+    /** Option to open to Entry sheet on launch (#68). */
+    openToEntry: string;
     currency: string;
     categories: string;
     addCategory: string;
@@ -185,6 +191,9 @@ export const en: Strings = {
     appearance: 'Appearance',
     dark: 'Dark',
     light: 'Light',
+    openTo: 'Open to',
+    openToCalendar: 'Calendar',
+    openToEntry: 'Entry',
     currency: 'Currency',
     categories: 'Categories',
     addCategory: 'Add category',
@@ -299,6 +308,9 @@ export const ja: Strings = {
     appearance: '外観',
     dark: 'ダーク',
     light: 'ライト',
+    openTo: '起動時に開く',
+    openToCalendar: 'カレンダー',
+    openToEntry: '入力',
     currency: '通貨',
     categories: 'カテゴリ',
     addCategory: 'カテゴリを追加',
