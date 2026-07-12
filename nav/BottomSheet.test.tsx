@@ -100,7 +100,8 @@ describe('BottomSheet', () => {
     const applied = appliedContentStyle();
     expect(applied.paddingHorizontal).toBe(20);
     expect(applied.paddingTop).toBe(4);
-    expect(applied.paddingBottom).toBe(28);
+    // paddingBottom includes base 28 + bottom safe-area inset (#69)
+    expect(applied.paddingBottom).toBe(28); // mock default inset is 0
     expect(applied.minHeight).toBe(200);
   });
 

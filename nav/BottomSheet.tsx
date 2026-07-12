@@ -28,7 +28,7 @@ import {
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -96,6 +96,26 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/**
+ * Custom sheet handle: forgiving touch target (#69). Wraps gorhom's default
+ * indicator pill (same visual size) inside a full-sheet-width, ~40px-tall
+ * transparent band. The generous band makes drag-to-dismiss easy; the tap area
+ * covers the full width so users don't need to aim. The band sits above the
+ * sheet header (title / ✕ button), not overlapping it.
+ */
+function SheetHandle() {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      style={styles.handleBand}
+      // Gesture is handled by gorhom's modal; this Pressable just expands the tap target.
+      hitSlop={0}
+    >
+      <View style={[styles.handlePill, { backgroundColor: colors.line }]} />
+    </Pressable>
+  );
+}
 
 /**
  * The dimmed backdrop, tap-to-close. Custom (not gorhom's BottomSheetBackdrop)
@@ -243,7 +263,7 @@ export function BottomSheet({
         styles.sheet,
         { backgroundColor: colors.card, borderColor: colors.border },
       ]}
-      handleIndicatorStyle={{ backgroundColor: colors.line }}
+      handleComponent={SheetHandle}
     >
       {/* Pre-flattened to ONE object: gorhom spreads array styles into
           StyleSheet.compose(...), which react-native-web throws on in dev when
@@ -253,7 +273,7 @@ export function BottomSheet({
         testID={testID}
         style={StyleSheet.flatten([
           styles.content,
-          { minHeight: MIN_CONTENT_HEIGHT, maxHeight: maxSheetHeight },
+          { minHeight: MIN_CONTENT_HEIGHT, maxHeight: maxSheetHeight, paddingBottom: 28 + insets.bottom },
           style,
         ])}
       >
@@ -276,6 +296,18 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: metrics.screenPadX,
     paddingTop: 4,
-    paddingBottom: 28,
+    // paddingBottom is set dynamically to include bottom safe-area inset (#69)
+  },
+  // Custom drag handle with forgiving touch target (#69)
+  handleBand: {
+    height: 40,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  handlePill: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
   },
 });
