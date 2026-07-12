@@ -51,14 +51,21 @@ export async function expectSheetOpen(
 ) {
   const content = sheet(page, id);
   await expect(content, message).toBeVisible({ timeout: OPEN_TIMEOUT });
-  const box = (await content.boundingBox())!;
   const viewport = page.viewportSize()!;
-  expect(box.y, `${id} top edge should be on screen${message ? ` — ${message}` : ''}`)
-    .toBeGreaterThanOrEqual(0);
-  expect(
-    box.y + box.height,
-    `${id} should rise into the viewport, not sit collapsed below it${message ? ` — ${message}` : ''}`,
-  ).toBeLessThanOrEqual(viewport.height + 1);
+  // gorhom marks the content view visible at the START of the ~300ms slide-up
+  // present animation, so a box sampled the instant `toBeVisible` resolves
+  // catches the sheet still translated below the fold (box bottom overshoots
+  // the viewport). Retry the geometry assertions until the sheet settles into
+  // the viewport (#63) — a sheet that never rises still fails at OPEN_TIMEOUT.
+  await expect(async () => {
+    const box = (await content.boundingBox())!;
+    expect(box.y, `${id} top edge should be on screen${message ? ` — ${message}` : ''}`)
+      .toBeGreaterThanOrEqual(0);
+    expect(
+      box.y + box.height,
+      `${id} should rise into the viewport, not sit collapsed below it${message ? ` — ${message}` : ''}`,
+    ).toBeLessThanOrEqual(viewport.height + 1);
+  }).toPass({ timeout: OPEN_TIMEOUT });
 }
 
 /** Wait for a sheet to be fully gone (gorhom unmounts children after dismiss). */
@@ -80,17 +87,29 @@ export async function tapBackdrop(page: Page, id: SheetId) {
  * Ghost-overlay probe (#60): after a dismissal — or a failed open — a tap on a
  * calendar day must still register. If an invisible layer is eating taps, the
  * day never becomes selected and this fails.
+ *
+ * Selection is read off the tile's own background, not `aria-selected`:
+ * react-native-web does not emit `aria-selected` for `accessibilityRole=
+ * "button"` (the DayCell role), so the attribute is always absent even for the
+ * visibly-selected day. The selected day is the only cell painted a solid
+ * accent tile; every other day is transparent, so "background stopped being
+ * transparent" is the truthful signal that the tap landed and selection moved.
  */
+async function dayIsSelected(cell: Locator): Promise<boolean> {
+  const bg = await cell.evaluate((el) => getComputedStyle(el).backgroundColor);
+  return bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent';
+}
+
 export async function expectCalendarTappable(page: Page, message?: string) {
   // Two candidate days so the probe works whatever day is already selected.
   for (const day of [3, 4]) {
     const cell = await visibleDay(page, day);
-    if ((await cell.getAttribute('aria-selected')) === 'true') continue;
+    if (await dayIsSelected(cell)) continue;
     await tapAt(page, await center(cell));
     await expect(
-      cell,
+      async () => expect(await dayIsSelected(cell)).toBe(true),
       `calendar day ${day} tap did not register — tap-eating ghost overlay?${message ? ` — ${message}` : ''}`,
-    ).toHaveAttribute('aria-selected', 'true', { timeout: 2_000 });
+    ).toPass({ timeout: 2_000 });
     return;
   }
   throw new Error('both probe days were already selected — cannot happen');

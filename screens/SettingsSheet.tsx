@@ -513,14 +513,17 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 4 },
+  // flexShrink + minHeight:0 let this body cap to the sheet host's maxHeight
+  // (#63) so the scroll region below the header bounds and scrolls, instead of
+  // the whole sheet growing to full content height and running off-screen.
+  container: { gap: 4, flexShrink: 1, minHeight: 0 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
-  scroll: { flex: 1 },
+  scroll: { flex: 1, minHeight: 0 },
   scrollBody: { gap: 22, paddingBottom: 4 },
   section: { gap: 10 },
   lockRow: {
