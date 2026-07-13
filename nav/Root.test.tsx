@@ -26,13 +26,23 @@ jest.mock('../platform/auth', () => ({
 jest.mock('../platform/haptics', () => ({ entrySaved: jest.fn() }));
 jest.mock('../platform/shareFile', () => ({ shareTextFile: jest.fn() }));
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
-jest.mock('expo-file-system', () => ({ File: class {} }));
+const mockFileArrayBuffer = jest.fn();
+jest.mock('expo-file-system', () => ({
+  File: class {
+    arrayBuffer() {
+      return mockFileArrayBuffer();
+    }
+  },
+}));
 
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 
+import { serializeZaimCsv, type Transaction } from '../domain';
 import { strings } from '../i18n';
+import { shareTextFile } from '../platform/shareFile';
 import { DEFAULT_STATE } from '../store/schema';
 import { ThemeProvider } from '../theme';
 import { Root } from './Root';
@@ -338,6 +348,218 @@ describe('Root sheet state management (#60)', () => {
     });
 
     expect(update).toHaveBeenCalledWith({ entries: [], budgets: {}, totalBudget: 0 });
+    alert.mockRestore();
+  });
+});
+
+describe('Root CSV backup flow (#75)', () => {
+  const entry = (over: Partial<Transaction>): Transaction => ({
+    id: 'entry-id',
+    y: 2026,
+    m: 6,
+    day: 1,
+    type: 'expense',
+    amount: 1200,
+    category: 'Food',
+    note: 'Lunch',
+    repeat: 'never',
+    ...over,
+  });
+
+  const arrayBufferOf = (text: string): ArrayBuffer => {
+    const bytes = Buffer.from(text, 'utf-8');
+    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  };
+
+  const renderBackupRoot = (over: Partial<React.ComponentProps<typeof Root>> = {}) => {
+    const update = jest.fn();
+    render(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+          {...over}
+        />
+      </ThemeProvider>,
+    );
+    return { update };
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('exports the current ledger as a restorable CSV through the share seam', async () => {
+    const ledger = [
+      entry({
+        category: '食費, 外食',
+        note: 'Lunch with "friends", 2 people — 日本語のメモ',
+      }),
+    ];
+    (shareTextFile as jest.Mock).mockResolvedValue(undefined);
+    renderBackupRoot({ state: { ...DEFAULT_STATE, entries: ledger } });
+
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.settings.exportData));
+
+    await waitFor(() => expect(shareTextFile).toHaveBeenCalled());
+    const [filename, csv] = (shareTextFile as jest.Mock).mock.calls[0];
+    expect(filename).toBe('kaji-export.csv');
+    expect(csv).toBe(serializeZaimCsv(ledger));
+  });
+
+  it('shows localized recovery guidance when export write/share fails', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const { update } = renderBackupRoot();
+    (shareTextFile as jest.Mock).mockRejectedValue(new Error('share failed'));
+
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.settings.exportData));
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(strings.zaim.exportFailedTitle, strings.zaim.exportFailedMessage),
+    );
+    expect(update).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  it('imports an app-generated export after confirmation without losing supported fields', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const ledger = [
+      entry({
+        day: 3,
+        amount: 2480,
+        category: '食費, 外食',
+        note: 'Lunch with "friends", 2 people — 日本語のメモ',
+      }),
+      entry({
+        id: 'income-id',
+        day: 20,
+        type: 'income',
+        amount: 125000,
+        category: '副業',
+        note: 'Invoice "A-001", July',
+      }),
+    ];
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://backup.csv' }],
+    });
+    mockFileArrayBuffer.mockResolvedValue(arrayBufferOf(serializeZaimCsv(ledger)));
+    const { update } = renderBackupRoot({ state: { ...DEFAULT_STATE, entries: [] } });
+
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        strings.settings.importFromZaim,
+        strings.zaim.entriesReady(2),
+        expect.any(Array),
+      ),
+    );
+    const buttons = alert.mock.calls[0][2]!;
+    await act(async () => {
+      buttons[1].onPress?.();
+    });
+
+    expect(update).toHaveBeenCalledTimes(1);
+    const patch = update.mock.calls[0][0];
+    expect(patch.entries).toHaveLength(2);
+    expect(patch.entries[0]).toMatchObject({
+      day: 3,
+      amount: 2480,
+      category: '食費, 外食',
+      note: 'Lunch with "friends", 2 people — 日本語のメモ',
+    });
+    expect(patch.entries[1]).toMatchObject({
+      day: 20,
+      type: 'income',
+      amount: 125000,
+      category: '副業',
+      note: 'Invoice "A-001", July',
+    });
+    alert.mockRestore();
+  });
+
+  it('re-importing the same export writes nothing and reports duplicates', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const ledger = [
+      entry({ day: 1, amount: 1200, category: 'Food', note: 'Lunch' }),
+      entry({ id: 'income-id', day: 2, type: 'income', amount: 300000, category: 'Salary', note: 'Salary' }),
+    ];
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://backup.csv' }],
+    });
+    mockFileArrayBuffer.mockResolvedValue(arrayBufferOf(serializeZaimCsv(ledger)));
+    const { update } = renderBackupRoot({ state: { ...DEFAULT_STATE, entries: ledger } });
+
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        strings.zaim.noEntriesTitle,
+        `${strings.zaim.noEntriesMessage} — ${strings.zaim.skip.duplicate(2)}`,
+      ),
+    );
+    expect(update).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  it('picker cancellation performs no write and displays no error', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({ canceled: true, assets: [] });
+    const { update } = renderBackupRoot();
+
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+
+    await waitFor(() => expect(DocumentPicker.getDocumentAsync).toHaveBeenCalled());
+    expect(update).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  it('file-read failures preserve the ledger and show localized recovery guidance', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://backup.csv' }],
+    });
+    mockFileArrayBuffer.mockRejectedValue(new Error('read failed'));
+    const { update } = renderBackupRoot();
+
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(strings.zaim.importFailedTitle, strings.zaim.importFailedMessage),
+    );
+    expect(update).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  it('decode failures preserve the ledger and show localized guidance', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://not-zaim.csv' }],
+    });
+    mockFileArrayBuffer.mockResolvedValue(arrayBufferOf('name,amount\nLunch,1200'));
+    const { update } = renderBackupRoot();
+
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(strings.zaim.notZaimTitle, strings.zaim.notZaimMessage),
+    );
+    expect(update).not.toHaveBeenCalled();
     alert.mockRestore();
   });
 });

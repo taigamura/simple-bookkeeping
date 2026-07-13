@@ -223,15 +223,23 @@ function Shell({
   // exportData(): serialize the full ledger to a Zaim-format CSV and hand it
   // to the share sheet. Restore is the existing "Import from Zaim" row below —
   // an exported file round-trips through it unchanged, so no new import UI.
-  const exportData = () => {
-    shareTextFile('kaji-export.csv', serializeZaimCsv(state.entries));
+  const exportData = async () => {
+    try {
+      await shareTextFile('kaji-export.csv', serializeZaimCsv(state.entries));
+    } catch {
+      notify(strings.zaim.exportFailedTitle, strings.zaim.exportFailedMessage);
+    }
   };
 
   // exportCorruptStash(): share the raw unreadable blob kept by the #28 safety
   // net, so a stuck user can get their pre-corruption data off the device.
   const exportCorruptStash = async () => {
-    const raw = await readCorruptStash();
-    if (raw) shareTextFile('kaji-unreadable-backup.txt', raw);
+    try {
+      const raw = await readCorruptStash();
+      if (raw) await shareTextFile('kaji-unreadable-backup.txt', raw);
+    } catch {
+      notify(strings.zaim.exportFailedTitle, strings.zaim.exportFailedMessage);
+    }
   };
 
   // importZaim(): pick a Zaim CSV export → decode (Shift-JIS or UTF-8) →
@@ -241,43 +249,48 @@ function Shell({
   // categories into the ledger through the normal update() path. Canceling
   // the picker or the confirmation writes nothing.
   const importZaim = async () => {
-    const picked = await DocumentPicker.getDocumentAsync({ type: 'text/csv' });
-    if (picked.canceled) return;
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({ type: 'text/csv' });
+      if (picked.canceled) return;
 
-    const asset = picked.assets[0];
-    const buffer =
-      Platform.OS === 'web'
-        ? await asset.file!.arrayBuffer()
-        : await new File(asset.uri).arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    const text = decodeZaimBytes(bytes);
-    if (!text) {
-      notify(strings.zaim.notZaimTitle, strings.zaim.notZaimMessage);
-      return;
-    }
+      const asset = picked.assets[0];
+      const buffer =
+        Platform.OS === 'web'
+          ? await asset.file!.arrayBuffer()
+          : await new File(asset.uri).arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const text = decodeZaimBytes(bytes);
+      if (!text) {
+        notify(strings.zaim.notZaimTitle, strings.zaim.notZaimMessage);
+        return;
+      }
 
-    const result = parseZaimCsv(text, {
-      expCats: state.expCats,
-      incCats: state.incCats,
-      entries: state.entries,
-    });
-    if (result.entries.length === 0) {
-      notify(
-        strings.zaim.noEntriesTitle,
-        `${strings.zaim.noEntriesMessage}${skipSummary(result.skipped)}`,
-      );
-      return;
-    }
-
-    const message = `${strings.zaim.entriesReady(result.entries.length)}${skipSummary(result.skipped)}`;
-    confirm(strings.settings.importFromZaim, message, () => {
-      update({
-        entries: [...state.entries, ...result.entries],
-        expCats: result.expCats,
-        incCats: result.incCats,
+      const result = parseZaimCsv(text, {
+        expCats: state.expCats,
+        incCats: state.incCats,
+        entries: state.entries,
       });
-      setSheet(null);
-    });
+      if (result.entries.length === 0) {
+        notify(
+          strings.zaim.noEntriesTitle,
+          `${strings.zaim.noEntriesMessage}${skipSummary(result.skipped)}`,
+        );
+        return;
+      }
+
+      const message = `${strings.zaim.entriesReady(result.entries.length)}${skipSummary(result.skipped)}`;
+      confirm(strings.settings.importFromZaim, message, () => {
+        update({
+          entries: [...state.entries, ...result.entries],
+          expCats: result.expCats,
+          incCats: result.incCats,
+        });
+        setSheet(null);
+      });
+    } catch {
+      notify(strings.zaim.importFailedTitle, strings.zaim.importFailedMessage);
+      return;
+    }
   };
 
   // Month navigation: move the cursor and clamp the selected day into the new

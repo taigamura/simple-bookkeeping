@@ -95,8 +95,8 @@ export interface ZaimImportResult {
  * aborts the rest of the file.
  */
 export function parseZaimCsv(csvText: string, existing: ZaimExisting): ZaimImportResult {
-  const lines = csvText.split(/\r\n|\r|\n/).filter((line) => line.length > 0);
-  const rows = lines.slice(1); // drop the header row
+  const records = parseCsvRecords(csvText).filter((record) => record.length > 0);
+  const rows = records.slice(1); // drop the header row
 
   let expCats = existing.expCats;
   let incCats = existing.incCats;
@@ -315,4 +315,38 @@ function parseCsvLine(line: string): string[] {
   }
   out.push(field);
   return out;
+}
+
+/** Split CSV records without breaking on newlines inside quoted fields. */
+function parseCsvRecords(csvText: string): string[] {
+  const records: string[] = [];
+  let record = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < csvText.length; i++) {
+    const c = csvText[i];
+
+    if (c === '"') {
+      record += c;
+      if (inQuotes && csvText[i + 1] === '"') {
+        record += csvText[i + 1];
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (!inQuotes && (c === '\n' || c === '\r')) {
+      records.push(record);
+      record = '';
+      if (c === '\r' && csvText[i + 1] === '\n') i++;
+      continue;
+    }
+
+    record += c;
+  }
+
+  if (record.length > 0) records.push(record);
+  return records;
 }

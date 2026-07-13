@@ -131,6 +131,10 @@ export interface Strings {
   zaim: {
     notZaimTitle: string;
     notZaimMessage: string;
+    importFailedTitle: string;
+    importFailedMessage: string;
+    exportFailedTitle: string;
+    exportFailedMessage: string;
     noEntriesTitle: string;
     noEntriesMessage: string;
     entriesReady: (n: number) => string;
@@ -254,6 +258,12 @@ export const en: Strings = {
   zaim: {
     notZaimTitle: "Doesn't look like a Zaim export",
     notZaimMessage: 'No entries were imported.',
+    importFailedTitle: 'Import failed',
+    importFailedMessage:
+      'Your ledger was not changed. Try exporting the CSV again, or choose a different backup file.',
+    exportFailedTitle: 'Export failed',
+    exportFailedMessage:
+      'Your ledger was not changed. Check storage or sharing permissions, then try exporting again.',
     noEntriesTitle: 'No entries found',
     noEntriesMessage: 'No importable rows were found in that file.',
     entriesReady: (n) => `${n} entries ready to import`,
@@ -381,6 +391,12 @@ export const ja: Strings = {
   zaim: {
     notZaimTitle: 'Zaimのエクスポートではないようです',
     notZaimMessage: '記録は読み込まれませんでした。',
+    importFailedTitle: '読み込みに失敗しました',
+    importFailedMessage:
+      '帳簿は変更されていません。CSVをもう一度書き出すか、別のバックアップファイルを選んでください。',
+    exportFailedTitle: '書き出しに失敗しました',
+    exportFailedMessage:
+      '帳簿は変更されていません。ストレージや共有の権限を確認してから、もう一度書き出してください。',
     noEntriesTitle: '記録が見つかりません',
     noEntriesMessage: 'このファイルに読み込み可能な行が見つかりませんでした。',
     entriesReady: (n) => `${n}件の記録を読み込めます`,

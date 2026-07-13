@@ -319,4 +319,34 @@ describe('serializeZaimCsv', () => {
       note: 'Lunch with "friends", 2 people — 日本語のメモ',
     });
   });
+
+  it('restores a representative exported ledger exactly once into an empty ledger', () => {
+    const ledger = [
+      entry({
+        day: 3,
+        type: 'expense',
+        amount: 2480,
+        category: '食費, 外食',
+        note: 'Lunch with "friends", 2 people\n日本語のメモ',
+      }),
+      entry({
+        day: 20,
+        type: 'income',
+        amount: 125000,
+        category: '副業',
+        note: 'Invoice "A-001", July',
+      }),
+    ];
+
+    const csv = serializeZaimCsv(ledger);
+    const first = parseZaimCsv(csv, cats({ expCats: [], incCats: [], entries: [] }));
+    expect(first.entries).toHaveLength(2);
+    expect(first.entries.map(({ id: _id, repeat: _repeat, ...rest }) => rest)).toEqual(
+      ledger.map(({ id: _id, repeat: _repeat, ...rest }) => rest),
+    );
+
+    const second = parseZaimCsv(csv, cats({ entries: first.entries }));
+    expect(second.entries).toHaveLength(0);
+    expect(second.skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 0, duplicate: 2 });
+  });
 });
