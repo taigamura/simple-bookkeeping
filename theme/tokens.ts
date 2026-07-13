@@ -176,8 +176,6 @@ export const metrics = {
   ctaRadius: 16,
   /** Web only: center the app in a phone-width container (decision 10). */
   webMaxWidth: 402,
-  /** Reserve space at list bottom for the free-tier ad slot (decision 7). */
-  adReserve: 72,
 } as const;
 
 /** Shadows are theme-independent in the design (tuned for dark). */

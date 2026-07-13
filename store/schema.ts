@@ -5,8 +5,8 @@
  *
  * Fields grow slice by slice. `entries` is the ledger; `expCats`/`incCats` are
  * seeded with defaults on first launch (decision 8 — empty ledger, categories
- * only). `currency`/`premium` arrive with their slices (#7/#8); because the
- * store merges by known keys, adding a field later is backward-compatible.
+ * only). The store merges by known keys, so adding a field later is
+ * backward-compatible and legacy fields are ignored on load.
  */
 import {
   CURRENCIES,
@@ -27,7 +27,6 @@ export interface AppState {
   expCats: string[];
   incCats: string[];
   currency: Currency;
-  premium: boolean;
   /** Face ID / passcode gate on launch (#30); default off, web never gates. */
   lockEnabled: boolean;
   /** Recurring monthly budget per expense category (#49); absent = no budget.
@@ -51,7 +50,6 @@ export const DEFAULT_STATE: AppState = {
   expCats: DEFAULT_EXP_CATS,
   incCats: DEFAULT_INC_CATS,
   currency: DEFAULT_CURRENCY,
-  premium: false,
   lockEnabled: false,
   budgets: {},
   budgetMode: 'category',
@@ -70,7 +68,6 @@ type StateKey = keyof AppState;
 const stateKeys = Object.keys(DEFAULT_STATE) as StateKey[];
 const additiveStateKeys: StateKey[] = [
   'currency',
-  'premium',
   'lockEnabled',
   'budgets',
   'budgetMode',
@@ -157,7 +154,6 @@ function validateField(key: StateKey, value: unknown): boolean {
       return isCategoryArray(value);
     case 'currency':
       return isCurrency(value);
-    case 'premium':
     case 'lockEnabled':
       return typeof value === 'boolean';
     case 'budgets':

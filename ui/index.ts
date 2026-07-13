@@ -8,4 +8,3 @@ export { CalendarGrid } from './CalendarGrid';
 export { MonthPager } from './MonthPager';
 export { SplitBar } from './SplitBar';
 export { CategoryBar } from './CategoryBar';
-export { AdCard } from './AdCard';

@@ -80,7 +80,6 @@ describe('createStore', () => {
   it('loads valid older envelopes without additive fields and preserves ledger data', async () => {
     const {
       currency: _currency,
-      premium: _premium,
       lockEnabled: _lockEnabled,
       budgets: _budgets,
       budgetMode: _budgetMode,
@@ -96,12 +95,28 @@ describe('createStore', () => {
     expect(loaded.entries).toEqual([sampleEntry]);
     expect(loaded.theme).toBe('light');
     expect(loaded.currency).toEqual(DEFAULT_STATE.currency);
-    expect(loaded.premium).toBe(false);
     expect(loaded.lockEnabled).toBe(false);
     expect(loaded.budgets).toEqual({});
     expect(loaded.budgetMode).toBe('category');
     expect(loaded.totalBudget).toBe(0);
     expect(loaded.openTo).toBe('calendar');
+  });
+
+  it('ignores a legacy premium field when loading older persisted state (#77)', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: {
+        ...stateWith({ entries: [sampleEntry], theme: 'light' }),
+        premium: true,
+      },
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    const loaded = await store.load();
+
+    expect(loaded).toEqual(stateWith({ entries: [sampleEntry], theme: 'light' }));
+    expect(loaded).not.toHaveProperty('premium');
+    expect(store.wasLastLoadCorrupt()).toBe(false);
   });
 
   it('round-trips through the default AsyncStorage-backed store', async () => {

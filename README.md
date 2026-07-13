@@ -181,6 +181,8 @@ The remaining work for a public V1 is tracked in
 4. Produce one clean EAS release candidate, smoke-test it on a real iPhone,
    then submit that exact build for review.
 
-V1 ships without advertising, purchases, analytics, accounts, or enabled
-crash reporting. The Sentry integration remains inert while `sentryDsn` is
-blank, and EAS builds disable source-map upload accordingly.
+V1 ships without advertising, purchases, Premium state, analytics, accounts,
+sync, or enabled crash reporting. The Sentry integration remains inert while
+`sentryDsn` is blank, EAS builds disable source-map upload accordingly, and the
+zero-data-collection release posture is documented in
+[`docs/v1-privacy-mode.md`](docs/v1-privacy-mode.md).

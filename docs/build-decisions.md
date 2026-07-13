@@ -29,10 +29,10 @@ work superseded several implementation details:
 - Navigation remains bespoke, but sheets now use one controlled
   `@gorhom/bottom-sheet` modal host rather than separate React Native `Modal`
   instances. Entry, Settings, and Budgets swap bodies inside that host.
-- The static sponsored cards and user-facing Premium toggle were removed from
-  V1. V1 has no advertising or purchase surface. A legacy `premium` state field
-  and unused `AdCard` component remain implementation cleanup, not product
-  behavior.
+- The static sponsored cards, user-facing Premium toggle, legacy `premium`
+  state field, and unused `AdCard` component were removed from V1. Legacy
+  persisted blobs that still contain `premium` load normally; the field is
+  ignored and omitted from subsequent saves.
 - Persisted state now also includes lock preference, budgets, budget mode,
   total budget, and launch destination. CSV export, corrupt-blob recovery,
   JP/EN localization, haptics, and device authentication are implemented.
@@ -51,10 +51,10 @@ below, the amendment describes the current product.
 | 1 | **No accounts/wallets** | Match the design (pure daily in/out). `Transaction` keeps an unused optional `accountId?` so accounts can be added later additively. Overrides `initial-spec.md` §3/§5. |
 | 2 | **Recurring kept** | Entry sheet Repeat (Never/Every day/Every month/Every year) + weekend-shift (Move to Monday/Move to Friday/Keep). Materialize-on-save, current month only, exactly as the prototype: `daily` fills every day of the month; `monthly`/`yearly` create one entry on the weekend-adjusted day. No scheduler/recurrence engine. Overrides spec §4. |
 | 3 | **Bespoke navigation** | Root holds `tab: 'calendar'\|'summary'` and `sheet: 'entry'\|'settings'\|null`. Custom bottom bar with center green ＋ FAB that opens the Entry sheet. Sheets via RN `Modal` (`animationType="slide"`, transparent backdrop). No react-navigation / expo-router. |
-| 4 | **Persistence: AsyncStorage** | `@react-native-async-storage/async-storage`, whole-state JSON, behind a small store module (swappable for SQLite later). Persist: `entries`, `expCats`, `incCats`, `theme`, `currency`, `premium`. Load-on-boot, save-on-change. |
+| 4 | **Persistence: AsyncStorage** | `@react-native-async-storage/async-storage`, whole-state JSON, behind a small store module (swappable for SQLite later). Persist: `entries`, `expCats`, `incCats`, `theme`, `currency`, lock preference, budgets, budget mode, total budget, and launch destination. Load-on-boot, save-on-change. |
 | 5 | **Font: JetBrains Mono (bundled)** | Bundle via `@expo-google-fonts/jetbrains-mono` + `expo-font`, weights 400/500/600/700, for the mono "signature" (every number + uppercase micro-label). System sans (SF/Roboto default) for UI copy. Hold splash until fonts load. |
 | 6 | **Icons: `@expo/vector-icons`** | Map each design glyph to its intent (Feather/Ionicons/MaterialCommunity): ＋→plus, ⚙→settings, ‹›→chevrons, ✕→x, ↑↓→arrows, ↻→repeat, ⌫→delete, tabs→calendar + bar-chart, theme→moon/sun. Not literal Unicode (Android tofu risk). |
-| 7 | **Ads: static placeholder + premium flag** | Build the design's ad card (house-ad "Kaji Cash-back Card · Sponsored") gated by a local `premium` boolean; no ad network. Free tier: banner above tab bar on Calendar & Summary + slim variant above keypad in Entry sheet; reserve ~72px extra list bottom space. Premium: all ad slots removed, layout otherwise identical. Add a "Remove ads / Premium" toggle in Settings. Real AdMob deferred. |
+| 7 | **No ads or Premium in V1** | V1 has no advertising, sponsored placement, purchase, subscription, Premium, or remove-ads surface. Earlier prototype ad/Premium concepts are not product behavior. |
 | 8 | **First launch: empty (A+)** | Start with **no transactions**; seed only default categories. Use the designed empty states ("No entries this day. Tap ＋ to add one."). Provide a **"Load sample data"** action in Settings that inserts the 15 July-2026 sample entries for demos. |
 | 9 | **Theme: dark default, manual only** | Default dark; two-button Appearance control (Dark / Light); OS appearance ignored (no `useColorScheme`). Choice persists. |
 | 10 | **Web = phone-width container** | On web only, center the app in a `maxWidth: 402` full-height rounded container with subtle shadow on a neutral backdrop. Native = full-screen with `SafeAreaView`. **No** faux status bar / dynamic island / home indicator anywhere. |
@@ -102,22 +102,22 @@ rgba(0,0,0,.4) · CTA glow 0 8 24 rgba(43,212,138,.26).
 1. **Calendar (home)** — header (month+year title, ‹ › month nav, ⚙ settings); In/Out/Net
    strip bounded by hairlines; weekday row; 7-col month grid with signed daily net (selected
    day = solid green cell, near-black text); selected-day label + net; that day's entries as
-   list rows or empty state; ad slot (free); tab bar.
+   list rows or empty state; tab bar.
 2. **Summary** — header ("Summary" + ⚙) + month subtitle; Net card (large mono net + in/out
-   split bar + legend); spending-by-category ranked bars (highest first, scaled to max); ad slot.
+   split bar + legend); spending-by-category ranked bars (highest first, scaled to max).
 3. **New Entry (＋ sheet)** — grab handle; Expense/Income segmented toggle centered; ✕ close;
    large centered amount + type micro-label; horizontally-scrolling category chips; Note row
-   (cycles options); Repeat row (cycles); "If on weekend" row (monthly/yearly only); slim ad
-   (free); 3-col keypad (1–9, 000, 0, ⌫); full-width primary CTA (disabled until amount>0).
+   (cycles options); Repeat row (cycles); "If on weekend" row (monthly/yearly only); 3-col
+   keypad (1–9, 000, 0, ⌫); full-width primary CTA (disabled until amount>0).
 4. **Settings sheet** — grab handle; title + Done; Appearance (Dark/Light); Currency (4-grid);
    Categories (Expense/Income sub-tabs; rows = 2-letter code tile + label + ↑/↓/✕; add field +
-   green Add); Premium/Remove-ads toggle; Load sample data.
+   green Add); Load sample data.
 
 ## Components (primitives to build)
 
 SegmentedToggle · CategoryChip · Keypad · ListRow · SplitBar · CategoryBar · CalendarGrid /
-DayCell · TabBar (+ center FAB) · BottomSheet (Modal wrapper w/ grab handle + backdrop) ·
-AdCard (banner + slim) · IconButton (round 34 nav button).
+DayCell · TabBar (+ center FAB) · BottomSheet (controlled bottom-sheet host) ·
+IconButton (round 34 nav button).
 
 ## Data model & logic
 
@@ -186,9 +186,9 @@ except where a locked decision says otherwise. This section is the authoritative
 Design Fidelity Pass in `.ralph/fix_plan.md`; each fix must keep `tsc`/tests/web green.
 
 **Locked exceptions (do NOT "fix" back to the prototype):** icons stay `@expo/vector-icons`
-Feather glyphs, not the prototype's Unicode (decision 6); the in-app Premium/Remove-ads toggle
-and Load-sample-data row stay (decisions 7 & 8) — the prototype has neither; keep them styled
-consistently with the rest of Settings.
+Feather glyphs, not the prototype's Unicode (decision 6); the Load-sample-data row stays
+(decision 8) — the prototype does not have it; keep it styled consistently with the rest of
+Settings. Premium, remove-ads, sponsored, and ad surfaces stay absent from V1.
 
 ### Required corrections (target = design)
 

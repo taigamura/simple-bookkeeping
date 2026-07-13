@@ -1,11 +1,8 @@
 /**
- * errorReporting — Sentry crash reporting (#27), the sole exception to the
- * app's "nothing leaves the device" privacy story. The DSN comes from app
- * config (`expo.extra.sentryDsn` in app.json) via expo-constants, which is
- * blank until the developer pastes a real one in later. With no DSN, `init()`
- * is a deliberate no-op *before* ever calling `Sentry.init` — not a reliance
- * on the SDK's own no-dsn handling — so there's no ambiguity about whether a
- * network call or console warning could slip out while inert.
+ * errorReporting — Sentry crash reporting (#27). V1 keeps it inert: the DSN
+ * comes from app config (`expo.extra.sentryDsn` in app.json), which is blank
+ * for release builds. With no DSN, `init()` returns before calling
+ * `Sentry.init`, so the SDK is not enabled at runtime.
  */
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';

@@ -33,11 +33,13 @@ currency conversion.
       version, encryption declaration, splash screen, and app icons configured.
 - [x] EAS development, preview, production, and submission profiles committed.
 - [x] Core product functionality implemented with JP/EN localization.
-- [x] Premium and fake-ad surfaces removed from the user experience.
+- [x] Premium state, fake-ad components, and user-visible monetization
+      surfaces removed while preserving legacy persisted-envelope loads.
 - [x] CSV import/export and corrupt-load safety net implemented.
 - [x] Haptics and optional native device authentication implemented.
 - [x] Privacy policy written and hosted in English and Japanese.
-- [x] Sentry kept inert with a blank DSN and source-map upload disabled.
+- [x] Sentry kept inert with a blank DSN, source-map upload disabled, and a
+      unit test proving blank-DSN runtime initialization is skipped.
 - [x] Real-iPhone behavior tested and accepted as sufficient to enter the
       release-candidate phase.
 - [x] Total/per-category budgets, delete-all-data, launch destination, and
@@ -76,12 +78,12 @@ currency conversion.
       App Store metadata consistently. Do not change the existing bundle
       identifier casually.
 - [ ] Reconcile package and Expo version metadata for the official V1 release.
-- [ ] Remove the unused Premium state and dead ad component, or document a
-      concrete compatibility reason for retaining them.
-- [ ] Update durable build decisions that still describe removed Premium/ad
-      behavior or superseded sheet implementation details.
-- [ ] Ensure README, privacy policy, release checklist, and App Store claims all
-      describe the same shipped behavior.
+- [x] Remove the unused Premium state and dead ad component while keeping
+      legacy `premium` values harmless on load.
+- [x] Update durable build decisions that still describe removed Premium/ad
+      behavior.
+- [x] Ensure README, privacy policy, release checklist, and App Store claims all
+      describe the same shipped behavior; see `docs/v1-privacy-mode.md`.
 
 ### 4. App Store publication package
 
@@ -89,8 +91,9 @@ currency conversion.
       promotional copy, and support contact details.
 - [ ] Complete Finance category, age rating, copyright, privacy-policy URL,
       support URL, and export-compliance metadata.
-- [ ] Declare “Data Not Collected” only while Sentry, analytics, advertising,
-      and every other transmission path remain disabled.
+- [x] Declare “Data Not Collected” only while Sentry, analytics, advertising,
+      and every other transmission path remain disabled; see
+      `docs/v1-privacy-mode.md`.
 - [ ] Capture current Japanese and English screenshots for every App Store
       device class required by App Store Connect.
 - [ ] Write review notes explaining that the app is local-only, has no account
@@ -108,7 +111,8 @@ currency conversion.
       and persistence.
 - [ ] Confirm there are no placeholder labels, fake purchase/ad surfaces,
       debug controls, unexpected network requests, or developer-only sample
-      data in the initial experience.
+      data in the initial experience using the audit in
+      `docs/v1-privacy-mode.md`.
 - [ ] Submit the tested build and archive the final checklist, build number,
       commit, and App Store metadata snapshot.
 
