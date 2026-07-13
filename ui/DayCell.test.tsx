@@ -35,6 +35,13 @@ describe('DayCell', () => {
     expect(screen.getByText('+1,200')).toBeTruthy();
   });
 
+  it('exposes selected state and net value to accessibility', () => {
+    renderCell({ day: 3, net: 1200, selected: true });
+    const cell = screen.getByLabelText('Day 3');
+    expect(cell.props.accessibilityState.selected).toBe(true);
+    expect(cell.props.accessibilityValue.text).toBe('Net +1,200');
+  });
+
   it('shows negative nets with the unicode minus', () => {
     renderCell({ day: 4, net: -850 });
     expect(screen.getByText('−850')).toBeTruthy();

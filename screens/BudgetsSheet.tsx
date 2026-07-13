@@ -93,7 +93,12 @@ export function BudgetsSheet({
               onPress={() => onChangeBudgetMode('category')}
               accessible
               accessibilityRole="radio"
+              accessibilityLabel={strings.budgets.perCategory}
               accessibilityState={{ selected: budgetMode === 'category' }}
+              accessibilityValue={{
+                text:
+                  budgetMode === 'category' ? strings.a11y.selected : strings.a11y.notSelected,
+              }}
             >
               <Txt
                 variant="listItem"
@@ -110,7 +115,11 @@ export function BudgetsSheet({
               onPress={() => onChangeBudgetMode('total')}
               accessible
               accessibilityRole="radio"
+              accessibilityLabel={strings.budgets.total}
               accessibilityState={{ selected: budgetMode === 'total' }}
+              accessibilityValue={{
+                text: budgetMode === 'total' ? strings.a11y.selected : strings.a11y.notSelected,
+              }}
             >
               <Txt variant="listItem" tone={budgetMode === 'total' ? 'ink' : 'muted'}>
                 {strings.budgets.total}
@@ -204,6 +213,7 @@ function BudgetRow({
         placeholder={strings.budgets.none}
         placeholderTextColor={colors.dim}
         accessibilityLabel={strings.budgets.budgetFor(category)}
+        accessibilityValue={{ text: draft === '' ? strings.budgets.none : `${symbol}${draft}` }}
         style={[styles.input, { backgroundColor: colors.card3, color: colors.ink }]}
       />
     </View>
@@ -247,6 +257,7 @@ function TotalBudgetRow({
         placeholder={strings.budgets.none}
         placeholderTextColor={colors.dim}
         accessibilityLabel={strings.budgets.totalBudgetLabel}
+        accessibilityValue={{ text: draft === '' ? strings.budgets.none : `${symbol}${draft}` }}
         style={[styles.input, { backgroundColor: colors.card3, color: colors.ink }]}
       />
     </View>

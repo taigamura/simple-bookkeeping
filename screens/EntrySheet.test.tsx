@@ -72,6 +72,13 @@ describe('EntrySheet', () => {
     expect(screen.getByLabelText('↻ Repeat: Never')).toBeTruthy();
   });
 
+  it('announces repeat value and save-time materialization (#76)', () => {
+    renderSheet();
+    const repeat = screen.getByLabelText('↻ Repeat: Never');
+    expect(repeat.props.accessibilityValue.text).toBe('Never');
+    expect(repeat.props.accessibilityHint).toContain('created when you save');
+  });
+
   it('renders no ad card (Premium/ads stripped for v1, #23)', () => {
     renderSheet();
     expect(screen.queryByLabelText('Sponsored ad')).toBeNull();
@@ -89,8 +96,9 @@ describe('EntrySheet (edit mode, #43)', () => {
 
   it('prefills the selected category chip', () => {
     renderSheet({ editing: editingEntry() });
-    const chip = screen.getByRole('button', { name: 'Rent' });
+    const chip = screen.getByRole('radio', { name: 'Rent' });
     expect(chip.props.accessibilityState.selected).toBe(true);
+    expect(chip.props.accessibilityValue.text).toBe('Selected');
   });
 
   it('hides the create-only Repeat and weekend-shift rows', () => {

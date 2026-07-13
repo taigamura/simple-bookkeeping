@@ -61,6 +61,16 @@ describe('SettingsSheet', () => {
     expect(screen.queryByText('Food')).toBeNull();
   });
 
+  it('exposes selection state/value for settings option groups (#76)', () => {
+    renderSheet({ openTo: 'calendar' });
+    const calendar = screen.getByLabelText('Calendar');
+    const entry = screen.getByLabelText('Entry');
+    expect(calendar.props.accessibilityRole).toBe('radio');
+    expect(calendar.props.accessibilityState.selected).toBe(true);
+    expect(calendar.props.accessibilityValue.text).toBe('Selected');
+    expect(entry.props.accessibilityValue.text).toBe('Not selected');
+  });
+
   it('renders a Budgets drill-in row that fires its callback (#49)', () => {
     const onOpenBudgets = jest.fn();
     renderSheet({ onOpenBudgets });
@@ -112,6 +122,7 @@ describe('SettingsSheet', () => {
     renderSheet({ lockEnabled: false, lockAvailable: false, onToggleLock });
     const lockSwitch = screen.getByLabelText('Lock');
     expect(lockSwitch.props.accessibilityState.disabled).toBe(true);
+    expect(lockSwitch.props.accessibilityValue.text).toBe('Off');
     fireEvent.press(lockSwitch);
     expect(onToggleLock).not.toHaveBeenCalled();
     expect(
@@ -167,7 +178,9 @@ describe('SettingsSheet', () => {
   it('renders a "Delete all data" action that fires its callback (#67)', () => {
     const onDeleteAllData = jest.fn();
     renderSheet({ onDeleteAllData });
-    fireEvent.press(screen.getByLabelText('Delete all data'));
+    const deleteAll = screen.getByLabelText('Delete all data');
+    expect(deleteAll.props.accessibilityHint).toContain('entries and budgets');
+    fireEvent.press(deleteAll);
     expect(onDeleteAllData).toHaveBeenCalled();
   });
 
@@ -177,5 +190,16 @@ describe('SettingsSheet', () => {
     expect(screen.getByText('Calendar')).toBeTruthy();
     fireEvent.press(screen.getByText('Entry'));
     expect(onChangeOpenTo).toHaveBeenCalledWith('entry');
+  });
+
+  it('labels the category input and disabled Add button for accessibility (#76)', () => {
+    renderSheet();
+    expect(screen.getByLabelText('Category name').props.accessibilityValue.text).toBe('None');
+    expect(screen.getByLabelText('Add category').props.accessibilityState.disabled).toBe(true);
+  });
+
+  it('describes currency as symbol-only, not conversion (#76)', () => {
+    renderSheet();
+    expect(screen.getByLabelText('JPY ¥').props.accessibilityHint).toContain('symbol only');
   });
 });

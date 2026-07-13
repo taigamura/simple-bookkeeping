@@ -228,6 +228,7 @@ function LockToggle({
           accessibilityRole="switch"
           accessibilityState={{ checked: enabled, disabled }}
           accessibilityLabel={strings.lock.label}
+          accessibilityValue={{ text: enabled ? strings.common.on : strings.common.off }}
           style={[
             styles.pill,
             { backgroundColor: enabled ? accents.positive : colors.card3, opacity: disabled ? 0.5 : 1 },
@@ -259,6 +260,7 @@ function CurrencyGrid({
             label={`${c.symbol} ${c.code}`}
             active={c.code === value.code}
             accessibilityLabel={`${c.code} ${c.symbol}`}
+            accessibilityHint={strings.a11y.symbolOnlyCurrencyHint}
             onPress={() => onChange(c)}
           />
         ))}
@@ -275,20 +277,24 @@ function OptBox({
   label,
   active,
   accessibilityLabel,
+  accessibilityHint,
   onPress,
 }: {
   label: string;
   active: boolean;
   accessibilityLabel?: string;
+  accessibilityHint?: string;
   onPress: () => void;
 }) {
   const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
+      accessibilityRole="radio"
       accessibilityState={{ selected: active }}
       accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityHint={accessibilityHint}
+      accessibilityValue={{ text: active ? strings.a11y.selected : strings.a11y.notSelected }}
       style={[
         styles.optBox,
         active
@@ -344,9 +350,10 @@ function Categories({
                   setTab(t.value);
                   setDraft('');
                 }}
-                accessibilityRole="button"
+                accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={t.label}
+                accessibilityValue={{ text: active ? strings.a11y.selected : strings.a11y.notSelected }}
                 style={[
                   styles.miniPill,
                   { backgroundColor: active ? accents.positive : colors.card2 },
@@ -408,6 +415,8 @@ function Categories({
           onSubmitEditing={add}
           placeholder={strings.settings.addCategory}
           placeholderTextColor={colors.dim}
+          accessibilityLabel={strings.a11y.categoryName}
+          accessibilityValue={{ text: draft || strings.budgets.none }}
           returnKeyType="done"
           style={[
             styles.input,
@@ -419,6 +428,7 @@ function Categories({
           disabled={draft.trim().length === 0}
           accessibilityRole="button"
           accessibilityLabel={strings.settings.addCategory}
+          accessibilityState={{ disabled: draft.trim().length === 0 }}
           style={[
             styles.addBtn,
             {
@@ -541,6 +551,7 @@ function DataActions({
         onPress={onDeleteAllData}
         accessibilityRole="button"
         accessibilityLabel={strings.settings.deleteAllData}
+        accessibilityHint={strings.settings.deleteAllDataConfirmMessage}
         style={rowStyle}
       >
         <Txt variant="listItem" tone="negative">

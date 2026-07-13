@@ -6,6 +6,7 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
+import { strings } from '../i18n';
 import { useTheme, metrics, accents, Txt } from '../theme';
 
 interface CategoryChipsProps {
@@ -28,8 +29,9 @@ export function CategoryChips({ categories, selected, onSelect }: CategoryChipsP
           <Pressable
             key={cat}
             onPress={() => onSelect(cat)}
-            accessibilityRole="button"
+            accessibilityRole="radio"
             accessibilityState={{ selected: active }}
+            accessibilityValue={{ text: active ? strings.a11y.selected : strings.a11y.notSelected }}
             style={[
               styles.chip,
               { backgroundColor: active ? accents.positive : colors.card2 },

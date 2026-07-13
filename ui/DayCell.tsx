@@ -10,6 +10,7 @@ import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { signed } from '../domain';
+import { strings } from '../i18n';
 import { metrics, accents, Txt } from '../theme';
 
 /** Selected-day total: translucent near-black over the green tile (design §1). */
@@ -26,13 +27,17 @@ interface DayCellProps {
 export function DayCell({ day, net, selected, onPress }: DayCellProps) {
   const hasNet = net !== 0;
   const netTone = net > 0 ? 'positive' : 'negative';
+  const netText = signed(net, '');
 
   return (
     <Pressable
       onPress={() => onPress(day)}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={`Day ${day}`}
+      accessibilityLabel={strings.calendar.dayAccessibilityLabel(day)}
+      accessibilityValue={
+        hasNet ? { text: strings.calendar.dayNetAccessibilityValue(netText) } : undefined
+      }
       style={[
         styles.cell,
         { backgroundColor: selected ? accents.positive : 'transparent' },
@@ -49,7 +54,7 @@ export function DayCell({ day, net, selected, onPress }: DayCellProps) {
           numberOfLines={1}
         >
           {/* compact signed net, no currency symbol, to fit the cell */}
-          {signed(net, '')}
+          {netText}
         </Txt>
       )}
     </Pressable>

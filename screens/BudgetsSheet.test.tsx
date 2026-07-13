@@ -90,6 +90,16 @@ describe('BudgetsSheet', () => {
     expect(screen.getByText('Total')).toBeTruthy();
   });
 
+  it('exposes budget mode selection state/value (#76)', () => {
+    renderSheet({ budgetMode: 'category' });
+    const perCategory = screen.getByLabelText('Per category');
+    const total = screen.getByLabelText('Total');
+    expect(perCategory.props.accessibilityRole).toBe('radio');
+    expect(perCategory.props.accessibilityState.selected).toBe(true);
+    expect(perCategory.props.accessibilityValue.text).toBe('Selected');
+    expect(total.props.accessibilityValue.text).toBe('Not selected');
+  });
+
   it('in category mode, displays per-category amount fields', () => {
     renderSheet({ budgetMode: 'category' });
     for (const cat of ['Food', 'Rent', 'Transport']) {
@@ -116,6 +126,12 @@ describe('BudgetsSheet', () => {
     renderSheet({ budgetMode: 'total', onChangeTotalBudget });
     fireEvent.changeText(screen.getByLabelText('Total budget'), '100000');
     expect(onChangeTotalBudget).toHaveBeenCalledWith(100000);
+  });
+
+  it('exposes blank and populated field values for screen readers (#76)', () => {
+    renderSheet({ budgets: { Food: 30000 } });
+    expect(screen.getByLabelText('Budget for Food').props.accessibilityValue.text).toBe('¥30000');
+    expect(screen.getByLabelText('Budget for Rent').props.accessibilityValue.text).toBe('None');
   });
 
   it('clears the total budget when the field is blanked in total mode', () => {

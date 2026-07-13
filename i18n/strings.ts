@@ -26,6 +26,14 @@ export interface Strings {
     on: string;
     off: string;
   };
+  a11y: {
+    selected: string;
+    notSelected: string;
+    textInput: string;
+    categoryName: string;
+    symbolOnlyCurrencyHint: string;
+    materializeOnSaveHint: string;
+  };
   nav: {
     calendar: string;
     summary: string;
@@ -43,6 +51,8 @@ export interface Strings {
     net: string;
     /** Strip label for the month's remaining budget (#50). */
     budget: string;
+    dayAccessibilityLabel: (day: number) => string;
+    dayNetAccessibilityValue: (value: string) => string;
     emptyDay: string;
   };
   summary: {
@@ -153,6 +163,14 @@ export const en: Strings = {
     on: 'On',
     off: 'Off',
   },
+  a11y: {
+    selected: 'Selected',
+    notSelected: 'Not selected',
+    textInput: 'Text input',
+    categoryName: 'Category name',
+    symbolOnlyCurrencyHint: 'Changes the displayed currency symbol only. Amounts are not converted.',
+    materializeOnSaveHint: 'Repeating entries are created when you save.',
+  },
   nav: {
     calendar: 'Calendar',
     summary: 'Summary',
@@ -169,6 +187,8 @@ export const en: Strings = {
     out: 'Out',
     net: 'Net',
     budget: 'Budget',
+    dayAccessibilityLabel: (day) => `Day ${day}`,
+    dayNetAccessibilityValue: (value) => `Net ${value}`,
     emptyDay: 'No entries this day. Tap ＋ to add one.',
   },
   summary: {
@@ -287,6 +307,14 @@ export const ja: Strings = {
     on: 'オン',
     off: 'オフ',
   },
+  a11y: {
+    selected: '選択中',
+    notSelected: '未選択',
+    textInput: 'テキスト入力',
+    categoryName: 'カテゴリ名',
+    symbolOnlyCurrencyHint: '表示する通貨記号だけを変更します。金額は換算されません。',
+    materializeOnSaveHint: '繰り返しの記録は保存時に作成されます。',
+  },
   nav: {
     calendar: 'カレンダー',
     summary: 'サマリー',
@@ -303,6 +331,8 @@ export const ja: Strings = {
     out: '支出',
     net: '収支',
     budget: '予算',
+    dayAccessibilityLabel: (day) => `${day}日`,
+    dayNetAccessibilityValue: (value) => `収支 ${value}`,
     emptyDay: 'この日の記録はありません。＋をタップして追加しましょう。',
   },
   summary: {

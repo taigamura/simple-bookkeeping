@@ -7,6 +7,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { strings } from '../i18n';
 import { useTheme, metrics, accents, Txt, type Tone } from '../theme';
 
 export interface SegmentOption<T extends string> {
@@ -40,9 +41,10 @@ export function SegmentedToggle<T extends string>({
           <Pressable
             key={opt.value}
             onPress={() => onChange(opt.value)}
-            accessibilityRole="button"
+            accessibilityRole="radio"
             accessibilityState={{ selected: active }}
             accessibilityLabel={opt.label}
+            accessibilityValue={{ text: active ? strings.a11y.selected : strings.a11y.notSelected }}
             style={[styles.item, active && { backgroundColor: activeColor }]}
           >
             <Txt variant="listItem" tone={active ? activeTone : 'muted'} style={styles.label}>

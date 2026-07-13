@@ -165,6 +165,7 @@ export function EntrySheet({
             value={REPEAT_LABEL[repeat]}
             active={repeat !== 'never'}
             activeTone="positive"
+            accessibilityHint={strings.a11y.materializeOnSaveHint}
             onPress={() => setRepeat((r) => next(REPEAT_ORDER, r))}
           />
         )}
@@ -227,6 +228,7 @@ function CycleRow({
   activeTone = 'ink',
   first = false,
   onPress,
+  accessibilityHint,
 }: {
   label: string;
   value: string;
@@ -234,6 +236,7 @@ function CycleRow({
   activeTone?: Tone;
   first?: boolean;
   onPress: () => void;
+  accessibilityHint?: string;
 }) {
   const { colors } = useTheme();
   return (
@@ -241,6 +244,8 @@ function CycleRow({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${value}`}
+      accessibilityHint={accessibilityHint}
+      accessibilityValue={{ text: value }}
       style={({ pressed }) => [
         styles.row,
         !first && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hair },
