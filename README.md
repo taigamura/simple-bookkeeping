@@ -1,11 +1,12 @@
 # Kaji (家計)
 
 A minimal, iOS-style personal money-in/out tracker. Log daily income and
-expenses against a calendar, see monthly totals and category breakdowns, and
-import transaction history from Zaim (CSV). No accounts/wallets, no budgets,
-no sync — a small, finished app rather than a feature-rich one. Built with
-Expo (React Native) + TypeScript, local-first (AsyncStorage), dark by
-default.
+expenses against a calendar, set either a total monthly budget or budgets by
+expense category, see monthly totals and category breakdowns, and import or
+export transaction history as Zaim-compatible CSV. There are no
+accounts/wallets, cloud accounts, or sync — the product is intentionally a
+small, local-first app rather than a full personal-finance platform. Built
+with Expo (React Native) + TypeScript and dark by default.
 
 See [`initial-spec.md`](initial-spec.md) for the original scope/stack spec
 and [`docs/build-decisions.md`](docs/build-decisions.md) for the full set of
@@ -60,7 +61,7 @@ Tests live alongside the code they cover (`*.test.ts` / `*.test.tsx`) across
 `npm run typecheck` before considering a change complete — the design
 fidelity work in particular has to keep both green.
 
-### Sheet-regression e2e suite (red-first)
+### Sheet-regression e2e suite
 
 `e2e/` holds a permanent Playwright suite that drives the exported Expo web
 build the way a user does — fresh cold page loads, real first taps on ＋ and
@@ -76,13 +77,11 @@ libraries can't be installed (e.g. bare WSL2 without sudo —
 script also skips Playwright's pre-launch host validation, which rejects the
 machine even though Firefox loads the audio libs dynamically).
 
-**Red-first contract:** tests marked `test.fail()` reproduce real,
-currently-shipping bugs (#60/#61/#62). They keep CI green only while the bug
-exists, and turn CI red the moment a fix lands without flipping the marker to
-a plain passing test — so the fix PR must flip them. Removing, skipping, or
-weakening these tests is treated exactly like deleting the unit suite. A
-marked test that "passes unexpectedly" means the scenario drifted off the
-real bug: rewrite it, never delete it.
+The release contract is straightforward: all canonical Playwright scenarios
+must pass without `test.fail()`, retries, skips, or weakened assertions. The
+suite currently exposes an unresolved web-only bottom-sheet regression tracked
+in GitHub issue #63; a public V1 release requires that issue to be resolved and
+the suite to be green in CI.
 
 ## Project structure
 
@@ -96,8 +95,8 @@ real bug: rewrite it, never delete it.
   (no react-navigation/expo-router).
 - `ui/` — presentational primitives (keypad, calendar grid, list rows,
   charts, cards).
-- `screens/` — the four screens/sheets: Calendar, Summary, New Entry,
-  Settings.
+- `screens/` — Calendar and Summary screens plus the Entry, Settings, and
+  Budgets sheet bodies.
 - `docs/` — design reference (`v0.1_design.html`) and the durable
   build-decisions record.
 
@@ -112,73 +111,76 @@ EAS's free tier covers roughly 15 iOS + 15 Android builds/month, which is
 enough for this project's needs; the Apple Developer fee ($99/yr) is the
 only unavoidable cost.
 
-### Shipping plan (status as of 2026-07-04)
+### iOS deployment runbook
 
-All code-side items from [`docs/appstore-readiness.md`](docs/appstore-readiness.md)
-are done (Premium/ad surfaces stripped, CSV export, corrupt-load safety
-net, JP/EN localization, haptics, Face ID lock, Sentry, splash screen).
-Apple Developer enrollment is paid and awaiting approval. Remaining steps,
-in order:
+The Expo project, EAS project ID, bundle identifier, build profiles, splash
+screen, and encryption declaration are already configured in `app.json` and
+`eas.json`. Run deployment commands from the repository root under Node 20.
 
-**While Apple enrollment is pending (typically 24–48h):**
+1. Log in to Expo if the current machine has no EAS session:
 
-1. **EAS build configuration** — the last unchecked code item:
-   - Create a free [Expo account](https://expo.dev), then `npx eas-cli init`
-     and `npx eas-cli build:configure`; commit `eas.json`.
-   - Add to `app.json`: `ios.bundleIdentifier` (permanent once shipped —
-     choose carefully), `ios.buildNumber: "1"`, and `android.package` for
-     later.
-   - Add `ios.config.usesNonExemptEncryption: false` — the app makes no
-     custom encrypted connections; this skips the export-compliance
-     question on every TestFlight upload.
-   - Bump `version` to `1.0.0` for the submission.
-2. **Write and host the privacy policy.** The easy case ("all data stays
-   on device; nothing is collected") with one decision: Sentry is inert
-   until a DSN is supplied — ship v1 with it off for a pure "Data Not
-   Collected" label, or on (then the policy must mention crash data). Off
-   is simpler for v1. A GitHub Pages page in this repo works as the
-   hosted URL.
+   ```bash
+   npx eas-cli login
+   ```
 
-   > While Sentry is off, `eas.json` sets `SENTRY_DISABLE_AUTO_UPLOAD=true`
-   > on every build profile. The `@sentry/react-native/expo` config plugin
-   > adds an Xcode build phase that runs `sentry-cli` to upload source maps,
-   > and it fails the build without a Sentry org/project and
-   > `SENTRY_AUTH_TOKEN`. When you enable Sentry, set those up (add the token
-   > as an EAS secret) and remove the flag so symbolicated stack traces work.
+2. Build the production iOS binary in EAS:
 
-**Once Apple approves the account:**
+   ```bash
+   npx eas-cli build --platform ios --profile production
+   ```
 
-3. **Accept agreements** at
-   [App Store Connect](https://appstoreconnect.apple.com) (Business →
-   Paid/Free Apps). Builds can't be submitted until these are accepted.
-4. **First iOS build:** `npx eas-cli build --platform ios`. Let EAS log
-   into
-   the Apple account when prompted — it creates the signing certificate,
-   provisioning profile, and bundle ID registration automatically (no
-   manual Xcode certificate work).
-5. **Create the app record + upload to TestFlight:**
-   `npx eas-cli submit --platform ios` — it can create the App Store
-   Connect
-   app record (this is where the name "Kaji" is claimed; have a fallback
-   name ready). Add yourself as an internal tester in TestFlight and
-   install on a real iPhone.
-6. **Native validation on device** (non-negotiable per the readiness
-   doc): exercise the risky areas — RN `Modal` bottom sheets, safe-area
-   insets, document picker + Shift-JIS Zaim import, keypad/keyboard
-   interaction — plus the features that have only run in dev: Face ID
-   lock, haptics, JP/EN locale switching, CSV export share sheet. Fix
-   what breaks, rebuild, re-test.
+   On the first build, let EAS authenticate with Apple and manage the signing
+   certificate and provisioning profile. The production profile increments the
+   remote build number automatically.
 
-**Then the listing and submission:**
+3. Upload the completed build to App Store Connect/TestFlight:
 
-7. **App Store Connect listing:** description, subtitle, keywords,
-   category (Finance), age rating questionnaire, privacy policy URL, and
-   privacy nutrition labels ("Data Not Collected" if Sentry stays off).
-   Do both Japanese and English listings — Japan is the real market.
-8. **Screenshots:** at least one 6.9" (iPhone 16 Pro Max class) set;
-   simulator captures are fine. JP and EN sets to match the listings.
-9. **Submit for review.** First reviews typically take 1–3 days. The
-   common first-app rejection causes (fake ads, fake premium toggle) are
-   already defused; the remaining risk is reviewer confusion — use the
-   review notes field to say it's a fully local app with no accounts, and
-   mention the Zaim CSV import so they don't hunt for a login.
+   ```bash
+   npx eas-cli submit --platform ios --profile production
+   ```
+
+   `npx eas-cli submit --platform ios` is also valid when selecting the build
+   and submit profile interactively. The App Store Connect app record must use
+   the final public name; the name is intentionally still undecided.
+
+4. In App Store Connect, wait for processing, add the build to internal
+   TestFlight testing, and install that exact candidate on a real iPhone. Run
+   the release smoke test from `docs/appstore-readiness.md`.
+
+5. Complete the Japanese and English listing, screenshots, age rating,
+   Finance category, privacy answers, privacy-policy/support URLs, export
+   compliance, and review notes. Then select the tested build and submit it for
+   App Review in App Store Connect.
+
+Any code or release configuration change after the TestFlight smoke test
+requires a new production build and a repeat of the affected checks. EAS
+Submit uploads a binary to App Store Connect; it does not replace the final
+metadata and App Review submission steps there.
+
+While crash reporting remains disabled, every EAS build profile sets
+`SENTRY_DISABLE_AUTO_UPLOAD=true`. If Sentry is enabled later, configure its
+organization/project and `SENTRY_AUTH_TOKEN`, remove that flag, and update the
+privacy policy and App Store privacy answers before shipping.
+
+### V1 release status (2026-07-13)
+
+Core V1 functionality, EAS configuration, the hosted privacy policy, and
+real-iPhone testing are complete. The current product name remains a working
+name and will be finalized separately before App Store metadata is locked.
+
+The remaining work for a public V1 is tracked in
+[`docs/appstore-readiness.md`](docs/appstore-readiness.md) and GitHub issue
+[#72](https://github.com/taigamura/simple-bookkeeping/issues/72). In summary:
+
+1. Restore a deterministic, fully green release quality gate, including the
+   bottom-sheet Playwright suite and clean unit-test output.
+2. Harden the persisted-data boundary and verify CSV backup/restore as a
+   release flow.
+3. Finalize the product name, version metadata, bilingual App Store listing,
+   screenshots, privacy answers, support details, and review notes.
+4. Produce one clean EAS release candidate, smoke-test it on a real iPhone,
+   then submit that exact build for review.
+
+V1 ships without advertising, purchases, analytics, accounts, or enabled
+crash reporting. The Sentry integration remains inert while `sentryDsn` is
+blank, and EAS builds disable source-map upload accordingly.

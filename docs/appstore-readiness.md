@@ -1,100 +1,124 @@
-# App Store Readiness Plan
+# Public V1 Readiness
 
-Assessment date: 2026-07-04. Kaji is solid as software but ~60% of the way to
-a shippable App Store product. The gap is shipping infrastructure, the
-data-safety story, and two placeholder features (Premium toggle, house-ad
-card) that App Review will care about. This doc is the working checklist —
-tackle items top to bottom; each should be a small, reviewable branch.
+Assessment date: 2026-07-13. Core product development is complete and native
+iOS testing is accepted as good enough to proceed toward release. This
+document records the current baseline and the remaining work required to make
+V1 an official, public App Store release.
 
-## Current strengths (context, not tasks)
+The implementation PRD is GitHub issue
+[#72 — Official public V1 release readiness](https://github.com/taigamura/simple-bookkeeping/issues/72).
 
-- Clean domain/store/UI separation with tests alongside code.
-- Versioned persistence envelope (`store/schema.ts` `SCHEMA_VERSION`) behind a
-  swappable `Persistence` seam (`store/persistence.ts`).
-- Differentiating feature: Zaim CSV import with Shift-JIS handling.
-- Bundled fonts, platform icons, designed empty states.
-- "Small, finished app" is a viable positioning — protect it.
+The current name, **Kaji**, is a working name. Choosing the final public name
+is intentionally deferred, but applying it consistently is a release gate.
 
-## Phase 1 — Hard blockers (required before any submission)
+## Product contract for V1
 
-### 1. Build/submit configuration
-- [ ] `eas init` + `eas build:configure` → commit `eas.json`.
-- [ ] Add `ios.bundleIdentifier` and `android.package` to `app.json`.
-- [ ] Add `ios.buildNumber` / `android.versionCode`.
-- [ ] Wire up the splash screen (`expo-splash-screen` plugin) — the
-      `assets/splash-icon.png` asset exists but is not configured, so builds
-      currently get the default splash.
+V1 is a small, local-first personal income and expense tracker. It includes:
 
-### 2. Native validation (do immediately after #1 — may reshuffle priorities)
-- [ ] EAS build → TestFlight on a real iPhone.
-- [ ] Verify the risky-on-native areas: RN `Modal` bottom sheets, safe-area
-      insets, document picker + Shift-JIS decode for Zaim import,
-      keyboard/keypad interaction.
-- [ ] Fix what breaks before continuing with feature work.
+- Calendar-based income and expense entry, editing, and deletion.
+- Monthly totals, category breakdowns, and total or per-category budgets.
+- Editable categories, four display currencies, dark/light themes, and an
+  optional Face ID/device-passcode lock.
+- Japanese and English UI selected from the device locale.
+- Zaim-compatible CSV import and export, including Shift-JIS import.
+- Corrupt-load recovery through a separately stashed, exportable backup.
 
-### 3. Resolve the Premium placeholder (review-rejection risk)
-The local `premium` boolean with a "Premium / Remove ads" toggle in Settings
-(build decision 7) will fail App Review as-is: a free switch implying a
-purchase is misleading, and unlockable features must go through IAP. The
-house-ad card labeled "Sponsored" in `ui/AdCard.tsx` is also a fake ad —
-review-risky on its own.
+V1 deliberately has no accounts/wallets, cloud backend, sync, advertising,
+in-app purchases, analytics, enabled crash reporting, bank integrations, or
+currency conversion.
 
-Decision (leaning): **strip both for v1** — hide the toggle, remove the ad
-surfaces — and reintroduce them together in 1.1 with real IAP + real ads.
-- [ ] Option A (v1 lean): hide Premium toggle; remove/gate off `AdCard`
-      surfaces on Calendar, Summary, and Entry sheet.
-- [ ] Option B (if monetizing now): RevenueCat IAP, including the
-      Apple-required "Restore purchases" button; real ad network for the ad
-      slots.
+## Completed baseline
 
-### 4. Privacy policy + store listing
-Required even for a fully local app. Ours is the easy case ("no data
-collected, nothing leaves the device") but it must exist as a hosted URL.
-- [ ] Write and host a privacy policy.
-- [ ] Fill App Store privacy nutrition labels ("Data Not Collected").
-- [ ] Screenshots, description, keywords, category, age rating.
+- [x] Expo/EAS project, iOS bundle identifier, iOS build number, production
+      version, encryption declaration, splash screen, and app icons configured.
+- [x] EAS development, preview, production, and submission profiles committed.
+- [x] Core product functionality implemented with JP/EN localization.
+- [x] Premium and fake-ad surfaces removed from the user experience.
+- [x] CSV import/export and corrupt-load safety net implemented.
+- [x] Haptics and optional native device authentication implemented.
+- [x] Privacy policy written and hosted in English and Japanese.
+- [x] Sentry kept inert with a blank DSN and source-map upload disabled.
+- [x] Real-iPhone behavior tested and accepted as sufficient to enter the
+      release-candidate phase.
+- [x] Total/per-category budgets, delete-all-data, launch destination, and
+      recent sheet/calendar polish implemented.
 
-## Phase 2 — Competence gaps (what makes it competent, not just accepted)
+## Release gates
 
-### 5. Data export/import (highest-value single addition)
-Everything lives in one AsyncStorage blob — delete the app, lose your entire
-financial history. For a money tracker that's a trust-killer and will show up
-in reviews. Preserves the local-first/no-accounts identity while removing its
-scariest downside.
-- [ ] "Export data" row in Settings: share a JSON (or CSV matching the Zaim
-      format we already parse) via the share sheet (`expo-file-system` is
-      already a dependency).
-- [ ] Import counterpart → backup/restore + device-migration story with no
-      sync infrastructure.
+### 1. Trustworthy automated quality gate
 
-### 6. Corrupt-load safety net
-`load()` falls back to defaults when the version doesn't match or parse
-fails — a corrupt read silently presents an empty ledger and the next save
-overwrites the blob. Worst failure mode in the app.
-- [ ] Before falling back, copy the unparseable blob to a second key
-      (e.g. `kaji:state:corrupt`).
-- [ ] Surface a notice to the user so the data is recoverable.
+- [ ] Resolve the open P0 bottom-sheet regression tracked in GitHub issue #63.
+- [ ] Make every canonical Playwright scenario pass in CI without expected
+      failures, retries, skips, debug-only probes, or weakened assertions.
+- [ ] Decide whether diagnostic probe specs become stable assertions or move
+      outside the default release suite.
+- [ ] Remove React `act(...)` warning noise from the Jest run so new warnings
+      are visible.
+- [ ] Keep strict TypeScript, all Jest suites, the web export, and Playwright
+      green on the release commit.
 
-### 7. Japanese localization
-The app is named 家事/家計, imports from Zaim, defaults to ¥ — the real
-market is almost certainly Japan.
-- [ ] JP + EN string localization.
-- [ ] Japanese App Store listing.
+### 2. Financial-data boundary hardening
 
-### 8. Polish that reads as "competent"
-- [ ] Haptic feedback on keypad + save (`expo-haptics`).
-- [ ] Optional Face ID / passcode lock — it's financial data
-      (`expo-local-authentication`).
-- [ ] Crash reporting (Sentry's Expo integration) so production isn't debugged
-      blind.
+- [ ] Runtime-validate persisted state rather than trusting any parseable JSON
+      with the current version number.
+- [ ] Serialize whole-state writes so a slower earlier save cannot overwrite a
+      newer state.
+- [ ] Give import, export/share, and persistence failures user-visible recovery
+      paths; no financial-data operation should fail only in the console.
+- [ ] Verify a full exported CSV can restore an empty installation without
+      losing supported transaction fields or duplicating entries.
+- [ ] Preserve and test the corrupt-stash behavior for invalid data.
 
-## Suggested order
+### 3. Release identity and repository cleanup
 
-1. Phase 1 #1–2: EAS setup + TestFlight on a real device; fix what breaks.
-2. Phase 2 #5–6: export/import + corrupt-load safety net.
-3. Phase 1 #3: Premium decision (lean: strip for v1, monetize in 1.1).
-4. Phase 1 #4 + Phase 2 #7: privacy policy, store listing, JP localization.
-5. Submit. Phase 2 #8 items can land any time they fit.
+- [ ] Choose the final public name, then update the Expo name/slug where safe,
+      on-device copy, icons containing text, privacy policy, support copy, and
+      App Store metadata consistently. Do not change the existing bundle
+      identifier casually.
+- [ ] Reconcile package and Expo version metadata for the official V1 release.
+- [ ] Remove the unused Premium state and dead ad component, or document a
+      concrete compatibility reason for retaining them.
+- [ ] Update durable build decisions that still describe removed Premium/ad
+      behavior or superseded sheet implementation details.
+- [ ] Ensure README, privacy policy, release checklist, and App Store claims all
+      describe the same shipped behavior.
 
-Items 1–2 of this ordering are non-negotiable; the rest is sequencing
-preference.
+### 4. App Store publication package
+
+- [ ] Create final Japanese and English name, subtitle, description, keywords,
+      promotional copy, and support contact details.
+- [ ] Complete Finance category, age rating, copyright, privacy-policy URL,
+      support URL, and export-compliance metadata.
+- [ ] Declare “Data Not Collected” only while Sentry, analytics, advertising,
+      and every other transmission path remain disabled.
+- [ ] Capture current Japanese and English screenshots for every App Store
+      device class required by App Store Connect.
+- [ ] Write review notes explaining that the app is local-only, has no account
+      or login, and imports Zaim CSV through Settings.
+- [ ] Verify the public privacy-policy URL and support contact from a logged-out
+      browser.
+
+### 5. Release candidate and submission
+
+- [ ] Produce a clean production EAS build from a tagged, green commit.
+- [ ] Install that exact build through TestFlight and run the short release
+      smoke test: cold launch, both launch destinations, create/edit/delete,
+      month navigation, budgets, Settings/Budgets sheets, JP/EN locale, theme,
+      lock/unlock, Zaim import, CSV export, delete-all confirmation, relaunch,
+      and persistence.
+- [ ] Confirm there are no placeholder labels, fake purchase/ad surfaces,
+      debug controls, unexpected network requests, or developer-only sample
+      data in the initial experience.
+- [ ] Submit the tested build and archive the final checklist, build number,
+      commit, and App Store metadata snapshot.
+
+## Release definition of done
+
+V1 is ready to publicize when all release gates above are complete, the final
+name is consistently applied, the exact submitted build passes the native
+smoke test, and the public listing makes only claims the binary and privacy
+policy can support.
+
+Android publication is not a V1 gate. Android configuration may remain in the
+Expo project, but Android store validation and listing work belong to a later
+release.

@@ -113,6 +113,14 @@ export interface Strings {
     title: string;
     message: string;
   };
+  persistenceNotice: {
+    readFailedTitle: string;
+    readFailedMessage: string;
+    recoveryFailedTitle: string;
+    recoveryFailedMessage: string;
+    saveFailedTitle: string;
+    saveFailedMessage: string;
+  };
   lock: {
     label: string;
     unavailableExplanation: string;
@@ -224,6 +232,17 @@ export const en: Strings = {
     title: 'Backup kept',
     message:
       "Your previous data couldn't be read; a backup copy was kept. You can export it from Settings.",
+  },
+  persistenceNotice: {
+    readFailedTitle: 'Storage unavailable',
+    readFailedMessage:
+      'Your saved data could not be opened. The app is using a blank local ledger for now; export any important entries before closing.',
+    recoveryFailedTitle: 'Backup could not be kept',
+    recoveryFailedMessage:
+      'Your saved data could not be read, and the unreadable backup could not be written. Export any important entries before closing.',
+    saveFailedTitle: 'Changes not saved',
+    saveFailedMessage:
+      'This change could not be saved to this device. Export your entries now and try restarting before making more changes.',
   },
   lock: {
     label: 'Lock',
@@ -340,6 +359,17 @@ export const ja: Strings = {
   corruptNotice: {
     title: 'バックアップを保持しました',
     message: '以前のデータを読み込めませんでした。バックアップは保持されています。設定から書き出せます。',
+  },
+  persistenceNotice: {
+    readFailedTitle: 'ストレージを開けません',
+    readFailedMessage:
+      '保存済みデータを開けませんでした。現在は空のローカル帳簿で動作しています。閉じる前に必要な記録を書き出してください。',
+    recoveryFailedTitle: 'バックアップを保持できません',
+    recoveryFailedMessage:
+      '保存済みデータを読み込めず、読み取れないバックアップも保存できませんでした。閉じる前に必要な記録を書き出してください。',
+    saveFailedTitle: '変更を保存できません',
+    saveFailedMessage:
+      'この変更を端末に保存できませんでした。今すぐ記録を書き出し、追加の変更をする前にアプリを再起動してください。',
   },
   lock: {
     label: 'ロック',

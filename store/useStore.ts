@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { DEFAULT_STATE, type AppState } from './schema';
-import { createStore, type Store } from './store';
+import { createStore, type LoadIssue, type Store } from './store';
 
 const defaultStore = createStore();
 
@@ -26,6 +26,8 @@ export interface UseStore {
   hasCorruptStash: boolean;
   /** Read the stashed raw blob for the "Export unreadable backup" row. */
   readCorruptStash: () => Promise<string | null>;
+  /** Non-corrupt persistence failures that need user-visible recovery guidance. */
+  persistenceNotice: Exclude<LoadIssue, 'none' | 'corrupt'> | 'save-failed' | null;
 }
 
 export function useStore(store: Store = defaultStore): UseStore {
@@ -33,16 +35,31 @@ export function useStore(store: Store = defaultStore): UseStore {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const [showCorruptNotice, setShowCorruptNotice] = useState(false);
   const [hasCorruptStash, setHasCorruptStash] = useState(false);
+  const [persistenceNotice, setPersistenceNotice] = useState<UseStore['persistenceNotice']>(null);
 
   useEffect(() => {
     let alive = true;
     store.load().then(async (loaded) => {
       const corrupt = store.wasLastLoadCorrupt();
-      const stashed = await store.hasCorruptStash();
+      const loadIssue = store.lastLoadIssue();
+      let stashed = false;
+      let stashReadFailed = false;
+      try {
+        stashed = await store.hasCorruptStash();
+      } catch {
+        stashReadFailed = true;
+      }
       if (!alive) return;
       setState(loaded);
       setShowCorruptNotice(corrupt);
       setHasCorruptStash(stashed);
+      setPersistenceNotice(
+        stashReadFailed
+          ? 'read-failed'
+          : loadIssue === 'read-failed' || loadIssue === 'recovery-failed'
+            ? loadIssue
+            : null,
+      );
       setReady(true);
     });
     return () => {
@@ -54,7 +71,10 @@ export function useStore(store: Store = defaultStore): UseStore {
     (patch: Partial<AppState>) => {
       setState((prev) => {
         const next = { ...prev, ...patch };
-        void store.save(next);
+        void store.save(next).then(
+          () => setPersistenceNotice((current) => (current === 'save-failed' ? null : current)),
+          () => setPersistenceNotice('save-failed'),
+        );
         return next;
       });
     },
@@ -63,5 +83,13 @@ export function useStore(store: Store = defaultStore): UseStore {
 
   const readCorruptStash = useCallback(() => store.readCorruptStash(), [store]);
 
-  return { ready, state, update, showCorruptNotice, hasCorruptStash, readCorruptStash };
+  return {
+    ready,
+    state,
+    update,
+    showCorruptNotice,
+    hasCorruptStash,
+    readCorruptStash,
+    persistenceNotice,
+  };
 }

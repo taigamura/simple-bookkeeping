@@ -40,7 +40,7 @@ import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
 import { SettingsSheet } from '../screens/SettingsSheet';
 import { SummaryScreen } from '../screens/SummaryScreen';
-import type { AppState } from '../store';
+import type { AppState, UseStore } from '../store';
 import { metrics } from '../theme';
 import { AppShell } from './AppShell';
 import { BottomSheet } from './BottomSheet';
@@ -55,6 +55,7 @@ interface RootProps {
   /** Whether a corrupt-stash blob exists — gates the Settings recovery row. */
   hasCorruptStash: boolean;
   readCorruptStash: () => Promise<string | null>;
+  persistenceNotice?: UseStore['persistenceNotice'];
 }
 
 // RN Web's Alert.alert is a no-op stub (react-native-web has no dialog
@@ -114,6 +115,7 @@ function Shell({
   showCorruptNotice,
   hasCorruptStash,
   readCorruptStash,
+  persistenceNotice = null,
 }: RootProps) {
   const [tab, setTab] = useState<Tab>('calendar');
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -171,6 +173,19 @@ function Shell({
       notify(strings.corruptNotice.title, strings.corruptNotice.message);
     }
   }, [showCorruptNotice]);
+
+  useEffect(() => {
+    if (persistenceNotice === 'read-failed') {
+      notify(strings.persistenceNotice.readFailedTitle, strings.persistenceNotice.readFailedMessage);
+    } else if (persistenceNotice === 'recovery-failed') {
+      notify(
+        strings.persistenceNotice.recoveryFailedTitle,
+        strings.persistenceNotice.recoveryFailedMessage,
+      );
+    } else if (persistenceNotice === 'save-failed') {
+      notify(strings.persistenceNotice.saveFailedTitle, strings.persistenceNotice.saveFailedMessage);
+    }
+  }, [persistenceNotice]);
 
   // Single-sheet-host handlers (#60): the unified sheet host replaces the
   // three separate modals. Sheet state is authoritative; dismissal while a sheet

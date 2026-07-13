@@ -29,7 +29,8 @@ jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 jest.mock('expo-file-system', () => ({ File: class {} }));
 
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 import { strings } from '../i18n';
 import { DEFAULT_STATE } from '../store/schema';
@@ -217,5 +218,126 @@ describe('Root sheet state management (#60)', () => {
 
     // Entry sheet is not auto-presented when openTo='calendar'
     expect(screen.queryByTestId('entry-sheet')).toBeNull();
+  });
+
+  it('shows localized recovery guidance when persistence reports a save failure', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+    render(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={jest.fn()}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+          persistenceNotice="save-failed"
+        />
+      </ThemeProvider>,
+    );
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        strings.persistenceNotice.saveFailedTitle,
+        strings.persistenceNotice.saveFailedMessage,
+      ),
+    );
+    alert.mockRestore();
+  });
+
+  it('shows localized recovery guidance when persisted data cannot be opened', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+    render(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={jest.fn()}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+          persistenceNotice="read-failed"
+        />
+      </ThemeProvider>,
+    );
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        strings.persistenceNotice.readFailedTitle,
+        strings.persistenceNotice.readFailedMessage,
+      ),
+    );
+    alert.mockRestore();
+  });
+
+  it('shows localized recovery guidance when an unreadable backup cannot be kept', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+    render(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={jest.fn()}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+          persistenceNotice="recovery-failed"
+        />
+      </ThemeProvider>,
+    );
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        strings.persistenceNotice.recoveryFailedTitle,
+        strings.persistenceNotice.recoveryFailedMessage,
+      ),
+    );
+    alert.mockRestore();
+  });
+
+  it('delete-all-data clears ledger and budgets while preserving settings by patch', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const update = jest.fn();
+
+    render(
+      <ThemeProvider>
+        <Root
+          state={{
+            ...DEFAULT_STATE,
+            entries: [
+              {
+                id: 'e1',
+                y: 2026,
+                m: 6,
+                day: 2,
+                type: 'expense',
+                amount: 850,
+                category: 'Food',
+                note: 'Food',
+                repeat: 'never',
+              },
+            ],
+            budgets: { Food: 30000 },
+            totalBudget: 100000,
+            theme: 'light',
+          }}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={true}
+          readCorruptStash={async () => '{bad'}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByText(strings.settings.deleteAllData));
+
+    const buttons = alert.mock.calls[0][2]!;
+    await act(async () => {
+      buttons[1].onPress?.();
+    });
+
+    expect(update).toHaveBeenCalledWith({ entries: [], budgets: {}, totalBudget: 0 });
+    alert.mockRestore();
   });
 });

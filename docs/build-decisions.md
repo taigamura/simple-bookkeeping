@@ -21,6 +21,29 @@ Treat the design bundle as **visual/design-intent reference, not code to port**.
 with `View`/`Text`/`Pressable` + `StyleSheet`, CSS→Flexbox. Do **not** port the HTML/CSS
 or the prototype's `{{ }}`/`sc-for`/`sc-if` template.
 
+## Current-status amendments (2026-07-13)
+
+This file preserves the original design decisions, but later release-readiness
+work superseded several implementation details:
+
+- Navigation remains bespoke, but sheets now use one controlled
+  `@gorhom/bottom-sheet` modal host rather than separate React Native `Modal`
+  instances. Entry, Settings, and Budgets swap bodies inside that host.
+- The static sponsored cards and user-facing Premium toggle were removed from
+  V1. V1 has no advertising or purchase surface. A legacy `premium` state field
+  and unused `AdCard` component remain implementation cleanup, not product
+  behavior.
+- Persisted state now also includes lock preference, budgets, budget mode,
+  total budget, and launch destination. CSV export, corrupt-blob recovery,
+  JP/EN localization, haptics, and device authentication are implemented.
+- EAS configuration, bundle identifiers, splash configuration, a hosted
+  bilingual privacy policy, and real-iPhone validation now exist. Remaining
+  public-release work is tracked in `docs/appstore-readiness.md` and the public
+  V1 PRD.
+
+Where an amendment conflicts with the original locked table or screen text
+below, the amendment describes the current product.
+
 ## Locked decisions (grill results)
 
 | # | Decision | Detail |

@@ -77,6 +77,33 @@ describe('createStore', () => {
     expect(loaded.theme).toBe('light');
   });
 
+  it('loads valid older envelopes without additive fields and preserves ledger data', async () => {
+    const {
+      currency: _currency,
+      premium: _premium,
+      lockEnabled: _lockEnabled,
+      budgets: _budgets,
+      budgetMode: _budgetMode,
+      totalBudget: _totalBudget,
+      openTo: _openTo,
+      ...legacyState
+    } = stateWith({ entries: [sampleEntry], theme: 'light' });
+    const blob = JSON.stringify({ version: SCHEMA_VERSION, state: legacyState });
+    const store = createStore(createMemoryPersistence(blob));
+
+    const loaded = await store.load();
+
+    expect(loaded.entries).toEqual([sampleEntry]);
+    expect(loaded.theme).toBe('light');
+    expect(loaded.currency).toEqual(DEFAULT_STATE.currency);
+    expect(loaded.premium).toBe(false);
+    expect(loaded.lockEnabled).toBe(false);
+    expect(loaded.budgets).toEqual({});
+    expect(loaded.budgetMode).toBe('category');
+    expect(loaded.totalBudget).toBe(0);
+    expect(loaded.openTo).toBe('calendar');
+  });
+
   it('round-trips through the default AsyncStorage-backed store', async () => {
     // No persistence arg → default asyncStoragePersistence (AsyncStorage mock).
     const store = createStore();
@@ -113,18 +140,70 @@ describe('createStore', () => {
     expect(await store.load()).toEqual(DEFAULT_STATE);
   });
 
-  it('merges persisted state over defaults: drops unknown, fills missing fields', async () => {
-    // Persist only `theme` (+ an unknown field); the rest should fill from defaults.
+  it('stashes blobs missing core fields instead of silently filling ledger defaults', async () => {
     const blob = JSON.stringify({
       version: SCHEMA_VERSION,
       state: { theme: 'light', bogus: 42 },
     });
     const store = createStore(createMemoryPersistence(blob));
 
+    await expect(store.load()).resolves.toEqual(DEFAULT_STATE);
+    expect(store.wasLastLoadCorrupt()).toBe(true);
+    expect(await store.readCorruptStash()).toBe(blob);
+  });
+
+  it('drops unknown top-level and nested transaction fields from otherwise valid state', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: {
+        ...stateWith({ entries: [{ ...sampleEntry, unexpectedNested: true } as Transaction] }),
+        bogus: 42,
+      },
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
     const loaded = await store.load();
 
-    expect(loaded).toEqual(stateWith({ theme: 'light' })); // missing filled, unknown dropped
+    expect(loaded).toEqual(stateWith({ entries: [sampleEntry] }));
     expect(loaded).not.toHaveProperty('bogus');
+    expect(loaded.entries[0]).not.toHaveProperty('unexpectedNested');
+  });
+
+  it('stashes syntactically valid but structurally invalid state before using defaults', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: { ...stateWith(), entries: [{ ...sampleEntry, m: 12 }] },
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    const loaded = await store.load();
+
+    expect(loaded).toEqual(DEFAULT_STATE);
+    expect(store.wasLastLoadCorrupt()).toBe(true);
+    expect(store.lastLoadIssue()).toBe('corrupt');
+    expect(await store.readCorruptStash()).toBe(blob);
+  });
+
+  it('stashes transactions whose day is outside their persisted month', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: { ...stateWith(), entries: [{ ...sampleEntry, y: 2026, m: 1, day: 31 }] },
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    await expect(store.load()).resolves.toEqual(DEFAULT_STATE);
+    expect(await store.readCorruptStash()).toBe(blob);
+  });
+
+  it('stashes structurally invalid top-level fields before using defaults', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: { ...stateWith(), totalBudget: 'not a number' },
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    await expect(store.load()).resolves.toEqual(DEFAULT_STATE);
+    expect(await store.readCorruptStash()).toBe(blob);
   });
 
   it('writes a versioned envelope, not the bare state', async () => {
@@ -142,6 +221,44 @@ describe('createStore', () => {
     await store.save(state);
 
     expect(JSON.parse(written!)).toEqual({ version: SCHEMA_VERSION, state });
+  });
+
+  it('serializes whole-state saves so an earlier delayed write cannot overwrite a newer state', async () => {
+    let durable: string | null = null;
+    const pending: { value: string; resolve: () => void }[] = [];
+    const store = createStore({
+      read: async () => durable,
+      write: (value) =>
+        new Promise<void>((resolve) => {
+          pending.push({
+            value,
+            resolve: () => {
+              durable = value;
+              resolve();
+            },
+          });
+        }),
+      readCorruptStash: async () => null,
+      writeCorruptStash: async () => {},
+    });
+
+    const first = store.save(stateWith({ theme: 'light' }));
+    const second = store.save(stateWith({ theme: 'dark' }));
+
+    await Promise.resolve();
+    expect(pending).toHaveLength(1);
+    expect(JSON.parse(pending[0].value).state.theme).toBe('light');
+
+    pending[0].resolve();
+    await first;
+    await Promise.resolve();
+
+    expect(pending).toHaveLength(2);
+    expect(JSON.parse(pending[1].value).state.theme).toBe('dark');
+
+    pending[1].resolve();
+    await second;
+    expect(JSON.parse(durable!).state.theme).toBe('dark');
   });
 });
 
@@ -222,5 +339,39 @@ describe('createStore — corrupt-load safety net (#28)', () => {
 
     expect(secondBoot.wasLastLoadCorrupt()).toBe(false);
     expect(await secondBoot.hasCorruptStash()).toBe(true);
+  });
+
+  it('reports a read failure without crashing or claiming a corrupt stash', async () => {
+    const store = createStore({
+      read: async () => {
+        throw new Error('storage unavailable');
+      },
+      write: async () => {},
+      readCorruptStash: async () => null,
+      writeCorruptStash: async () => {},
+    });
+
+    await expect(store.load()).resolves.toEqual(DEFAULT_STATE);
+    expect(store.wasLastLoadCorrupt()).toBe(false);
+    expect(store.lastLoadIssue()).toBe('read-failed');
+  });
+
+  it('reports when an invalid blob cannot be stashed for recovery', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: { ...stateWith(), entries: [{ ...sampleEntry, amount: '850' }] },
+    });
+    const store = createStore({
+      read: async () => blob,
+      write: async () => {},
+      readCorruptStash: async () => null,
+      writeCorruptStash: async () => {
+        throw new Error('stash unavailable');
+      },
+    });
+
+    await expect(store.load()).resolves.toEqual(DEFAULT_STATE);
+    expect(store.wasLastLoadCorrupt()).toBe(false);
+    expect(store.lastLoadIssue()).toBe('recovery-failed');
   });
 });

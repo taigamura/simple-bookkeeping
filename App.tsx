@@ -25,8 +25,15 @@ SplashScreen.preventAutoHideAsync();
  */
 export default function App() {
   const fontsLoaded = useAppFonts();
-  const { ready, state, update, showCorruptNotice, hasCorruptStash, readCorruptStash } =
-    useStore();
+  const {
+    ready,
+    state,
+    update,
+    showCorruptNotice,
+    hasCorruptStash,
+    readCorruptStash,
+    persistenceNotice,
+  } = useStore();
   const appReady = fontsLoaded && ready;
 
   useEffect(() => {
@@ -52,6 +59,7 @@ export default function App() {
             showCorruptNotice={showCorruptNotice}
             hasCorruptStash={hasCorruptStash}
             readCorruptStash={readCorruptStash}
+            persistenceNotice={persistenceNotice}
           />
         </LockGate>
       </ThemeProvider>
