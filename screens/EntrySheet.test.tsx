@@ -72,11 +72,11 @@ describe('EntrySheet', () => {
     expect(screen.getByLabelText('↻ Repeat: Never')).toBeTruthy();
   });
 
-  it('announces repeat value and save-time materialization (#76)', () => {
+  it('announces repeat value and its unbounded start-date behavior', () => {
     renderSheet();
     const repeat = screen.getByLabelText('↻ Repeat: Never');
     expect(repeat.props.accessibilityValue.text).toBe('Never');
-    expect(repeat.props.accessibilityHint).toContain('created when you save');
+    expect(repeat.props.accessibilityHint).toContain('no end date');
   });
 
   it('renders no ad card (Premium/ads stripped for v1, #23)', () => {
@@ -101,17 +101,19 @@ describe('EntrySheet (edit mode, #43)', () => {
     expect(chip.props.accessibilityValue.text).toBe('Selected');
   });
 
-  it('hides the create-only Repeat and weekend-shift rows', () => {
-    renderSheet({ editing: editingEntry() });
-    expect(screen.queryByLabelText('↻ Repeat: Never')).toBeNull();
-    expect(screen.queryByLabelText('If on weekend: Move to Monday')).toBeNull();
+  it('prefills Repeat and weekend handling for a recurring edit', () => {
+    renderSheet({ editing: editingEntry({ repeat: 'monthly' }) });
+    expect(screen.getByLabelText('↻ Repeat: Every month')).toBeTruthy();
+    expect(screen.getByLabelText('If on weekend: Move to Monday')).toBeTruthy();
+    expect(screen.getByLabelText('Save this and future')).toBeTruthy();
   });
 
-  it('fires onDelete with the entry id when Delete is pressed', () => {
+  it('fires onDelete with the edited occurrence when Delete is pressed', () => {
     const onDelete = jest.fn();
-    renderSheet({ editing: editingEntry(), onDelete });
+    const editing = editingEntry();
+    renderSheet({ editing, onDelete });
     fireEvent.press(screen.getByLabelText('Delete entry'));
-    expect(onDelete).toHaveBeenCalledWith('e1');
+    expect(onDelete).toHaveBeenCalledWith(editing);
   });
 
   it('saves the draft (unchanged fields) for the host to overwrite', () => {

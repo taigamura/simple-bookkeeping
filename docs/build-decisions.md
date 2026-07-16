@@ -49,9 +49,9 @@ below, the amendment describes the current product.
 | # | Decision | Detail |
 |---|----------|--------|
 | 1 | **No accounts/wallets** | Match the design (pure daily in/out). `Transaction` keeps an unused optional `accountId?` so accounts can be added later additively. Overrides `initial-spec.md` §3/§5. |
-| 2 | **Recurring kept** | Entry sheet Repeat (Never/Every day/Every month/Every year) + weekend-shift (Move to Monday/Move to Friday/Keep). Materialize-on-save, current month only, exactly as the prototype: `daily` fills every day of the month; `monthly`/`yearly` create one entry on the weekend-adjusted day. No scheduler/recurrence engine. Overrides spec §4. |
+| 2 | **Persistent recurrence rules** | Entry and edit sheets offer Repeat (Never/Every day/Every month/Every year) plus weekend handling. Rules are unbounded from the selected date and occurrences are projected on demand. Editing applies to the selected occurrence and future instances; deletion offers one occurrence or this-and-future. Existing materialized repeat data migrates as one-time history because it has no reliable series identity. |
 | 3 | **Bespoke navigation** | Root holds `tab: 'calendar'\|'summary'` and `sheet: 'entry'\|'settings'\|null`. Custom bottom bar with center green ＋ FAB that opens the Entry sheet. Sheets via RN `Modal` (`animationType="slide"`, transparent backdrop). No react-navigation / expo-router. |
-| 4 | **Persistence: AsyncStorage** | `@react-native-async-storage/async-storage`, whole-state JSON, behind a small store module (swappable for SQLite later). Persist: `entries`, `expCats`, `incCats`, `theme`, `currency`, lock preference, budgets, budget mode, total budget, and launch destination. Load-on-boot, save-on-change. |
+| 4 | **Persistence: AsyncStorage** | `@react-native-async-storage/async-storage`, whole-state JSON, behind a small store module (swappable for SQLite later). Persist: one-time `entries`, `recurrenceRules`, `expCats`, `incCats`, `theme`, `currency`, lock preference, budgets, budget mode, total budget, and launch destination. Load-on-boot, save-on-change. |
 | 5 | **Font: JetBrains Mono (bundled)** | Bundle via `@expo-google-fonts/jetbrains-mono` + `expo-font`, weights 400/500/600/700, for the mono "signature" (every number + uppercase micro-label). System sans (SF/Roboto default) for UI copy. Hold splash until fonts load. |
 | 6 | **Icons: `@expo/vector-icons`** | Map each design glyph to its intent (Feather/Ionicons/MaterialCommunity): ＋→plus, ⚙→settings, ‹›→chevrons, ✕→x, ↑↓→arrows, ↻→repeat, ⌫→delete, tabs→calendar + bar-chart, theme→moon/sun. Not literal Unicode (Android tofu risk). |
 | 7 | **No ads or Premium in V1** | V1 has no advertising, sponsored placement, purchase, subscription, Premium, or remove-ads surface. Earlier prototype ad/Premium concepts are not product behavior. |
@@ -131,6 +131,12 @@ interface Transaction {
   category: string; note: string;
   repeat?: Repeat; accountId?: string; // accountId reserved, unused in v1
 }
+interface RecurrenceRule {
+  id: string; start: { y: number; m: number; day: number }; anchorDay: number;
+  type: TxType; amount: number; category: string; note: string;
+  repeat: Exclude<Repeat, 'never'>; weekendShift: WeekendShift;
+  exceptions: string[]; endsBefore?: string;
+}
 interface Currency { symbol: string; code: string; } // ¥/JPY etc.
 ```
 
@@ -141,9 +147,10 @@ Aggregation (in-memory JS, mirrors the prototype):
   at implementation** so persistence spans months.)  ⚠ implementation note below.
 - `dayNet(day)`, `income`, `expense`, `net`, category breakdown (expenses, sorted desc, bar
   width scaled to max), in/out split bar proportional to `income+expense`.
-- `save()` — parse integer amount; if 0, no-op. Materialize per Repeat (daily→all month days;
-  monthly/yearly→weekend-adjusted single day); note falls back to category when "—"; land on
-  and re-select the target day; switch to Calendar tab.
+- `save()` — parse integer amount; if 0, no-op. Persist a one-time transaction for Never or an
+  unbounded recurrence rule for daily/monthly/yearly; project only the requested month. Notes
+  fall back to the category when "—". Edits split a rule at the selected scheduled occurrence,
+  preserving history while updating this and future occurrences.
 - Category ops: add (trim, dedupe), remove (min 1), reorder (↑/↓ swap), per Expense/Income list.
 - `code(cat)` = first 2 chars uppercased (list-row icon tile).
 - Formatting: `yen(n)` = symbol + `Math.round(n).toLocaleString('en-US')`; `signed(n)` prefixes

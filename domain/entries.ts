@@ -50,7 +50,7 @@ export interface EntryDraft {
   y: number;
   m: number;
   day: number;
-  /** Recurrence kind recorded on the materialized entries (default 'never'). */
+  /** Recurrence kind selected for this draft (default 'never'). */
   repeat?: Repeat;
 }
 

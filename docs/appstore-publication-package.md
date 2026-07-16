@@ -38,7 +38,7 @@ Personal expense tracker
 - No analytics or data collection.
 
 **Recurring entries (repeats):**
-When you create an entry marked as daily, monthly, or yearly, [NAME] creates the full series of future entries at save time. You can then edit or delete individual entries as needed. Your budget calculations include all entries created by repeats.
+When you create or edit an entry marked as daily, monthly, or yearly, [NAME] continues the series indefinitely from that date. You can edit this and future occurrences, delete one occurrence, or delete this and all future occurrences. Projected repeats are included in monthly budgets and summaries.
 
 **Getting started:**
 Start on the Calendar to add your first entry, or on the Summary to see your monthly totals. Import an existing Zaim CSV to restore a backup. All data is stored privately on your device.
@@ -95,7 +95,7 @@ Standard
 - 分析またはデータ収集なし。
 
 **繰り返し記録：**
-記録を「毎日」「毎月」「毎年」として作成すると、[NAME]は保存時に将来のすべての記録を一度に作成します。その後、個別の記録は編集または削除できます。予算計算には、繰り返しで作成されたすべての記録が含まれます。
+記録を「毎日」「毎月」「毎年」として作成または編集すると、選択した日から終了日なしで繰り返します。繰り返し記録は、この回以降を編集したり、この回だけ、またはこの回以降のすべてを削除したりできます。予算とサマリーには、表示する月の繰り返し記録も含まれます。
 
 **はじめ方：**
 カレンダーで最初の記録を追加するか、サマリーで月の合計を確認してください。既存のZaim CSVを読み込んでバックアップを復元できます。すべてのデータはあなたのデバイスにプライベートに保存されます。
@@ -145,15 +145,15 @@ Standard
 **How to review [NAME]:**
 
 1. **Cold launch:** Open the app with no prior data. You will see the Calendar view.
-2. **Add an entry:** Tap the ＋ button to create an expense or income entry. Choose a category, enter an amount, and optionally add a note. You can set the entry as a repeat (daily, monthly, or yearly); repeating entries are created immediately at save time.
+2. **Add an entry:** Tap the ＋ button to create an expense or income entry. Choose a category, enter an amount, and optionally add a note. You can set the entry as a repeat (daily, monthly, or yearly); it continues indefinitely from the selected date.
 3. **View summary:** Tap the Summary tab to see monthly totals and spending by category.
 4. **Settings:** Tap Settings to view options. You can toggle the appearance theme, set an optional device lock (Face ID/passcode), change the currency symbol, manage custom categories, and access import/export.
 5. **CSV import/export:**
-   - To export: In Settings, tap "Export data" to save a CSV file using the system share sheet.
+   - To export: In Settings, tap "Export data" to save a CSV file using the system share sheet. Repeating occurrences through today are exported as concrete one-time rows because Zaim CSV has no recurrence-rule format.
    - To import: In Settings, tap "Import from Zaim" to select a CSV file. [NAME] accepts standard Zaim CSV format and UTF-8 or Shift-JIS encoding.
 6. **No login, no network:** The app has no account creation, login, or network activity. It does not connect to banks, services, or cloud backends. All data is private and local.
 7. **Locales:** The app respects the device language setting. Change your device language to Japanese to verify the full Japanese UI and copy.
-8. **Delete all data:** In Settings, scroll to "Data" and select "Delete all data" to see a confirmation that clarifies the scope: entries and budgets are deleted, but currency, categories, and settings are preserved.
+8. **Delete all data:** In Settings, scroll to "Data" and select "Delete all data" to see a confirmation that clarifies the scope: entries, repeating series, and budgets are deleted, but currency, categories, and settings are preserved.
 
 **Important notes:**
 - The app is fully functional offline.
@@ -204,8 +204,8 @@ Each screenshot should show **real app UI** with **fictitious, non-sensitive dat
 **Screenshot 3: Entry creation (all locales)**
 - Shows the Entry sheet mid-workflow: category selection, amount keypad, and note input visible.
 - Demonstrates the category chips and optional repeat control.
-- Caption (EN): "Create repeating entries that materialize at save time."
-- Caption (JA): "繰り返し記録を保存時に作成します。"
+- Caption (EN): "Create repeating entries that continue with no end date."
+- Caption (JA): "終了日なしの繰り返し記録を作成します。"
 
 **Screenshot 4: Settings (all locales)**
 - Shows Settings view with currency, categories, import/export, and data options visible.
@@ -319,4 +319,3 @@ For implementation context and verification:
 - **Privacy Policy:** `docs/privacy.html`
 - **Build Decisions:** `docs/build-decisions.md`
 - **Overall Readiness:** `docs/appstore-readiness.md`
-

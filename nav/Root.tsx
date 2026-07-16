@@ -16,14 +16,15 @@ import { Alert, Platform, StyleSheet, View } from 'react-native';
 import {
   clampDay,
   decodeZaimBytes,
-  materialize,
+  deleteLedgerItem,
+  entriesForMonth,
+  entriesThrough,
   parseZaimCsv,
   pruneBudgets,
-  removeEntry,
   sampleEntries,
+  saveLedgerItem,
   serializeZaimCsv,
   shiftMonth,
-  updateEntry,
   type Currency,
   type EntryDraft,
   type Transaction,
@@ -101,6 +102,23 @@ function confirm(
   }
 }
 
+function chooseRecurringDelete(onOne: () => void, onFuture: () => void) {
+  const { entry } = strings;
+  if (Platform.OS === 'web') {
+    if (window.confirm(`${entry.deleteRecurringTitle}\n${entry.deleteThisAndFuture}?`)) {
+      onFuture();
+    } else if (window.confirm(`${entry.deleteRecurringTitle}\n${entry.deleteOnlyThis}?`)) {
+      onOne();
+    }
+    return;
+  }
+  Alert.alert(entry.deleteRecurringTitle, entry.deleteRecurringMessage, [
+    { text: strings.common.cancel, style: 'cancel' },
+    { text: entry.deleteOnlyThis, style: 'destructive', onPress: onOne },
+    { text: entry.deleteThisAndFuture, style: 'destructive', onPress: onFuture },
+  ]);
+}
+
 export function Root(props: RootProps) {
   return (
     <AppShell>
@@ -150,6 +168,16 @@ function Shell({
   }, []);
 
   const symbol = state.currency.symbol;
+  const ledger = { entries: state.entries, recurrenceRules: state.recurrenceRules };
+  // Keep the pager's neighboring months populated during a swipe. Screens still
+  // filter this finite projection to their requested cursor month.
+  const visibleEntries = useMemo(
+    () =>
+      [-1, 0, 1].flatMap((offset) =>
+        entriesForMonth(ledger, shiftMonth(cursor, offset)),
+      ),
+    [state.entries, state.recurrenceRules, cursor.y, cursor.m],
+  );
 
   // Whether this device can even satisfy the lock (#30) — checked once on
   // mount so the Settings toggle can be disabled-with-explanation rather
@@ -213,7 +241,7 @@ function Shell({
   // loadSample(): replace the ledger with the July-2026 demo set (stable ids)
   // and jump the cursor there so the entries are immediately visible.
   const loadSample = () => {
-    update({ entries: sampleEntries() });
+    update({ entries: sampleEntries(), recurrenceRules: [] });
     setCursor({ y: 2026, m: 6 });
     setSelectedDay(1);
     setTab('calendar');
@@ -225,7 +253,13 @@ function Shell({
   // an exported file round-trips through it unchanged, so no new import UI.
   const exportData = async () => {
     try {
-      await shareTextFile('kaji-export.csv', serializeZaimCsv(state.entries));
+      const now = new Date();
+      const entries = entriesThrough(ledger, {
+        y: now.getFullYear(),
+        m: now.getMonth(),
+        day: now.getDate(),
+      });
+      await shareTextFile('kaji-export.csv', serializeZaimCsv(entries));
     } catch {
       notify(strings.zaim.exportFailedTitle, strings.zaim.exportFailedMessage);
     }
@@ -265,10 +299,23 @@ function Shell({
         return;
       }
 
+      const now = new Date();
+      const today = {
+        y: now.getFullYear(),
+        m: now.getMonth(),
+        day: now.getDate(),
+      };
+      const recurringHistory = entriesThrough(
+        { entries: [], recurrenceRules: state.recurrenceRules },
+        today,
+      );
       const result = parseZaimCsv(text, {
         expCats: state.expCats,
         incCats: state.incCats,
-        entries: state.entries,
+        // All persisted one-time entries participate in duplicate detection,
+        // including future-dated rows. Infinite rules contribute only their
+        // finite concrete history through today.
+        entries: [...state.entries, ...recurringHistory],
       });
       if (result.entries.length === 0) {
         notify(
@@ -303,39 +350,60 @@ function Shell({
   };
   const goMonth = (delta: number) => setMonth(shiftMonth(cursor, delta));
 
-  // handleSubmit(): the Entry sheet's save. In edit mode, overwrite the entry by
-  // id (preserving id/y/m/day) via the pure `updateEntry`; otherwise materialize
-  // the draft and append. Either way land on the relevant day and show the
-  // Calendar.
+  // handleSubmit(): persist a one-time entry or recurrence rule. Editing a
+  // projected occurrence splits its rule so past history remains unchanged.
   const handleSubmit = (draft: EntryDraft, weekendShift: WeekendShift) => {
-    if (editing) {
-      entrySaved();
-      update({ entries: updateEntry(state.entries, editing.id, draft) });
-      setSelectedDay(editing.day);
-    } else {
-      const entries = materialize(draft, weekendShift);
-      if (entries.length === 0) return;
-      entrySaved();
-      update({ entries: [...state.entries, ...entries] });
-      const days = new Set(entries.map((e) => e.day));
-      setSelectedDay((d) => (days.has(d) ? d : entries[0].day));
+    const next = saveLedgerItem(ledger, draft, weekendShift, editing ?? undefined);
+    if (next === ledger) return;
+    entrySaved();
+    update(next);
+    if (editing) setSelectedDay(editing.day);
+    else {
+      let landing = { y: draft.y, m: draft.m, day: draft.day };
+      if (draft.repeat && draft.repeat !== 'never') {
+        const newRules = next.recurrenceRules.filter(
+          (rule) => !state.recurrenceRules.some((old) => old.id === rule.id),
+        );
+        const created = [-1, 0, 1]
+          .flatMap((offset) =>
+            entriesForMonth(next, shiftMonth({ y: draft.y, m: draft.m }, offset)),
+          )
+          .find((entry) => {
+            if (!entry.occurrence) return false;
+            const rule = newRules.find((candidate) => candidate.id === entry.occurrence!.ruleId);
+            return (
+              rule !== undefined &&
+              entry.occurrence.scheduled.y === rule.start.y &&
+              entry.occurrence.scheduled.m === rule.start.m &&
+              entry.occurrence.scheduled.day === rule.start.day
+            );
+          });
+        if (created) landing = { y: created.y, m: created.m, day: created.day };
+      }
+      setCursor({ y: landing.y, m: landing.m });
+      setSelectedDay(landing.day);
     }
     setTab('calendar');
     closeSheet();
   };
 
-  // handleDelete(): guarded by a native confirm (web window.confirm fallback);
-  // on confirm, drop the entry via the pure `removeEntry` and return to the
-  // Calendar with the same day still selected.
-  const handleDelete = (id: string) => {
+  // handleDelete(): one-time entries use the existing destructive confirm;
+  // recurring occurrences offer delete-only-this and this-and-future scopes.
+  const handleDelete = (entry: Transaction) => {
+    const remove = (scope: 'one' | 'future') => {
+      update(deleteLedgerItem(ledger, entry, scope));
+      setSelectedDay(entry.day);
+      setTab('calendar');
+      closeSheet();
+    };
+    if (entry.occurrence) {
+      chooseRecurringDelete(() => remove('one'), () => remove('future'));
+      return;
+    }
     confirm(
       strings.entry.deleteConfirmTitle,
       strings.entry.deleteConfirmMessage,
-      () => {
-        update({ entries: removeEntry(state.entries, id) });
-        setTab('calendar');
-        closeSheet();
-      },
+      () => remove('one'),
       strings.common.delete,
       true,
     );
@@ -349,7 +417,7 @@ function Shell({
       strings.settings.deleteAllData,
       strings.settings.deleteAllDataConfirmMessage,
       () => {
-        update({ entries: [], budgets: {}, totalBudget: 0 });
+        update({ entries: [], recurrenceRules: [], budgets: {}, totalBudget: 0 });
         closeSheet();
       },
       strings.common.delete,
@@ -362,7 +430,7 @@ function Shell({
       <View style={styles.body}>
         {tab === 'calendar' ? (
           <CalendarScreen
-            entries={state.entries}
+            entries={visibleEntries}
             budgets={state.budgets}
             budgetMode={state.budgetMode}
             totalBudget={state.totalBudget}
@@ -379,7 +447,7 @@ function Shell({
           />
         ) : (
           <SummaryScreen
-            entries={state.entries}
+            entries={visibleEntries}
             budgets={state.budgets}
             budgetMode={state.budgetMode}
             totalBudget={state.totalBudget}

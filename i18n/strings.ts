@@ -32,7 +32,7 @@ export interface Strings {
     textInput: string;
     categoryName: string;
     symbolOnlyCurrencyHint: string;
-    materializeOnSaveHint: string;
+    recurrenceHint: string;
   };
   nav: {
     calendar: string;
@@ -72,10 +72,15 @@ export interface Strings {
     addExpense: string;
     addIncome: string;
     save: string;
+    saveThisAndFuture: string;
     editEntry: (name: string) => string;
     deleteEntry: string;
     deleteConfirmTitle: string;
     deleteConfirmMessage: string;
+    deleteRecurringTitle: string;
+    deleteRecurringMessage: string;
+    deleteOnlyThis: string;
+    deleteThisAndFuture: string;
   };
   settings: {
     appearance: string;
@@ -169,7 +174,7 @@ export const en: Strings = {
     textInput: 'Text input',
     categoryName: 'Category name',
     symbolOnlyCurrencyHint: 'Changes the displayed currency symbol only. Amounts are not converted.',
-    materializeOnSaveHint: 'Repeating entries are created when you save.',
+    recurrenceHint: 'Repeating entries continue from this date with no end date.',
   },
   nav: {
     calendar: 'Calendar',
@@ -214,10 +219,15 @@ export const en: Strings = {
     addExpense: 'Add expense',
     addIncome: 'Add income',
     save: 'Save',
+    saveThisAndFuture: 'Save this and future',
     editEntry: (name) => `Edit ${name}`,
     deleteEntry: 'Delete entry',
     deleteConfirmTitle: 'Delete this entry?',
     deleteConfirmMessage: 'This cannot be undone.',
+    deleteRecurringTitle: 'Delete repeating entry?',
+    deleteRecurringMessage: 'Choose whether to delete only this occurrence or this and all future repeats.',
+    deleteOnlyThis: 'Delete only this',
+    deleteThisAndFuture: 'Delete this and future',
   },
   settings: {
     appearance: 'Appearance',
@@ -238,7 +248,7 @@ export const en: Strings = {
     importFromZaim: 'Import from Zaim',
     exportUnreadableBackup: 'Export unreadable backup',
     deleteAllData: 'Delete all data',
-    deleteAllDataConfirmMessage: 'This will permanently delete all entries and budgets. Categories, currency, and settings will be preserved.',
+    deleteAllDataConfirmMessage: 'This will permanently delete all entries, repeating series, and budgets. Categories, currency, and settings will be preserved.',
   },
   budgets: {
     title: 'Budgets',
@@ -313,7 +323,7 @@ export const ja: Strings = {
     textInput: 'テキスト入力',
     categoryName: 'カテゴリ名',
     symbolOnlyCurrencyHint: '表示する通貨記号だけを変更します。金額は換算されません。',
-    materializeOnSaveHint: '繰り返しの記録は保存時に作成されます。',
+    recurrenceHint: 'この日から終了日なしで繰り返します。',
   },
   nav: {
     calendar: 'カレンダー',
@@ -358,10 +368,15 @@ export const ja: Strings = {
     addExpense: '支出を追加',
     addIncome: '収入を追加',
     save: '保存',
+    saveThisAndFuture: 'これ以降を保存',
     editEntry: (name) => `${name}を編集`,
     deleteEntry: '記録を削除',
     deleteConfirmTitle: 'この記録を削除しますか？',
     deleteConfirmMessage: 'この操作は取り消せません。',
+    deleteRecurringTitle: '繰り返しの記録を削除しますか？',
+    deleteRecurringMessage: 'この回だけ、またはこの回以降のすべてを削除できます。',
+    deleteOnlyThis: 'この回だけ削除',
+    deleteThisAndFuture: 'この回以降を削除',
   },
   settings: {
     appearance: '外観',
@@ -382,7 +397,7 @@ export const ja: Strings = {
     importFromZaim: 'Zaimから読み込む',
     exportUnreadableBackup: '読み取れないバックアップを書き出す',
     deleteAllData: 'すべてのデータを削除',
-    deleteAllDataConfirmMessage: 'すべての支出と予算が永遠に削除されます。カテゴリ、通貨、および設定は保持されます。',
+    deleteAllDataConfirmMessage: 'すべての記録、繰り返し、および予算が完全に削除されます。カテゴリ、通貨、および設定は保持されます。',
   },
   budgets: {
     title: '予算',

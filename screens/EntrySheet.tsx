@@ -1,13 +1,12 @@
 /**
  * EntrySheet — the New/Edit Entry sheet (slices #3 + #6 + #43). Captures a draft
  * (type · amount · category · note · repeat · weekend-shift) and hands it to the
- * host on save; the host materializes it into one or more `Transaction`s
- * (decision 2: materialize-on-save, no scheduler) or, in edit mode, overwrites
- * the entry by id. Recurrence rows cycle their options on tap; the weekend row
+ * host on save; the host stores either one concrete transaction or an infinite
+ * recurrence rule. Recurrence rows cycle their options on tap; the weekend row
  * shows only for monthly/yearly repeats.
  *
- * With `editing` set the sheet prefills from that entry, hides the create-only
- * Repeat/weekend rows, flips the CTA to "Save", and exposes a Delete action.
+ * With `editing` set the sheet prefills every editable field and exposes a
+ * Delete action. Recurring edits clearly apply to this and future occurrences.
  *
  * Presentational state only — the parent owns persistence and where the entries
  * land (it passes the target `y`/`m`/`day`).
@@ -40,15 +39,13 @@ interface EntrySheetProps {
   day: number;
   symbol: string;
   /**
-   * Existing entry to edit (#43). When set, the sheet prefills from it, hides
-   * the create-only Repeat/weekend rows, and its save overwrites that entry by
-   * `id` rather than appending a new one.
+   * Existing concrete or projected occurrence to edit (#43).
    */
   editing?: Transaction;
-  /** Collects the draft on save; the host materializes (create) or overwrites (edit). */
+  /** Collects the draft on save; the host stores or splits the corresponding ledger item. */
   onSave: (draft: EntryDraft, weekendShift: WeekendShift) => void;
-  /** Edit mode only: request deletion of `editing` (the host confirms). */
-  onDelete?: (id: string) => void;
+  /** Edit mode only: request deletion of `editing` (the host chooses scope). */
+  onDelete?: (entry: Transaction) => void;
   onClose: () => void;
 }
 
@@ -94,16 +91,21 @@ export function EntrySheet({
     () => editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
   );
   const [note, setNote] = useState(editing?.note ?? '—');
-  const [repeat, setRepeat] = useState<Repeat>('never');
-  const [weekendShift, setWeekendShift] = useState<WeekendShift>('after');
+  const [repeat, setRepeat] = useState<Repeat>(editing?.repeat ?? 'never');
+  const [weekendShift, setWeekendShift] = useState<WeekendShift>(
+    editing?.occurrence?.weekendShift ?? 'after',
+  );
 
   const value = amountValue(amountStr);
   const canSave = value > 0;
   const heroText = yen(value, symbol);
-  // Repeat/weekend rows are create-only (#43): edit operates on one occurrence.
-  const showWeekend = !isEditing && (repeat === 'monthly' || repeat === 'yearly');
+  const showWeekend = repeat === 'monthly' || repeat === 'yearly';
+  const editsSeries =
+    isEditing && ((editing.repeat ?? 'never') !== 'never' || repeat !== 'never');
   const ctaLabel = isEditing
-    ? strings.entry.save
+    ? editsSeries
+      ? strings.entry.saveThisAndFuture
+      : strings.entry.save
     : txType === 'income'
       ? strings.entry.addIncome
       : strings.entry.addExpense;
@@ -159,16 +161,14 @@ export function EntrySheet({
           active={note !== '—'}
           onPress={() => setNote((n) => next(NOTE_OPTIONS[txType], n))}
         />
-        {!isEditing && (
-          <CycleRow
-            label={strings.entry.repeatRowLabel}
-            value={REPEAT_LABEL[repeat]}
-            active={repeat !== 'never'}
-            activeTone="positive"
-            accessibilityHint={strings.a11y.materializeOnSaveHint}
-            onPress={() => setRepeat((r) => next(REPEAT_ORDER, r))}
-          />
-        )}
+        <CycleRow
+          label={strings.entry.repeatRowLabel}
+          value={REPEAT_LABEL[repeat]}
+          active={repeat !== 'never'}
+          activeTone="positive"
+          accessibilityHint={strings.a11y.recurrenceHint}
+          onPress={() => setRepeat((r) => next(REPEAT_ORDER, r))}
+        />
         {showWeekend && (
           <CycleRow
             label={strings.entry.weekendRowLabel}
@@ -201,7 +201,7 @@ export function EntrySheet({
 
       {isEditing && onDelete && (
         <Pressable
-          onPress={() => onDelete(editing.id)}
+          onPress={() => onDelete(editing)}
           accessibilityRole="button"
           accessibilityLabel={strings.entry.deleteEntry}
           style={({ pressed }) => [styles.deleteRow, pressed && { opacity: 0.6 }]}

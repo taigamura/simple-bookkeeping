@@ -67,8 +67,10 @@ currency conversion.
       newer state.
 - [ ] Give import, export/share, and persistence failures user-visible recovery
       paths; no financial-data operation should fail only in the console.
-- [ ] Verify a full exported CSV can restore an empty installation without
-      losing supported transaction fields or duplicating entries.
+- [ ] Verify an exported CSV can restore one-time entries and concrete repeating
+      history through the export date without losing supported fields or
+      duplicating entries. Recurrence rules intentionally import as one-time
+      rows because Zaim CSV has no recurrence-rule format.
 - [ ] Preserve and test the corrupt-stash behavior for invalid data.
 
 ### 3. Release identity and repository cleanup

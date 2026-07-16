@@ -4,6 +4,10 @@ export type {
   Repeat,
   WeekendShift,
   Transaction,
+  RecurrenceDate,
+  RecurrenceOccurrence,
+  RecurrenceRule,
+  Ledger,
   Currency,
   YM,
 } from './types';
@@ -43,7 +47,12 @@ export {
   type CategorySlice,
   type Split,
 } from './summary';
-export { shiftWeekendDay, materialize } from './recurrence';
+export {
+  saveLedgerItem,
+  entriesForMonth,
+  deleteLedgerItem,
+  entriesThrough,
+} from './recurrence';
 export {
   CURRENCIES,
   addCategory,

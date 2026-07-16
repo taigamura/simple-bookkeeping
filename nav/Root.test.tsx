@@ -23,7 +23,7 @@ jest.mock('react-native-safe-area-context', () =>
 jest.mock('../platform/auth', () => ({
   isAuthAvailable: jest.fn().mockResolvedValue(false),
 }));
-jest.mock('../platform/haptics', () => ({ entrySaved: jest.fn() }));
+jest.mock('../platform/haptics', () => ({ entrySaved: jest.fn(), keypadTap: jest.fn() }));
 jest.mock('../platform/shareFile', () => ({ shareTextFile: jest.fn() }));
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 const mockFileArrayBuffer = jest.fn();
@@ -40,7 +40,13 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 
-import { serializeZaimCsv, type Transaction } from '../domain';
+import {
+  entriesThrough,
+  saveLedgerItem,
+  serializeZaimCsv,
+  type EntryDraft,
+  type Transaction,
+} from '../domain';
 import { strings } from '../i18n';
 import { shareTextFile } from '../platform/shareFile';
 import { DEFAULT_STATE } from '../store/schema';
@@ -132,6 +138,32 @@ describe('Root sheet click behavior', () => {
     // Pre-fix this threw the dev-web error the moment the sheet content
     // rendered: "StyleSheet.compose() only accepts 2 arguments, received 3".
     expect(screen.getByTestId('entry-sheet')).toBeTruthy();
+  });
+
+  it('saves a new Repeat selection as an infinite rule instead of materialized entries', () => {
+    const update = jest.fn();
+    render(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText(strings.nav.addEntry));
+    fireEvent.press(screen.getByLabelText('↻ Repeat: Never'));
+    fireEvent.press(screen.getByLabelText('1'));
+    fireEvent.press(screen.getByLabelText(strings.entry.addExpense));
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update.mock.calls[0][0].entries).toEqual([]);
+    expect(update.mock.calls[0][0].recurrenceRules).toEqual([
+      expect.objectContaining({ repeat: 'daily', amount: 1 }),
+    ]);
   });
 
   it('tapping the Settings gear opens the Settings sheet without a style crash', () => {
@@ -347,7 +379,60 @@ describe('Root sheet state management (#60)', () => {
       buttons[1].onPress?.();
     });
 
-    expect(update).toHaveBeenCalledWith({ entries: [], budgets: {}, totalBudget: 0 });
+    expect(update).toHaveBeenCalledWith({
+      entries: [],
+      recurrenceRules: [],
+      budgets: {},
+      totalBudget: 0,
+    });
+    alert.mockRestore();
+  });
+
+  it('offers both delete scopes for a projected recurring occurrence', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const update = jest.fn();
+    const now = new Date();
+    const draft: EntryDraft = {
+      type: 'expense',
+      amountStr: '850',
+      category: 'Food',
+      note: 'Lunch',
+      y: now.getFullYear(),
+      m: now.getMonth(),
+      day: now.getDate(),
+      repeat: 'monthly',
+    };
+    const ledger = saveLedgerItem({ entries: [], recurrenceRules: [] }, draft, 'off');
+    render(
+      <ThemeProvider>
+        <Root
+          state={{ ...DEFAULT_STATE, ...ledger }}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText(strings.entry.editEntry('Food')));
+    expect(screen.getByLabelText('↻ Repeat: Every month')).toBeTruthy();
+    expect(screen.getByLabelText(strings.entry.saveThisAndFuture)).toBeTruthy();
+    fireEvent.press(screen.getByLabelText(strings.entry.deleteEntry));
+
+    expect(alert).toHaveBeenCalledWith(
+      strings.entry.deleteRecurringTitle,
+      strings.entry.deleteRecurringMessage,
+      expect.any(Array),
+    );
+    const buttons = alert.mock.calls[0][2]!;
+    expect(buttons.map((button) => button.text)).toEqual([
+      strings.common.cancel,
+      strings.entry.deleteOnlyThis,
+      strings.entry.deleteThisAndFuture,
+    ]);
+    await act(async () => buttons[1].onPress?.());
+    expect(update.mock.calls[0][0].recurrenceRules[0].exceptions).toHaveLength(1);
     alert.mockRestore();
   });
 });
@@ -409,6 +494,38 @@ describe('Root CSV backup flow (#75)', () => {
     const [filename, csv] = (shareTextFile as jest.Mock).mock.calls[0];
     expect(filename).toBe('kaji-export.csv');
     expect(csv).toBe(serializeZaimCsv(ledger));
+  });
+
+  it('exports recurring occurrences only through today as finite CSV rows', async () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2);
+    const ledger = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      {
+        type: 'expense',
+        amountStr: '850',
+        category: 'Food',
+        note: 'Lunch',
+        y: start.getFullYear(),
+        m: start.getMonth(),
+        day: start.getDate(),
+        repeat: 'daily',
+      },
+      'off',
+    );
+    (shareTextFile as jest.Mock).mockResolvedValue(undefined);
+    renderBackupRoot({ state: { ...DEFAULT_STATE, ...ledger } });
+
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.settings.exportData));
+
+    await waitFor(() => expect(shareTextFile).toHaveBeenCalled());
+    const expected = entriesThrough(ledger, {
+      y: now.getFullYear(),
+      m: now.getMonth(),
+      day: now.getDate(),
+    });
+    expect((shareTextFile as jest.Mock).mock.calls[0][1]).toBe(serializeZaimCsv(expected));
   });
 
   it('shows localized recovery guidance when export write/share fails', async () => {
@@ -505,6 +622,32 @@ describe('Root CSV backup flow (#75)', () => {
       expect(alert).toHaveBeenCalledWith(
         strings.zaim.noEntriesTitle,
         `${strings.zaim.noEntriesMessage} — ${strings.zaim.skip.duplicate(2)}`,
+      ),
+    );
+    expect(update).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  it('detects a duplicate against a persisted future one-time entry', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const now = new Date();
+    const future = entry({ y: now.getFullYear() + 1, m: 0, day: 1 });
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file://backup.csv' }],
+    });
+    mockFileArrayBuffer.mockResolvedValue(arrayBufferOf(serializeZaimCsv([future])));
+    const { update } = renderBackupRoot({
+      state: { ...DEFAULT_STATE, entries: [future] },
+    });
+
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        strings.zaim.noEntriesTitle,
+        `${strings.zaim.noEntriesMessage} — ${strings.zaim.skip.duplicate(1)}`,
       ),
     );
     expect(update).not.toHaveBeenCalled();

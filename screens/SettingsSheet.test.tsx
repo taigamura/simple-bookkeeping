@@ -179,7 +179,7 @@ describe('SettingsSheet', () => {
     const onDeleteAllData = jest.fn();
     renderSheet({ onDeleteAllData });
     const deleteAll = screen.getByLabelText('Delete all data');
-    expect(deleteAll.props.accessibilityHint).toContain('entries and budgets');
+    expect(deleteAll.props.accessibilityHint).toContain('entries, repeating series, and budgets');
     fireEvent.press(deleteAll);
     expect(onDeleteAllData).toHaveBeenCalled();
   });

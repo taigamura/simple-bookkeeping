@@ -11,7 +11,7 @@
 import { createStore } from './store';
 import { createMemoryPersistence } from './persistence';
 import { DEFAULT_STATE, SCHEMA_VERSION, type AppState } from './schema';
-import type { Transaction } from '../domain';
+import { saveLedgerItem, type EntryDraft, type Transaction } from '../domain';
 
 /** A full AppState with the given overrides, so tests state only what matters. */
 const stateWith = (over: Partial<AppState> = {}): AppState => ({
@@ -46,6 +46,63 @@ describe('createStore', () => {
     await store.save(stateWith({ entries: [sampleEntry] }));
 
     expect((await store.load()).entries).toEqual([sampleEntry]);
+  });
+
+  it('round-trips persisted infinite recurrence rules', async () => {
+    const draft: EntryDraft = {
+      type: 'expense',
+      amountStr: '850',
+      category: 'Food',
+      note: 'Lunch',
+      y: 2027,
+      m: 0,
+      day: 31,
+      repeat: 'monthly',
+    };
+    const ledger = saveLedgerItem({ entries: [], recurrenceRules: [] }, draft, 'after');
+    const store = createStore(createMemoryPersistence());
+
+    await store.save(stateWith(ledger));
+
+    expect((await store.load()).recurrenceRules).toEqual(ledger.recurrenceRules);
+  });
+
+  it('rejects recurrence rules with impossible persisted exception dates', async () => {
+    const draft: EntryDraft = {
+      type: 'expense',
+      amountStr: '850',
+      category: 'Food',
+      note: 'Lunch',
+      y: 2027,
+      m: 0,
+      day: 31,
+      repeat: 'monthly',
+    };
+    const ledger = saveLedgerItem({ entries: [], recurrenceRules: [] }, draft, 'after');
+    const invalidState = stateWith({
+      ...ledger,
+      recurrenceRules: [{ ...ledger.recurrenceRules[0], exceptions: ['2027-99-99'] }],
+    });
+    const blob = JSON.stringify({ version: SCHEMA_VERSION, state: invalidState });
+    const store = createStore(createMemoryPersistence(blob));
+
+    expect(await store.load()).toEqual(DEFAULT_STATE);
+    expect(store.wasLastLoadCorrupt()).toBe(true);
+    expect(await store.readCorruptStash()).toBe(blob);
+  });
+
+  it('migrates legacy materialized repeats to one-time history without inventing series', async () => {
+    const { recurrenceRules: _recurrenceRules, ...legacyState } = stateWith({
+      entries: [{ ...sampleEntry, repeat: 'daily' }],
+    });
+    const store = createStore(
+      createMemoryPersistence(JSON.stringify({ version: SCHEMA_VERSION, state: legacyState })),
+    );
+
+    const loaded = await store.load();
+
+    expect(loaded.entries).toEqual([{ ...sampleEntry, repeat: 'never' }]);
+    expect(loaded.recurrenceRules).toEqual([]);
   });
 
   it('round-trips lockEnabled (#30): saved true survives a reload', async () => {
