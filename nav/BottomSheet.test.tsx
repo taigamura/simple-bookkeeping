@@ -28,7 +28,7 @@ jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default,
 );
 
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -55,6 +55,9 @@ function appliedContentStyle(): ViewStyle {
 }
 
 describe('BottomSheet', () => {
+  const modalProps = (): any =>
+    require('../test-utils/gorhomBottomSheetWebMock').getLastBottomSheetModalProps();
+
   test('renders without crashing when visible is false', () => {
     expect(() => renderSheet({ visible: false })).not.toThrow();
   });
@@ -122,5 +125,37 @@ describe('BottomSheet', () => {
     // respond to touch and pan gestures; verified by device testing.
     expect(() => renderSheet()).not.toThrow();
     // On device: verify grab bar drag visibly tracks finger and fling dismisses
+  });
+
+  test('offers an expanded snap point while retaining dynamic natural sizing', () => {
+    renderSheet();
+    expect(modalProps().enableDynamicSizing).toBe(true);
+    expect(modalProps().snapPoints).toEqual([appliedContentStyle().maxHeight]);
+  });
+
+  test('retains the greatest laid-out height during an open sheet session', () => {
+    renderSheet();
+
+    fireEvent(screen.getByTestId('test-sheet'), 'layout', {
+      nativeEvent: { layout: { height: 480, width: 320, x: 0, y: 0 } },
+    });
+
+    expect(appliedContentStyle().minHeight).toBe(480);
+
+    fireEvent(screen.getByTestId('test-sheet'), 'layout', {
+      nativeEvent: { layout: { height: 260, width: 320, x: 0, y: 0 } },
+    });
+    expect(appliedContentStyle().minHeight).toBe(480);
+  });
+
+  test('redirects an expanded downward drag to dismissal', () => {
+    const onClose = jest.fn();
+    renderSheet({ onClose });
+
+    modalProps().onAnimate(1, 0, 44, 300);
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    modalProps().onAnimate(0, 1, 300, 44);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

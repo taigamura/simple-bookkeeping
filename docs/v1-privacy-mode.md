@@ -14,9 +14,6 @@ analytics, purchase, subscription, Premium, or enabled crash-reporting surface.
 - `platform/errorReporting.ts` returns before calling `Sentry.init` when the
   DSN is blank, and `platform/errorReporting.test.ts` locks that behavior.
 - No analytics or telemetry SDK is installed or initialized.
-- The optional app lock uses iOS-managed Face ID, Touch ID, or device passcode
-  through `expo-local-authentication`; the app never sees or stores biometric
-  data.
 
 ## Legacy Premium Compatibility
 
@@ -32,17 +29,16 @@ Audit target: the exact production candidate selected for App Store review.
 Required journey:
 
 1. Cold launch with a fresh install.
-2. Switch launch destination.
-3. Create, edit, and delete entries.
-4. Navigate months and summary.
-5. Open Settings and Budgets.
-6. Toggle theme and optional app lock.
-7. Import a local Zaim CSV and export app CSV through the system share sheet.
-8. Delete all data and relaunch.
+2. Create, edit, and delete entries.
+3. Navigate months and summary.
+4. Open Settings and Budgets.
+5. Toggle the theme.
+6. Import a local Zaim CSV and export app CSV through the system share sheet.
+7. Delete all data and relaunch.
 
 Expected result: no app-initiated network requests during the required journey.
-System-owned iOS authentication, file picker, and share sheet UI may appear, but
-Kaji does not transmit user data from those flows. Any future non-empty Sentry
+System-owned iOS file picker and share sheet UI may appear, but Kaji does not
+transmit user data from those flows. Any future non-empty Sentry
 DSN, analytics SDK, ad SDK, account, sync, or purchase integration invalidates
 the “Data Not Collected” claim until the audit and public privacy text are
 updated.

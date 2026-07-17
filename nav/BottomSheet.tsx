@@ -17,9 +17,11 @@
  * invisible sheet. If content height falls below the floor, the sheet uses the
  * floor instead, guaranteeing visibility.
  *
- * Single content-height detent (#54): only dynamic content-height, no full-screen
- * snap. Content panning is disabled; sheets drag only via the handle or close
- * via backdrop tap/Done buttons, so in-sheet scrollables never compete with pan.
+ * Two-position sizing: sheets open at their dynamic content height and can be
+ * dragged upward to the capped expanded height. While one modal session stays
+ * open, content swaps retain the greatest height already shown, so drill-ins do
+ * not shrink. Content panning stays disabled; the handle owns sheet gestures
+ * while in-sheet scrollables own row scrolling.
  */
 import {
   BottomSheetModal,
@@ -27,8 +29,17 @@ import {
   useBottomSheetTimingConfigs,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type LayoutChangeEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -49,10 +60,6 @@ export interface BottomSheetProps {
   /** Anchor for the e2e suite (#58) — lands on the sheet's content view. */
   testID?: string;
 }
-
-// Empty snap points array: only the dynamic content-height detent from
-// `enableDynamicSizing` is used (#54). No fixed full-screen detent.
-const SNAP_POINTS: number[] = [];
 
 // Minimum content height (#60): if the sheet content measures below this,
 // use this floor instead to guarantee visibility. Prevents zero-height sheets.
@@ -186,6 +193,22 @@ export function BottomSheet({
   const containerHeight =
     Platform.OS === 'web' ? windowHeight - WEB_FRAME_INSET : windowHeight - insets.top;
   const maxSheetHeight = Math.max(MIN_CONTENT_HEIGHT, containerHeight - SHEET_TOP_STRIP);
+  // Dynamic sizing inserts the natural-height point ahead of this cap. If the
+  // content already fills the cap, gorhom de-duplicates the two points.
+  const snapPoints = useMemo(() => [maxSheetHeight], [maxSheetHeight]);
+
+  // A drill-in is a content swap inside the same modal, not a new presentation.
+  // Retain the largest laid-out content height until dismissal so Settings →
+  // Repeats/Budgets never shrinks. Shorter bodies fill this retained viewport
+  // and their BottomSheetScrollView handles any overflow.
+  const [sessionMinHeight, setSessionMinHeight] = useState(MIN_CONTENT_HEIGHT);
+  const handleContentLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const laidOutHeight = Math.min(event.nativeEvent.layout.height, maxSheetHeight);
+      setSessionMinHeight((current) => Math.max(current, laidOutHeight));
+    },
+    [maxSheetHeight],
+  );
 
   // Snappy open/close. Beyond feel, a short close shrinks the window in which
   // gorhom's full-screen sheet container (whose `pointerEvents="box-none"` does
@@ -222,6 +245,10 @@ export function BottomSheet({
     }
   }, [visible, phase]);
 
+  useEffect(() => {
+    if (!visible) setSessionMinHeight(MIN_CONTENT_HEIGHT);
+  }, [visible]);
+
   // gorhom fires onDismiss only when the dismiss animation finishes — long after
   // nav changed, possibly after the user reopened. So this must never blindly
   // re-close: it flips phase to 'closed', letting the effect above re-present if
@@ -245,6 +272,17 @@ export function BottomSheet({
     [onClose],
   );
 
+  // With two snap points gorhom would normally collapse an expanded sheet to
+  // its natural height first. Product behavior is simpler: every downward
+  // handle drag dismisses. Redirect that expanded→natural animation into the
+  // same app-driven close path used by the backdrop and close buttons.
+  const handleAnimate = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (fromIndex > 0 && toIndex >= 0 && toIndex < fromIndex) onClose();
+    },
+    [onClose],
+  );
+
   return (
     <BottomSheetModal
       ref={ref}
@@ -253,11 +291,12 @@ export function BottomSheet({
       enableHandlePanningGesture
       enableContentPanningGesture={false}
       topInset={insets.top}
-      snapPoints={SNAP_POINTS}
+      snapPoints={snapPoints}
       maxDynamicContentSize={maxSheetHeight}
       animationConfigs={animationConfigs}
       accessibilityLabel={SHEET_SURFACE_LABEL}
       onDismiss={handleDismiss}
+      onAnimate={handleAnimate}
       backdropComponent={renderBackdrop}
       backgroundStyle={[
         styles.sheet,
@@ -271,9 +310,14 @@ export function BottomSheet({
           way a 3-element array here breaks every sheet open on web. */}
       <BottomSheetView
         testID={testID}
+        onLayout={handleContentLayout}
         style={StyleSheet.flatten([
           styles.content,
-          { minHeight: MIN_CONTENT_HEIGHT, maxHeight: maxSheetHeight, paddingBottom: 28 + insets.bottom },
+          {
+            minHeight: Math.min(sessionMinHeight, maxSheetHeight),
+            maxHeight: maxSheetHeight,
+            paddingBottom: 28 + insets.bottom,
+          },
           style,
         ])}
       >

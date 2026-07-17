@@ -64,15 +64,8 @@ interface SettingsSheetProps {
   /** Whether a corrupt-stash blob exists (#28) — gates the recovery row. */
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
-  /** Face ID / passcode gate (#30). */
-  lockEnabled: boolean;
-  lockAvailable: boolean;
-  onToggleLock: (enabled: boolean) => void;
   /** Delete all entries and budgets (#67). */
   onDeleteAllData: () => void;
-  /** What the app opens to on launch (#68). */
-  openTo: 'calendar' | 'entry';
-  onChangeOpenTo: (openTo: 'calendar' | 'entry') => void;
   onClose: () => void;
   /** Scrollable wrapper for the rows below the header (#44); see file header. */
   ScrollContainer?: ComponentType<ScrollContainerProps>;
@@ -98,12 +91,7 @@ export function SettingsSheet({
   onImportZaim,
   hasCorruptStash,
   onExportCorruptStash,
-  lockEnabled,
-  lockAvailable,
-  onToggleLock,
   onDeleteAllData,
-  openTo,
-  onChangeOpenTo,
   onClose,
   ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
 }: SettingsSheetProps) {
@@ -119,8 +107,6 @@ export function SettingsSheet({
         showsVerticalScrollIndicator={false}
       >
         <Appearance />
-        <OpenTo value={openTo} onChange={onChangeOpenTo} />
-        <LockToggle enabled={lockEnabled} available={lockAvailable} onToggle={onToggleLock} />
         <CurrencyGrid value={currency} onChange={onChangeCurrency} />
         <Categories
           expCats={expCats}
@@ -163,89 +149,6 @@ function Appearance() {
         ))}
       </View>
     </Section>
-  );
-}
-
-/** Open-to selector: Calendar or Entry on launch (#68). */
-function OpenTo({
-  value,
-  onChange,
-}: {
-  value: 'calendar' | 'entry';
-  onChange: (openTo: 'calendar' | 'entry') => void;
-}) {
-  const OPTIONS: { value: 'calendar' | 'entry'; label: string }[] = [
-    { value: 'calendar', label: strings.settings.openToCalendar },
-    { value: 'entry', label: strings.settings.openToEntry },
-  ];
-  return (
-    <Section label={strings.settings.openTo}>
-      <View style={styles.optRow}>
-        {OPTIONS.map((o) => (
-          <OptBox
-            key={o.value}
-            label={o.label}
-            active={value === o.value}
-            onPress={() => onChange(o.value)}
-          />
-        ))}
-      </View>
-    </Section>
-  );
-}
-
-/**
- * Lock toggle (#30, #55): displays the persisted enabled state truthfully
- * (not enabled-AND-available), and is disabled only when the lock is off
- * AND availability is false — turning the lock off is always possible,
- * preventing the trap where the toggle shows "off" while the lock is actually
- * on (broken availability check).
- */
-function LockToggle({
-  enabled,
-  available,
-  onToggle,
-}: {
-  enabled: boolean;
-  available: boolean;
-  onToggle: (enabled: boolean) => void;
-}) {
-  const { colors } = useTheme();
-  const disabled = !enabled && !available;
-  return (
-    <View style={styles.section}>
-      <Txt variant="microLabel" tone="dim">
-        {strings.lock.label}
-      </Txt>
-      <View style={[styles.lockRow, { backgroundColor: colors.card2 }]}>
-        <View style={styles.lockCopy}>
-          <Txt variant="listItem" tone="ink">
-            {strings.lock.label}
-          </Txt>
-          {!available && (
-            <Txt variant="secondary" tone="dim">
-              {strings.lock.unavailableExplanation}
-            </Txt>
-          )}
-        </View>
-        <Pressable
-          onPress={() => onToggle(!enabled)}
-          disabled={disabled}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: enabled, disabled }}
-          accessibilityLabel={strings.lock.label}
-          accessibilityValue={{ text: enabled ? strings.common.on : strings.common.off }}
-          style={[
-            styles.pill,
-            { backgroundColor: enabled ? accents.positive : colors.card3, opacity: disabled ? 0.5 : 1 },
-          ]}
-        >
-          <Txt variant="microLabel" tone={enabled ? 'onPositive' : 'muted'}>
-            {enabled ? strings.common.on : strings.common.off}
-          </Txt>
-        </Pressable>
-      </View>
-    </View>
   );
 }
 
@@ -621,15 +524,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, minHeight: 0 },
   scrollBody: { gap: 22, paddingBottom: 4 },
   section: { gap: 10 },
-  lockRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: metrics.iconTileRadius,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  lockCopy: { flex: 1, gap: 2 },
   pill: {
     paddingHorizontal: 16,
     height: 32,

@@ -28,6 +28,7 @@ import React from 'react';
 import { StyleSheet, View, type ViewProps } from 'react-native';
 
 const officialMock = jest.requireActual('@gorhom/bottom-sheet/mock');
+let lastBottomSheetModalProps: Record<string, unknown> | null = null;
 
 function composeLikeGorhomOnDevWeb(style: ViewProps['style']): ViewProps['style'] {
   if (!style) {
@@ -56,4 +57,20 @@ function BottomSheetView({ children, style, ...rest }: ViewProps) {
   );
 }
 
-module.exports = { ...officialMock, BottomSheetView };
+class BottomSheetModal extends officialMock.BottomSheetModal {
+  render() {
+    lastBottomSheetModalProps = this.props;
+    return super.render();
+  }
+}
+
+function getLastBottomSheetModalProps() {
+  return lastBottomSheetModalProps;
+}
+
+module.exports = {
+  ...officialMock,
+  BottomSheetModal,
+  BottomSheetView,
+  getLastBottomSheetModalProps,
+};

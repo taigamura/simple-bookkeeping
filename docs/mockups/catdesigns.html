@@ -1,0 +1,230 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --bg:#0E1116; --card:#171B22; --card2:#1A1F28; --card3:#242B35;
+    --ink:#EAEEF3; --muted:#9AA4B2; --dim:#6B7480;
+    --green:#2BD48A; --hair:rgba(255,255,255,.06); --border:rgba(255,255,255,.08);
+    --sand:#C2B69B; --sand2:#EFE6D2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#05070A;font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+    -webkit-font-smoothing:antialiased;padding:40px}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+  .shot{display:flex;flex-direction:column;gap:14px;background:#05070A;padding:6px;width:1240px}
+  .sheet-title{color:var(--dim);font-family:"JetBrains Mono",ui-monospace,monospace;
+    font-size:11px;letter-spacing:2.5px;text-transform:uppercase;padding:4px 6px 2px}
+  .row{display:flex;align-items:stretch;gap:14px;background:var(--bg);
+    border:1px solid var(--border);border-radius:18px;padding:18px 22px}
+  .who{width:230px;display:flex;flex-direction:column;gap:7px;justify-content:center}
+  .who .n{color:var(--ink);font-size:15.5px;font-weight:700}
+  .who .k{color:var(--green);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:9.5px;letter-spacing:1.8px}
+  .who .d{color:var(--muted);font-size:11.5px;line-height:1.5;font-weight:500}
+  .pose{width:190px;background:var(--card2);border:1px solid var(--hair);border-radius:14px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px 6px}
+  .pose .lab{color:var(--dim);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:9px;letter-spacing:2px}
+  .pose .art{height:78px;display:flex;align-items:center;justify-content:center}
+  .ctx{flex:1;display:flex;flex-direction:column;gap:8px;justify-content:center}
+  .ctx .lab{color:var(--dim);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:9px;letter-spacing:2px;padding-left:4px}
+  .hctx{background:var(--bg);border:1px solid var(--border);border-radius:14px;
+    padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+  .hctx .tt .h1{color:var(--ink);font-size:21px;font-weight:700;letter-spacing:-.4px}
+  .hctx .tt .sub{color:var(--muted);font-size:11px;font-weight:500;margin-top:1px}
+  .hctx .right{display:flex;align-items:center;gap:9px}
+  .gear{width:32px;height:32px;border-radius:16px;background:var(--card2);color:var(--muted);
+    display:grid;place-items:center;font-size:14px;border:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<div class="shot" data-shot="cat-designs">
+  <div class="sheet-title">Mochi — five design directions · run + sleep · shown 6× and at real header scale</div>
+  <div id="rows"></div>
+</div>
+
+<script>
+/* ---------- pixel frames ---------- */
+const PIX={
+  A:{ // 16x10 chunky retro
+    run:[
+      "...........#..#.",
+      "...........####.",
+      "#..........##.#.",
+      ".#......#######.",
+      "..#############.",
+      "..############..",
+      "...##########...",
+      "..##.......##...",
+      ".##.........##..",
+      "##............##",
+    ],
+    sleep:[
+      "................",
+      "................",
+      "................",
+      "......#.#.......",
+      ".....######.....",
+      "...##########...",
+      "..############..",
+      "..############..",
+      "...##########...",
+      "..##............",
+    ],
+    w:16,h:10},
+  B:{ // 20x12 finer, two-tone belly + eye
+    run:[
+      "..............#..#..",
+      "..............####..",
+      "#.............##.#..",
+      ".#............#####.",
+      "..#......##########.",
+      "...##..############.",
+      ".....###oooooooo##..",
+      "......##......##....",
+      ".....##........##...",
+      "....##..........##..",
+      "....................",
+      "....................",
+    ],
+    sleep:[
+      "....................",
+      "....................",
+      "........#.#.........",
+      ".......#####........",
+      ".....#########......",
+      "....############....",
+      "...##oooooooo##.....",
+      "...##oooooooo##.....",
+      "....############....",
+      "..###...............",
+      "....................",
+      "....................",
+    ],
+    w:20,h:12},
+};
+
+function pixSvg(kind,pose,px){
+  const P=PIX[kind], f=P[pose];
+  let cells='';
+  f.forEach((row,y)=>{[...row].forEach((c,x)=>{
+    if(c==='#')cells+=`<rect x="${x}" y="${y}" width="1" height="1" fill="var(--sand)"/>`;
+    if(c==='o')cells+=`<rect x="${x}" y="${y}" width="1" height="1" fill="var(--sand2)"/>`;
+  });});
+  return `<svg width="${P.w*px}" height="${P.h*px}" viewBox="0 0 ${P.w} ${P.h}"
+    style="display:block"><g shape-rendering="crispEdges">${cells}</g></svg>`;
+}
+
+/* ---------- vector silhouette ---------- */
+function silSvg(pose,s){
+  if(pose==='run')return `<svg width="${40*s}" height="${24*s}" viewBox="0 0 40 24" style="display:block">
+    <g fill="var(--sand)" stroke="var(--sand)">
+      <path d="M5 12 C1.5 9 1.5 4 4.5 1.5" fill="none" stroke-width="2.6" stroke-linecap="round"/>
+      <ellipse cx="17" cy="12" rx="11.5" ry="5.6" stroke="none"/>
+      <g fill="none" stroke-width="2.5" stroke-linecap="round">
+        <path d="M9 16 L5.5 22"/><path d="M13 17 L12 22"/>
+        <path d="M22 17 L23.5 22"/><path d="M26 15.5 L29.5 22"/>
+      </g>
+      <circle cx="31" cy="8" r="5.8" stroke="none"/>
+      <path d="M27 4.2 L26 0 L30 2.4 Z" stroke="none"/>
+      <path d="M33 3.4 L35.6 0 L36.6 4 Z" stroke="none"/>
+    </g></svg>`;
+  return `<svg width="${40*s}" height="${24*s}" viewBox="0 0 40 24" style="display:block">
+    <g fill="var(--sand)" stroke="var(--sand)">
+      <circle cx="20" cy="14" r="8.2" stroke="none"/>
+      <path d="M14.5 8.5 L14 4.5 L17.5 6.8 Z" stroke="none"/>
+      <path d="M19.5 6 L22 3 L23 7 Z" stroke="none"/>
+      <path d="M13 19.5 C16 22.6 25 22.6 28 19" fill="none" stroke-width="2.6" stroke-linecap="round"/>
+    </g></svg>`;
+}
+
+/* ---------- line / outline ---------- */
+function lineSvg(pose,s){
+  if(pose==='run')return `<svg width="${40*s}" height="${24*s}" viewBox="0 0 40 24" style="display:block">
+    <g fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12 C1.5 9 1.5 4 4.5 1.5"/>
+      <path d="M9 16.5 L6 22 M13 17.3 L12 22 M22 17.3 L23.5 22 M26 16 L29.5 22"/>
+      <path d="M6.5 10.5 C9 7.4 24 5.6 27.5 8.6 C29.5 10.6 28.5 15 25 16.4 C19 18.4 9.5 17.6 6.9 15 C5.6 13.6 5.6 11.8 6.5 10.5 Z"/>
+      <path d="M27 9.5 C26.5 6.5 27.5 4.3 29 3.2 L30.5 5 C31.6 4.5 33 4.5 34 5 L35.6 3 C36.8 4.4 37.2 6.6 36.4 9 C37 10.4 36.6 12 35.4 13 C33 15 29.5 14.6 28 13"/>
+      <circle cx="33.4" cy="8.6" r=".8" fill="var(--muted)" stroke="none"/>
+    </g></svg>`;
+  return `<svg width="${40*s}" height="${24*s}" viewBox="0 0 40 24" style="display:block">
+    <g fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="20" cy="14" r="8"/>
+      <path d="M14.8 8.4 L14.2 4.6 L17.6 6.7"/>
+      <path d="M19.6 6.1 L22 3.2 L22.9 6.9"/>
+      <path d="M13.5 19.5 C16.5 22.4 24.5 22.4 27.5 19.2"/>
+      <path d="M17.5 13.5 C18.3 14.6 19.5 14.6 20.3 13.5"/>
+    </g></svg>`;
+}
+
+/* ---------- fude (brush) ---------- */
+function fudeSvg(pose,s){
+  if(pose==='run')return `<svg width="${40*s}" height="${24*s}" viewBox="0 0 40 24" style="display:block">
+    <g fill="#CFC8B8">
+      <!-- tail flick -->
+      <path d="M7.5 13 C3.5 11.5 1.6 6.5 4 1.8 C4.2 6 5.8 9.6 9.6 11.4 Z"/>
+      <!-- one-stroke body: thick at chest, tapers to rear -->
+      <path d="M6 13.5 C11 8.6 23 7 30 9.6 C32.4 10.6 32.6 13.4 30 14.6 C23 17.6 12 17.4 6.6 15 C5.8 14.6 5.6 14 6 13.5 Z"/>
+      <!-- head blob + ear flicks -->
+      <path d="M28.5 8.8 C28.6 5.6 31 3.4 34 3.8 C36.6 4.2 38.2 6.6 37.8 9.2 C37.4 11.8 35 13.4 32.4 13 C30 12.6 28.4 10.9 28.5 8.8 Z"/>
+      <path d="M29.8 5 C29.4 3.2 29.6 1.6 30.4 0.2 C31.6 1.2 32.4 2.6 32.6 4.2 Z"/>
+      <path d="M35 4.4 C35.6 2.8 36.6 1.4 38 .6 C38.2 2.2 37.8 3.8 36.8 5.2 Z"/>
+      <!-- leg flicks -->
+      <path d="M10 16.5 C9 18.5 7.8 20.2 6.2 21.6 C7 19.4 7.8 17.6 8.6 16.2 Z"/>
+      <path d="M24 17 C24.8 19 25.8 20.6 27.4 22 C26.4 19.8 25.8 18 25.4 16.4 Z"/>
+    </g></svg>`;
+  /* sleep: the cat curls into an ensō */
+  return `<svg width="${40*s}" height="${24*s}" viewBox="0 0 40 24" style="display:block">
+    <g fill="#CFC8B8">
+      <path d="M20 4.6 C13.4 4.6 9.4 9 9.6 14 C9.8 18.8 14 22.4 19.6 22.4 C24.6 22.4 28.6 19.6 29.8 15.6 C30 14.9 29.3 14.4 28.7 14.9 C27 19 23.4 20.8 19.8 20.7 C15.2 20.6 11.8 17.6 11.7 13.8 C11.6 9.8 15 6.6 20 6.6 C24 6.6 27 8.8 28 12 L30 11.4 C28.6 7.2 24.8 4.6 20 4.6 Z"/>
+      <path d="M15.6 5.8 C15 4.2 14.9 2.6 15.4 1 C16.8 1.8 17.8 3 18.4 4.6 Z"/>
+      <path d="M21.6 4.4 C22 2.8 22.9 1.4 24.2 .4 C24.6 2 24.4 3.6 23.7 5 Z"/>
+    </g></svg>`;
+}
+
+/* ---------- rows ---------- */
+const designs=[
+  {key:'A',name:'Pixel Classic',kicker:'16×10 · 1 color',
+   desc:'The retro option — chunky like the original RunCat. Reads instantly as "a little game creature".',
+   art:(pose,s)=>pixSvg('A',pose,s)},
+  {key:'B',name:'Pixel Fine',kicker:'20×12 · 2 tones',
+   desc:'Finer grid, cream belly, eye notch. Sleeker anatomy — closest to RunCat’s actual cat.',
+   art:(pose,s)=>pixSvg('B',pose,s)},
+  {key:'C',name:'Silhouette',kicker:'vector · 1 color',
+   desc:'Smooth solid glyph, no pixels. Quietest of the five — feels like part of the icon set.',
+   art:(pose,s)=>silSvg(pose,s)},
+  {key:'D',name:'Line Cat',kicker:'outline · hairline',
+   desc:'Stroke-only, same weight as the UI’s icons and hairlines. Almost invisible until it moves.',
+   art:(pose,s)=>lineSvg(pose,s)},
+  {key:'E',name:'Fude',kicker:'brush · sumi-e',
+   desc:'Drawn in a few brush flicks; asleep it curls into an ensō circle. The most "Kaji" of the set.',
+   art:(pose,s)=>fudeSvg(pose,s)},
+];
+
+const rowsEl=document.getElementById('rows');
+rowsEl.style.display='flex';rowsEl.style.flexDirection='column';rowsEl.style.gap='14px';
+for(const d of designs){
+  const row=document.createElement('div');row.className='row';
+  const zoomPx = d.key==='A'?6 : d.key==='B'?5 : 2.9; // pixel grids vs 40-unit vectors
+  const ctxPx  = d.key==='A'?2 : d.key==='B'?1.8 : 0.85;
+  row.innerHTML=`
+    <div class="who"><div class="k">${d.kicker.toUpperCase()}</div><div class="n">${d.name}</div><div class="d">${d.desc}</div></div>
+    <div class="pose"><div class="art">${d.art('run',zoomPx)}</div><div class="lab">RUN</div></div>
+    <div class="pose"><div class="art">${d.art('sleep',zoomPx)}</div><div class="lab">SLEEP</div></div>
+    <div class="ctx"><div class="lab">REAL SIZE · IN THE HEADER</div>
+      <div class="hctx">
+        <div class="tt"><div class="h1">Summary</div><div class="sub">July 2026</div></div>
+        <div class="right">${d.art('run',ctxPx)}<div class="gear">⚙</div></div>
+      </div>
+      <div class="hctx" style="padding-top:10px;padding-bottom:10px">
+        <div class="tt"><div class="sub">asleep · no spend today</div></div>
+        <div class="right">${d.art('sleep',ctxPx)}<div class="gear">⚙</div></div>
+      </div>
+    </div>`;
+  rowsEl.appendChild(row);
+}
+</script>
+</body>
+</html>

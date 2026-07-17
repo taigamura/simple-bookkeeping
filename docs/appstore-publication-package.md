@@ -25,7 +25,6 @@ Personal expense tracker
 - View spending summaries by category and month.
 - Choose from four display currencies (symbol-only, no conversion).
 - Import and export your data as Zaim-compatible CSV files for backup or transfer.
-- Protect your data with optional Face ID or device passcode.
 - Switch between light and dark themes.
 - Use the full app in Japanese or English, matching your device language.
 
@@ -82,7 +81,6 @@ Standard
 - カテゴリ別・月別の支出サマリーを表示。
 - 4つの表示通貨から選択（記号のみ、換算なし）。
 - Zaim互換のCSVファイルで自分のデータをバックアップ・移行。
-- Face IDまたはデバイスパスコードで任意にロック。
 - ライト・ダークテーマを切り替え。
 - デバイス言語に合わせて、日本語または英語で全機能を利用可能。
 
@@ -147,7 +145,7 @@ Standard
 1. **Cold launch:** Open the app with no prior data. You will see the Calendar view.
 2. **Add an entry:** Tap the ＋ button to create an expense or income entry. Choose a category, enter an amount, and optionally add a note. You can set the entry as a repeat (daily, monthly, or yearly); it continues indefinitely from the selected date.
 3. **View summary:** Tap the Summary tab to see monthly totals and spending by category.
-4. **Settings:** Tap Settings to view options. You can toggle the appearance theme, set an optional device lock (Face ID/passcode), change the currency symbol, manage custom categories, and access import/export.
+4. **Settings:** Tap Settings to view options. You can toggle the appearance theme, change the currency symbol, manage custom categories, and access import/export.
 5. **CSV import/export:**
    - To export: In Settings, tap "Export data" to save a CSV file using the system share sheet. Repeating occurrences through today are exported as concrete one-time rows because Zaim CSV has no recurrence-rule format.
    - To import: In Settings, tap "Import from Zaim" to select a CSV file. [NAME] accepts standard Zaim CSV format and UTF-8 or Shift-JIS encoding.
@@ -158,7 +156,6 @@ Standard
 **Important notes:**
 - The app is fully functional offline.
 - No account is required to use the app.
-- The optional device lock uses iOS system authentication (Face ID, Touch ID, or passcode) and does not store biometric data in the app.
 - CSV import is Zaim-compatible and supports both UTF-8 and Shift-JIS encoding.
 - The "symbol-only currency" means the currency display changes (¥, $, €, £) but amounts are never converted or recalculated.
 
@@ -301,7 +298,7 @@ When the final public name is decided, update the following locations to ensure 
 ## Part 7: Export Compliance
 
 **Classification:**
-[NAME] does not use encryption beyond the built-in platform security (iOS Keychain for optional device lock). It requires no CCATS export-compliance review.
+[NAME] does not implement or bundle encryption. It requires no CCATS export-compliance review.
 
 **EARs/ITARs applicability:**
 No. The app does not contain regulated technical data, source code, or cryptographic algorithms.

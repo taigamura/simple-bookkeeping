@@ -1,0 +1,614 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --bg:#0E1116; --card:#171B22; --card2:#1A1F28; --card3:#242B35;
+    --ink:#EAEEF3; --muted:#9AA4B2; --dim:#6B7480;
+    --green:#2BD48A; --red:#F0766C; --on-green:#0B0E12;
+    --hair:rgba(255,255,255,.06); --line:rgba(255,255,255,.10); --border:rgba(255,255,255,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#05070A;font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+    -webkit-font-smoothing:antialiased;padding:40px;display:flex;flex-direction:column;gap:48px;align-items:flex-start}
+  .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace}
+
+  .shot{display:flex;gap:28px;padding:0;background:#05070A}
+  .phone{width:402px;height:730px;background:var(--bg);border-radius:34px;overflow:hidden;
+    position:relative;border:1px solid rgba(255,255,255,.09);flex-shrink:0;display:flex;flex-direction:column}
+  .screen{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+
+  .status{height:34px;display:flex;justify-content:space-between;align-items:center;
+    padding:0 24px;font-size:12px;color:var(--ink);position:relative;z-index:5}
+  .status .t{font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:600}
+  .status .pills{display:flex;gap:5px}
+  .status .pills i{display:block;width:14px;height:8px;border-radius:2px;background:rgba(255,255,255,.35)}
+
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;
+    padding:14px 20px 0;position:relative;z-index:5}
+  .hdr h1{color:var(--ink);font-size:24px;font-weight:700;letter-spacing:-.48px}
+  .hdr .sub{color:var(--muted);font-size:12px;font-weight:500;margin-top:2px}
+  .gear{width:34px;height:34px;border-radius:17px;background:var(--card2);color:var(--muted);
+    display:grid;place-items:center;font-size:15px;border:1px solid var(--border)}
+
+  .content{padding:16px 20px 0;display:flex;flex-direction:column;gap:14px;position:relative;z-index:5}
+
+  .card{background:var(--card);border-radius:18px;padding:18px;border:1px solid var(--border);
+    display:flex;flex-direction:column;gap:11px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .eyebrow{color:var(--dim);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:10.5px;
+    font-weight:600;letter-spacing:1.47px;text-transform:uppercase}
+  .net{color:var(--green);font-family:"JetBrains Mono",ui-monospace,monospace;
+    font-size:40px;font-weight:700;letter-spacing:-1.2px}
+  .split{height:8px;border-radius:6px;overflow:hidden;display:flex;background:var(--card3)}
+  .split .in{width:73%;background:var(--green)} .split .out{flex:1;background:var(--red)}
+  .legend{display:flex;gap:18px}
+  .legend .item{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;font-weight:500}
+  .legend .dot{width:8px;height:8px;border-radius:4px}
+  .legend .amt{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;font-weight:600}
+
+  .cats{display:flex;flex-direction:column;gap:13px}
+  .cat .row{display:flex;justify-content:space-between;margin-bottom:7px}
+  .cat .lbl{color:var(--ink);font-size:14.5px;font-weight:600}
+  .cat .amt{color:var(--ink);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:14px;font-weight:600}
+  .cat .track{height:7px;border-radius:6px;background:var(--card3);overflow:hidden}
+  .cat .fill{height:100%;background:var(--green);border-radius:6px}
+
+  .tabbar{height:78px;border-top:1px solid var(--hair);display:flex;align-items:center;
+    justify-content:space-around;padding:0 30px;background:rgba(14,17,22,.9);position:relative;z-index:6}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--dim);font-size:10px;font-weight:600}
+  .tab.on{color:var(--ink)}
+  .tab .ic{font-size:19px}
+  .fab{width:54px;height:54px;border-radius:27px;background:var(--green);color:var(--on-green);
+    display:grid;place-items:center;font-size:24px;font-weight:700;margin-top:-26px;
+    box-shadow:0 8px 22px rgba(43,212,138,.32)}
+
+  .tag{position:absolute;left:0;right:0;bottom:-34px;text-align:center;color:#5A6472;
+    font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase}
+
+  /* ---------- IDEA 1 · KAJI-MON ---------- */
+  .pet-card{flex-direction:row;gap:16px;align-items:center;overflow:hidden;position:relative}
+  .pet-stage{width:124px;height:124px;border-radius:14px;flex-shrink:0;display:grid;place-items:center;
+    background:
+      linear-gradient(0deg,transparent 0 calc(100% - 1px),rgba(255,255,255,.05) 0),
+      linear-gradient(90deg,transparent 0 calc(100% - 1px),rgba(255,255,255,.05) 0);
+    background-size:14px 14px;background-color:#12332F}
+  canvas{image-rendering:pixelated;display:block}
+  .pet-info{flex:1;display:flex;flex-direction:column;gap:8px}
+  .pet-name-row{display:flex;align-items:baseline;gap:8px}
+  .pet-name{color:var(--ink);font-size:17px;font-weight:700}
+  .pet-lv{color:var(--dim);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;font-weight:600}
+  .pace-pill{align-self:flex-start;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:10px;
+    letter-spacing:1px;padding:3px 10px;border-radius:999px;color:var(--green);
+    border:1px solid rgba(43,212,138,.45);background:rgba(43,212,138,.08)}
+  .pet-copy{color:var(--muted);font-size:11.5px;line-height:1.45;font-weight:500}
+  .evo-row{display:flex;align-items:center;gap:8px;margin-top:2px}
+  .evo-row .q{color:var(--dim);font-size:10px;font-weight:600;letter-spacing:.4px}
+  .evo-ghost{opacity:.5}
+
+  /* ---------- IDEA 2 · BONSAI ---------- */
+  .bonsai-hero{height:308px;position:relative;overflow:hidden;flex-shrink:0}
+  .bonsai-hero .glow{position:absolute;inset:0;
+    background:radial-gradient(circle at 50% 62%,rgba(43,212,138,.10),rgba(43,212,138,.02) 55%,transparent 75%)}
+  .bonsai-hero svg{position:absolute;left:50%;transform:translateX(-50%);bottom:-4px}
+  .bonsai-hero .floor{position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--line)}
+  .day-chip{position:absolute;left:20px;bottom:16px;display:flex;align-items:baseline;gap:9px;z-index:4}
+  .day-chip .n{color:var(--ink);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:40px;font-weight:700;letter-spacing:-1.2px}
+  .day-chip .c{color:var(--muted);font-size:10.5px;font-weight:600;line-height:1.4;text-transform:uppercase;letter-spacing:1px}
+  .bonsai-kicker{position:absolute;top:12px;left:20px;color:var(--dim);z-index:4;
+    font-family:"JetBrains Mono",ui-monospace,monospace;font-size:10px;letter-spacing:2px}
+
+  /* ---------- IDEA 3 · KOI POND ---------- */
+  .pond-wrap{position:absolute;left:0;right:0;bottom:78px;height:284px;overflow:hidden;z-index:1}
+  .pond-wrap svg{display:block}
+  .pond-caption{position:absolute;left:20px;bottom:96px;z-index:5}
+  .pond-caption .big{color:var(--ink);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:34px;font-weight:700;letter-spacing:-1px;
+    text-shadow:0 2px 12px rgba(0,0,0,.7)}
+  .pond-caption .small{color:rgba(234,238,243,.75);font-size:11px;font-weight:600;letter-spacing:.6px;margin-top:2px;
+    text-shadow:0 2px 8px rgba(0,0,0,.8)}
+
+  /* ---------- IDEA 4 · HANKO ---------- */
+  .hanko-head{display:flex;justify-content:space-between;align-items:baseline}
+  .hanko-title{color:var(--ink);font-size:15px;font-weight:700;letter-spacing:.5px}
+  .streak{color:var(--green);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:.5px}
+  .stamp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+  .dow{color:var(--dim);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:8.5px;text-align:center;letter-spacing:1px;padding-bottom:2px}
+  .dcell{aspect-ratio:1;border-radius:11px;background:var(--card2);border:1px solid var(--hair);
+    display:grid;place-items:center;position:relative}
+  .dcell .dn{position:absolute;top:3px;left:6px;color:var(--dim);
+    font-family:"JetBrains Mono",ui-monospace,monospace;font-size:8px}
+  .dcell.today{border-color:rgba(43,212,138,.55)}
+  .dcell.future{opacity:.38}
+  .stamp{width:26px;height:26px;border-radius:50%;border:2px solid #D64B41;color:#E4574C;
+    display:grid;place-items:center;font-size:12px;font-weight:700;font-family:"Noto Sans JP",sans-serif;
+    background:radial-gradient(circle at 35% 30%,rgba(214,75,65,.22),rgba(214,75,65,.06));
+    text-shadow:0 0 6px rgba(214,75,65,.4)}
+  .stamp.perfect{border-color:var(--green);color:var(--green);
+    background:radial-gradient(circle at 35% 30%,rgba(43,212,138,.22),rgba(43,212,138,.05))}
+  .hanko-foot{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--hair);padding-top:12px}
+  .hanko-foot .l{color:var(--muted);font-size:11.5px;font-weight:500}
+  .hanko-foot .r{color:var(--ink);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;font-weight:600}
+
+  /* ---------- IDEA 5 · MICRO-SEASON SKY ---------- */
+  .sky{height:238px;position:relative;overflow:hidden;flex-shrink:0}
+  .sky svg{position:absolute;inset:0}
+  .sky .season{position:absolute;left:20px;bottom:44px;z-index:4}
+  .sky .kanji{color:rgba(234,238,243,.94);font-size:30px;font-weight:600;letter-spacing:10px;
+    font-family:"Noto Serif JP","Noto Sans JP",serif;text-shadow:0 2px 14px rgba(0,0,0,.55)}
+  .sky .romaji{color:rgba(234,238,243,.62);font-family:"JetBrains Mono",ui-monospace,monospace;
+    font-size:9.5px;letter-spacing:2.5px;margin-top:6px;text-transform:uppercase}
+  .sky .pace-line{position:absolute;left:20px;bottom:16px;font-size:11px;font-weight:600;z-index:4;
+    color:rgba(234,238,243,.85);text-shadow:0 1px 8px rgba(0,0,0,.6)}
+  .sky .hdr h1,.sky .hdr .sub{text-shadow:0 2px 10px rgba(0,0,0,.5)}
+</style>
+</head>
+<body>
+
+<!-- ============ SHOT 1 · KAJI-MON COMPANION ============ -->
+<div class="shot" data-shot="1-kajimon" style="position:relative">
+  <div class="phone"><div class="screen">
+    <div class="status"><span class="t">9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+    <div class="hdr"><div><h1>Summary</h1><div class="sub">July 2026</div></div><div class="gear">⚙</div></div>
+    <div class="content">
+      <div class="card pet-card">
+        <div class="pet-stage"><canvas id="pet-main" width="112" height="112"></canvas></div>
+        <div class="pet-info">
+          <div class="pet-name-row"><span class="pet-name">カジ</span><span class="pet-lv">LV.07 · 12 ENTRIES</span></div>
+          <span class="pace-pill">CONTENT · ON TRACK</span>
+          <div class="pet-copy">Every entry feeds Kaji. Your pace against budget decides its mood — and its month-end evolution.</div>
+          <div class="evo-row">
+            <span class="q">MONTH-END:</span>
+            <canvas class="evo-ghost" id="pet-angel" width="28" height="28"></canvas>
+            <span class="q">or</span>
+            <canvas class="evo-ghost" id="pet-devil" width="28" height="28"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Net this month</div>
+        <div class="net">+¥76,070</div>
+        <div class="split"><div class="in"></div><div class="out"></div></div>
+        <div class="legend">
+          <div class="item"><span class="dot" style="background:var(--green)"></span>In <span class="amt" style="color:var(--green)">¥120,000</span></div>
+          <div class="item"><span class="dot" style="background:var(--red)"></span>Out <span class="amt" style="color:var(--red)">¥43,930</span></div>
+        </div>
+      </div>
+      <div class="cats">
+        <div class="eyebrow">Spending by category</div>
+        <div class="cat"><div class="row"><span class="lbl">Groceries</span><span class="amt">¥12,830</span></div><div class="track"><div class="fill" style="width:86%"></div></div></div>
+        <div class="cat"><div class="row"><span class="lbl">Food</span><span class="amt">¥10,600</span></div><div class="track"><div class="fill" style="width:71%"></div></div></div>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="tabbar">
+      <div class="tab on"><span class="ic">◎</span>Summary</div>
+      <div class="fab">＋</div>
+      <div class="tab"><span class="ic">▦</span>Calendar</div>
+    </div>
+  </div></div>
+  <div class="tag">Idea 1 · Kaji-mon companion — mood follows budget pace</div>
+</div>
+
+<!-- ============ SHOT 2 · BONSAI GROWTH (3 stages) ============ -->
+<div class="shot" data-shot="2-bonsai" style="position:relative">
+  <div class="phone" id="bp1"></div>
+  <div class="phone" id="bp2"></div>
+  <div class="phone" id="bp3"></div>
+  <div class="tag">Idea 2 · Bonsai — each entry grows the month's tree</div>
+</div>
+
+<!-- ============ SHOT 3 · KOI POND ============ -->
+<div class="shot" data-shot="3-koi" style="position:relative">
+  <div class="phone"><div class="screen">
+    <div class="status"><span class="t">9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+    <div class="hdr"><div><h1>Summary</h1><div class="sub">July 2026</div></div><div class="gear">⚙</div></div>
+    <div class="content">
+      <div class="card">
+        <div class="eyebrow">Net this month</div>
+        <div class="net">+¥76,070</div>
+        <div class="split"><div class="in"></div><div class="out"></div></div>
+        <div class="legend">
+          <div class="item"><span class="dot" style="background:var(--green)"></span>In <span class="amt" style="color:var(--green)">¥120,000</span></div>
+          <div class="item"><span class="dot" style="background:var(--red)"></span>Out <span class="amt" style="color:var(--red)">¥43,930</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="pond-wrap">
+      <svg width="402" height="284" viewBox="0 0 402 284">
+        <defs>
+          <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#0E1116"/>
+            <stop offset=".22" stop-color="#0D1D22"/>
+            <stop offset="1" stop-color="#0A2A30"/>
+          </linearGradient>
+          <radialGradient id="deep" cx=".5" cy=".85" r=".8">
+            <stop offset="0" stop-color="rgba(23,90,96,.35)"/>
+            <stop offset="1" stop-color="rgba(23,90,96,0)"/>
+          </radialGradient>
+        </defs>
+        <rect width="402" height="284" fill="url(#water)"/>
+        <rect width="402" height="284" fill="url(#deep)"/>
+        <!-- ripples -->
+        <g stroke="rgba(234,238,243,.10)" fill="none">
+          <ellipse cx="96" cy="130" rx="34" ry="9"/><ellipse cx="96" cy="130" rx="18" ry="4.6"/>
+          <ellipse cx="300" cy="196" rx="42" ry="11"/><ellipse cx="300" cy="196" rx="22" ry="5.4"/>
+          <ellipse cx="188" cy="86" rx="26" ry="6.5"/>
+        </g>
+        <!-- lily pads -->
+        <g>
+          <path d="M340 84 a24 13 0 1 0 0.1 0 M340 84 l26 -9" fill="#12352E" stroke="rgba(43,212,138,.25)" stroke-width="1"/>
+          <path d="M52 210 a20 11 0 1 0 0.1 0 M52 210 l22 -7" fill="#123029" stroke="rgba(43,212,138,.2)" stroke-width="1"/>
+        </g>
+        <!-- koi -->
+        <g id="koi">
+          <!-- big white-orange koi -->
+          <g transform="translate(150 150) rotate(-18)">
+            <path d="M-34 0 C-20 -15 18 -16 38 0 C18 16 -20 15 -34 0 Z" fill="#E7EBEE"/>
+            <path d="M-34 0 L-52 -11 C-46 -3 -46 3 -52 11 Z" fill="#E7EBEE" opacity=".85"/>
+            <ellipse cx="8" cy="-4" rx="12" ry="8" fill="#E8734F"/>
+            <ellipse cx="-14" cy="4" rx="8" ry="5.5" fill="#E8734F" opacity=".9"/>
+            <circle cx="30" cy="-3.5" r="1.8" fill="#141820"/>
+          </g>
+          <!-- small koi -->
+          <g transform="translate(268 118) rotate(146)" opacity=".92">
+            <path d="M-22 0 C-13 -10 12 -10.5 25 0 C12 10.5 -13 10 -22 0 Z" fill="#E8734F"/>
+            <path d="M-22 0 L-34 -7 C-30 -2 -30 2 -34 7 Z" fill="#E8734F" opacity=".85"/>
+            <ellipse cx="2" cy="-2" rx="8" ry="5" fill="#F3F5F6"/>
+            <circle cx="19" cy="-2.4" r="1.4" fill="#141820"/>
+          </g>
+          <!-- shadow koi (deep) -->
+          <g transform="translate(90 236) rotate(24)" opacity=".38">
+            <path d="M-26 0 C-15 -11 14 -12 29 0 C14 12 -15 11 -26 0 Z" fill="#3E5A63"/>
+            <path d="M-26 0 L-40 -8 C-35 -2.5 -35 2.5 -40 8 Z" fill="#3E5A63"/>
+          </g>
+          <g transform="translate(330 250) rotate(-160)" opacity=".3">
+            <path d="M-20 0 C-12 -9 10 -9 22 0 C10 9 -12 9 -20 0 Z" fill="#3E5A63"/>
+          </g>
+        </g>
+        <!-- surface sheen -->
+        <rect width="402" height="60" fill="url(#water)" opacity=".35"/>
+      </svg>
+    </div>
+    <div class="pond-caption">
+      <div class="big">12<span style="font-size:15px;color:rgba(234,238,243,.6);letter-spacing:0"> 匹</span></div>
+      <div class="small">A koi for every entry · clear water — on pace</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="tabbar" style="background:rgba(14,17,22,.94)">
+      <div class="tab on"><span class="ic">◎</span>Summary</div>
+      <div class="fab">＋</div>
+      <div class="tab"><span class="ic">▦</span>Calendar</div>
+    </div>
+  </div></div>
+  <div class="tag">Idea 3 · Koi pond — entries become fish, budget health is water clarity</div>
+</div>
+
+<!-- ============ SHOT 4 · HANKO STAMP CARD ============ -->
+<div class="shot" data-shot="4-hanko" style="position:relative">
+  <div class="phone"><div class="screen">
+    <div class="status"><span class="t">9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+    <div class="hdr"><div><h1>Summary</h1><div class="sub">July 2026</div></div><div class="gear">⚙</div></div>
+    <div class="content">
+      <div class="card">
+        <div class="hanko-head">
+          <span class="hanko-title">出席カード <span style="color:var(--dim);font-size:11px;font-weight:500">· stamp card</span></span>
+          <span class="streak">▲ 11-DAY STREAK</span>
+        </div>
+        <div class="stamp-grid" id="stampgrid"></div>
+        <div class="hanko-foot">
+          <span class="l">Log today to keep the ink flowing</span>
+          <span class="r">17 / 31</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Net this month</div>
+        <div class="net">+¥76,070</div>
+        <div class="split"><div class="in"></div><div class="out"></div></div>
+        <div class="legend">
+          <div class="item"><span class="dot" style="background:var(--green)"></span>In <span class="amt" style="color:var(--green)">¥120,000</span></div>
+          <div class="item"><span class="dot" style="background:var(--red)"></span>Out <span class="amt" style="color:var(--red)">¥43,930</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="tabbar">
+      <div class="tab on"><span class="ic">◎</span>Summary</div>
+      <div class="fab">＋</div>
+      <div class="tab"><span class="ic">▦</span>Calendar</div>
+    </div>
+  </div></div>
+  <div class="tag">Idea 4 · Hanko stamp card — radio-taisō attendance for your ledger</div>
+</div>
+
+<!-- ============ SHOT 5 · MICRO-SEASON SKY (two states) ============ -->
+<div class="shot" data-shot="5-seasons" style="position:relative">
+  <!-- clear / on pace -->
+  <div class="phone"><div class="screen">
+    <div class="sky">
+      <svg width="402" height="238" viewBox="0 0 402 238" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="dawn" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#101B2C"/>
+            <stop offset=".55" stop-color="#1B3245"/>
+            <stop offset="1" stop-color="#3E5A63"/>
+          </linearGradient>
+          <radialGradient id="sun" cx=".72" cy=".58" r=".34">
+            <stop offset="0" stop-color="rgba(255,222,180,.95)"/>
+            <stop offset=".28" stop-color="rgba(255,205,150,.5)"/>
+            <stop offset="1" stop-color="rgba(255,205,150,0)"/>
+          </radialGradient>
+        </defs>
+        <rect width="402" height="238" fill="url(#dawn)"/>
+        <rect width="402" height="238" fill="url(#sun)"/>
+        <circle cx="290" cy="138" r="17" fill="#FFE7C4"/>
+        <g fill="rgba(234,238,243,.14)">
+          <ellipse cx="90" cy="70" rx="58" ry="10"/>
+          <ellipse cx="130" cy="80" rx="44" ry="8"/>
+          <ellipse cx="330" cy="46" rx="40" ry="7"/>
+        </g>
+        <!-- dragonfly hint -->
+        <g stroke="rgba(234,238,243,.5)" stroke-width="1.2" fill="none" transform="translate(120 150) rotate(-12)">
+          <line x1="0" y1="0" x2="14" y2="0"/><ellipse cx="4" cy="-3.5" rx="6" ry="1.6"/><ellipse cx="4" cy="3.5" rx="6" ry="1.6"/>
+        </g>
+        <rect y="196" width="402" height="42" fill="rgba(14,17,22,.55)"/>
+        <rect y="150" width="402" height="88" fill="url(#dawn)" opacity=".28"/>
+      </svg>
+      <div class="status"><span class="t">9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+      <div class="hdr"><div><h1>Summary</h1><div class="sub">July 2026</div></div><div class="gear" style="background:rgba(14,17,22,.6)">⚙</div></div>
+      <div class="season"><div class="kanji">小暑</div><div class="romaji">SHŌSHO · Lesser heat · Jul 7–22</div></div>
+      <div class="pace-line">Clear skies — spending on pace</div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="eyebrow">Net this month</div>
+        <div class="net">+¥76,070</div>
+        <div class="split"><div class="in"></div><div class="out"></div></div>
+        <div class="legend">
+          <div class="item"><span class="dot" style="background:var(--green)"></span>In <span class="amt" style="color:var(--green)">¥120,000</span></div>
+          <div class="item"><span class="dot" style="background:var(--red)"></span>Out <span class="amt" style="color:var(--red)">¥43,930</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="tabbar">
+      <div class="tab on"><span class="ic">◎</span>Summary</div>
+      <div class="fab">＋</div>
+      <div class="tab"><span class="ic">▦</span>Calendar</div>
+    </div>
+  </div></div>
+
+  <!-- overcast / over pace -->
+  <div class="phone"><div class="screen">
+    <div class="sky">
+      <svg width="402" height="238" viewBox="0 0 402 238" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="storm" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#12151B"/>
+            <stop offset=".6" stop-color="#232833"/>
+            <stop offset="1" stop-color="#39404D"/>
+          </linearGradient>
+        </defs>
+        <rect width="402" height="238" fill="url(#storm)"/>
+        <g fill="rgba(154,164,178,.20)">
+          <ellipse cx="110" cy="90" rx="86" ry="20"/>
+          <ellipse cx="180" cy="72" rx="70" ry="16"/>
+          <ellipse cx="300" cy="100" rx="90" ry="22"/>
+          <ellipse cx="40" cy="120" rx="60" ry="15"/>
+        </g>
+        <g fill="rgba(107,116,128,.35)">
+          <ellipse cx="250" cy="130" rx="100" ry="20"/>
+          <ellipse cx="90" cy="150" rx="80" ry="17"/>
+        </g>
+        <g stroke="rgba(234,238,243,.22)" stroke-width="1.3" stroke-linecap="round">
+          <line x1="120" y1="176" x2="113" y2="196"/>
+          <line x1="180" y1="168" x2="173" y2="188"/>
+          <line x1="245" y1="180" x2="238" y2="200"/>
+          <line x1="305" y1="170" x2="298" y2="190"/>
+          <line x1="70" y1="184" x2="63" y2="204"/>
+        </g>
+        <rect y="196" width="402" height="42" fill="rgba(14,17,22,.55)"/>
+      </svg>
+      <div class="status"><span class="t">9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+      <div class="hdr"><div><h1>Summary</h1><div class="sub">July 2026</div></div><div class="gear" style="background:rgba(14,17,22,.6)">⚙</div></div>
+      <div class="season"><div class="kanji">小暑</div><div class="romaji">SHŌSHO · Lesser heat · Jul 7–22</div></div>
+      <div class="pace-line" style="color:#F0766C">Rain gathering — ¥8,400 over pace</div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="eyebrow">Net this month</div>
+        <div class="net" style="color:var(--red)">−¥8,400</div>
+        <div class="split"><div class="in" style="width:44%"></div><div class="out"></div></div>
+        <div class="legend">
+          <div class="item"><span class="dot" style="background:var(--green)"></span>In <span class="amt" style="color:var(--green)">¥120,000</span></div>
+          <div class="item"><span class="dot" style="background:var(--red)"></span>Out <span class="amt" style="color:var(--red)">¥128,400</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="tabbar">
+      <div class="tab on"><span class="ic">◎</span>Summary</div>
+      <div class="fab">＋</div>
+      <div class="tab"><span class="ic">▦</span>Calendar</div>
+    </div>
+  </div></div>
+  <div class="tag">Idea 5 · Micro-season sky — 72 kō seasons + budget weather</div>
+</div>
+
+<script>
+/* ================= KAJI-MON SPRITE (from the artifact proof) ================= */
+const W=32,H=32;
+function ell(G,cx,cy,rx,ry,ch,over){
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const dx=(x-cx)/rx,dy=(y-cy)/ry;
+    if(dx*dx+dy*dy<=1){ if(!over||over.includes(G[y][x])) G[y][x]=ch; }
+  }
+}
+function set(G,x,y,ch){ x=Math.round(x);y=Math.round(y); if(x>=0&&x<W&&y>=0&&y<H)G[y][x]=ch; }
+const BODY=['m','d','l'], FACE=['m','d','l','b','s'];
+function build(v){
+  const G=Array.from({length:H},()=>Array(W).fill('.'));
+  if(v.wings){ ell(G,3,17,2.6,5.2,'l'); ell(G,29,17,2.6,5.2,'l'); }
+  if(v.tail){ ell(G,29,23,1.7,2.6,'m'); set(G,31,20,'r');set(G,30,20,'r');set(G,31,21,'r'); }
+  ell(G,16,17,11,12,'m');
+  ell(G,9,8,3.6,5,'m'); ell(G,23,8,3.6,5,'m');
+  ell(G,5,20,2.6,3.6,'m'); ell(G,27,20,2.6,3.6,'m');
+  ell(G,11,30,3.6,2.2,'m'); ell(G,21,30,3.6,2.2,'m');
+  ell(G,14,12,8,7,'l',['m']); ell(G,19,26,10,6,'d',['m']);
+  ell(G,9,9,1.7,3,'l',['m','d']); ell(G,23,9,1.7,3,'l',['m','d']);
+  ell(G,16,21,6,7,'b',['m','d','l']); ell(G,16,25,5,3,'s',['b']);
+  if(v.horns){ for(let i=0;i<4;i++){ for(let j=0;j<=i;j++){ set(G,8+j,6-i,'r'); set(G,24-j,6-i,'r'); } } }
+  const L=[11,15],R=[21,15];
+  if(v.eyes==='happy'){ for(const[cx,]of[L,R]){ [[-2,1],[-1,0],[0,-1],[1,0],[2,1]].forEach(([dx,dy])=>set(G,cx+dx,15+dy,'p')); } }
+  else{ for(const[cx,cy]of[L,R]){ ell(G,cx,cy,3,4,'w',FACE); }
+    ell(G,11.4,16,1.7,2.5,'p',['w']); ell(G,20.6,16,1.7,2.5,'p',['w']);
+    set(G,10,13,'w'); set(G,20,13,'w'); }
+  if(v.brow){ set(G,8,11,'p');set(G,9,11,'p');set(G,10,12,'p');set(G,11,12,'p');
+    set(G,24,11,'p');set(G,23,11,'p');set(G,22,12,'p');set(G,21,12,'p'); }
+  if(v.cheeks!==false){ ell(G,7,19,1.9,1.3,'c',BODY); ell(G,25,19,1.9,1.3,'c',BODY); }
+  if(v.mouth==='smile'){ set(G,15,21,'p');set(G,16,21,'p');set(G,14,20,'p');set(G,17,20,'p'); }
+  else if(v.mouth==='fang'){ for(let x=13;x<=18;x++)set(G,x,20,'p'); set(G,14,21,'w');set(G,17,21,'w'); }
+  if(v.halo){ ell(G,16,1,5,1.5,'y'); ell(G,16,1,3.2,0.7,'.'); }
+  const s=G.map(r=>r.slice());
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    if(s[y][x]!=='.')continue;
+    let n=false;
+    for(const[dy,dx]of[[0,1],[0,-1],[1,0],[-1,0]]){const ny=y+dy,nx=x+dx;
+      if(ny>=0&&ny<H&&nx>=0&&nx<W&&s[ny][nx]!=='.'&&s[ny][nx]!=='y'){n=true;break;}}
+    if(n)G[y][x]='#';
+  }
+  return G;
+}
+function paint(canvas,G,pal){
+  const off=document.createElement('canvas'); off.width=W; off.height=H;
+  const o=off.getContext('2d'); const img=o.createImageData(W,H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const c=pal[G[y][x]]||[0,0,0,0]; const i=(y*W+x)*4;
+    img.data[i]=c[0];img.data[i+1]=c[1];img.data[i+2]=c[2];img.data[i+3]=c[3]===undefined?255:c[3];
+  }
+  o.putImageData(img,0,0);
+  const ctx=canvas.getContext('2d'); ctx.imageSmoothingEnabled=false;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(off,0,0,W,H,0,0,canvas.width,canvas.height);
+}
+const base={'#':[26,20,40],'w':[255,255,255],'p':[26,20,40],'c':[255,143,168],
+  'y':[255,214,102],'r':[150,52,74],'W':[130,190,240],'H':[255,255,255],'.':[0,0,0,0]};
+function pal(d,m,l,b,s){return Object.assign({},base,{d,m,l,b,s});}
+const P={
+  content:  pal([39,138,128],[71,196,181],[141,224,211],[243,234,214],[214,197,166]),
+  angel:    pal([214,222,240],[244,247,255],[255,255,255],[255,250,230],[240,228,196]),
+  devil:    pal([92,36,54],[150,52,74],[196,80,102],[92,52,64],[64,38,50]),
+};
+P.devil['w']=[255,236,170]; P.devil['c']=[120,40,60];
+paint(document.getElementById('pet-main'),build({eyes:'normal',mouth:'smile'}),P.content);
+paint(document.getElementById('pet-angel'),build({eyes:'happy',mouth:'smile',halo:true,wings:true}),P.angel);
+paint(document.getElementById('pet-devil'),build({eyes:'normal',mouth:'fang',horns:true,tail:true,brow:true,cheeks:false}),P.devil);
+
+/* ================= BONSAI PHONES ================= */
+// foliage pad helper: layered ellipses, sumi-wash style
+function pad(cx,cy,r,op){
+  return `<g>
+    <ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r*.52}" fill="#1E5C44" opacity="${op*.9}"/>
+    <ellipse cx="${cx-r*.28}" cy="${cy-r*.2}" rx="${r*.62}" ry="${r*.34}" fill="#2BD48A" opacity="${op*.34}"/>
+    <ellipse cx="${cx+r*.3}" cy="${cy+r*.08}" rx="${r*.5}" ry="${r*.28}" fill="#173F30" opacity="${op*.85}"/>
+  </g>`;
+}
+const pot=`
+  <path d="M150 250 L252 250 L242 280 L160 280 Z" fill="#242B35"/>
+  <rect x="144" y="246" width="114" height="8" rx="3" fill="#2E3742"/>
+  <ellipse cx="201" cy="286" rx="64" ry="4" fill="rgba(0,0,0,.5)"/>`;
+const trunkStyle='stroke="#8E9A93" fill="none" stroke-linecap="round"';
+
+const bonsaiStages={
+  1:`<svg width="402" height="308" viewBox="0 0 402 308">
+      ${pot}
+      <path d="M201 250 C 199 226 207 212 200 192" ${trunkStyle} stroke-width="9"/>
+      <path d="M200 196 C 196 184 188 178 182 172" ${trunkStyle} stroke-width="5"/>
+      ${pad(178,162,26,.95)}
+      ${pad(212,184,18,.8)}
+    </svg>`,
+  2:`<svg width="402" height="308" viewBox="0 0 402 308">
+      ${pot}
+      <path d="M201 250 C 197 222 210 206 199 178 C 194 166 190 160 186 152" ${trunkStyle} stroke-width="10"/>
+      <path d="M199 182 C 214 172 228 168 240 160" ${trunkStyle} stroke-width="5.5"/>
+      <path d="M188 156 C 178 148 168 144 158 140" ${trunkStyle} stroke-width="4.5"/>
+      ${pad(150,128,30,.95)}
+      ${pad(196,120,26,.9)}
+      ${pad(248,148,28,.9)}
+      ${pad(222,192,16,.7)}
+    </svg>`,
+  3:`<svg width="402" height="308" viewBox="0 0 402 308">
+      ${pot}
+      <path d="M201 250 C 195 220 212 202 198 172 C 191 157 188 148 186 138" ${trunkStyle} stroke-width="11"/>
+      <path d="M199 178 C 218 166 236 162 254 150" ${trunkStyle} stroke-width="6"/>
+      <path d="M188 144 C 174 134 162 130 148 124" ${trunkStyle} stroke-width="5"/>
+      <path d="M187 140 C 192 126 198 118 206 108" ${trunkStyle} stroke-width="4.5"/>
+      <path d="M252 152 C 262 148 270 146 280 144" ${trunkStyle} stroke-width="3.5"/>
+      ${pad(136,110,34,.95)}
+      ${pad(206,92,38,.95)}
+      ${pad(272,132,32,.92)}
+      ${pad(166,150,22,.8)}
+      ${pad(238,168,20,.75)}
+      ${pad(300,164,15,.65)}
+      <!-- blossom accents on a full month -->
+      <g fill="#F0766C">
+        <circle cx="206" cy="82" r="2.4"/><circle cx="150" cy="102" r="2"/>
+        <circle cx="268" cy="120" r="2.2"/><circle cx="228" cy="98" r="1.8"/>
+      </g>
+    </svg>`,
+};
+function bonsaiPhone(el,stage,day,entries,foot){
+  el.innerHTML=`<div class="screen">
+    <div class="status"><span class="t">9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+    <div class="hdr"><div><h1>Summary</h1><div class="sub">July 2026</div></div><div class="gear">⚙</div></div>
+    <div class="bonsai-hero">
+      <div class="glow"></div>
+      <span class="bonsai-kicker">盆栽 · THE MONTH'S TREE</span>
+      ${bonsaiStages[stage]}
+      <div class="day-chip"><span class="n">${String(day).padStart(2,'0')}</span>
+        <span class="c">JULY ${day}<br>${entries} entries grown</span></div>
+      <div class="floor"></div>
+    </div>
+    <div class="content">
+      <div class="card" style="padding:14px 18px">
+        <div class="eyebrow">Net this month</div>
+        <div class="net" style="font-size:32px">${foot}</div>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="tabbar">
+      <div class="tab on"><span class="ic">◎</span>Summary</div>
+      <div class="fab">＋</div>
+      <div class="tab"><span class="ic">▦</span>Calendar</div>
+    </div>
+  </div>`;
+}
+bonsaiPhone(document.getElementById('bp1'),1,4,3,'+¥96,200');
+bonsaiPhone(document.getElementById('bp2'),2,16,12,'+¥76,070');
+bonsaiPhone(document.getElementById('bp3'),3,28,23,'+¥41,350');
+
+/* ================= HANKO GRID ================= */
+const grid=document.getElementById('stampgrid');
+['M','T','W','T','F','S','S'].forEach(d=>{const e=document.createElement('div');e.className='dow';e.textContent=d;grid.appendChild(e);});
+// July 2026 starts Wednesday; show 3 weeks + today=17
+const logged=new Set([1,2,3,4,6,7,8,9,10,11,12,13,14,15,16]);
+const perfect=new Set([12]); // e.g. a "no-spend day" special seal
+for(let i=0;i<21;i++){
+  const day=i-1; // offset: Jul 1 = Wed = col index 2
+  const cell=document.createElement('div');cell.className='dcell';
+  if(day<1||day>31){cell.style.visibility='hidden';grid.appendChild(cell);continue;}
+  cell.innerHTML=`<span class="dn">${day}</span>`;
+  if(day===17)cell.classList.add('today');
+  if(day>17)cell.classList.add('future');
+  if(logged.has(day)){
+    const s=document.createElement('div');
+    s.className='stamp'+(perfect.has(day)?' perfect':'');
+    s.textContent=perfect.has(day)?'福':'記';
+    s.style.transform=`rotate(${((day*7)%13)-6}deg)`;
+    s.style.opacity=String(0.82+((day*3)%5)*0.036);
+    cell.appendChild(s);
+  }
+  grid.appendChild(cell);
+}
+</script>
+</body>
+</html>

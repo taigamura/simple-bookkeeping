@@ -28,12 +28,7 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         onImportZaim={() => {}}
         hasCorruptStash={false}
         onExportCorruptStash={() => {}}
-        lockEnabled={false}
-        lockAvailable={true}
-        onToggleLock={() => {}}
         onDeleteAllData={() => {}}
-        openTo="calendar"
-        onChangeOpenTo={() => {}}
         onClose={() => {}}
         {...over}
       />
@@ -61,16 +56,6 @@ describe('SettingsSheet', () => {
     fireEvent.press(screen.getByLabelText('Income'));
     expect(screen.getByText('Salary')).toBeTruthy();
     expect(screen.queryByText('Food')).toBeNull();
-  });
-
-  it('exposes selection state/value for settings option groups (#76)', () => {
-    renderSheet({ openTo: 'calendar' });
-    const calendar = screen.getByLabelText('Calendar');
-    const entry = screen.getByLabelText('Entry');
-    expect(calendar.props.accessibilityRole).toBe('radio');
-    expect(calendar.props.accessibilityState.selected).toBe(true);
-    expect(calendar.props.accessibilityValue.text).toBe('Selected');
-    expect(entry.props.accessibilityValue.text).toBe('Not selected');
   });
 
   it('renders a Budgets drill-in row that fires its callback (#49)', () => {
@@ -121,69 +106,11 @@ describe('SettingsSheet', () => {
     expect(onExportCorruptStash).toHaveBeenCalled();
   });
 
-  it('fires onToggleLock when the Lock switch is available and pressed (#30)', () => {
-    const onToggleLock = jest.fn();
-    renderSheet({ lockEnabled: false, lockAvailable: true, onToggleLock });
-    fireEvent.press(screen.getByLabelText('Lock'));
-    expect(onToggleLock).toHaveBeenCalledWith(true);
-  });
-
-  it('disables the Lock switch and shows an explanation when unavailable on this device (#30)', () => {
-    const onToggleLock = jest.fn();
-    renderSheet({ lockEnabled: false, lockAvailable: false, onToggleLock });
-    const lockSwitch = screen.getByLabelText('Lock');
-    expect(lockSwitch.props.accessibilityState.disabled).toBe(true);
-    expect(lockSwitch.props.accessibilityValue.text).toBe('Off');
-    fireEvent.press(lockSwitch);
-    expect(onToggleLock).not.toHaveBeenCalled();
-    expect(
-      screen.getByText('Set up Face ID, Touch ID, or a passcode on this device to use this.'),
-    ).toBeTruthy();
-  });
-
   it('scrolls its rows through a custom ScrollContainer when one is supplied (#44)', () => {
     const ScrollContainer = jest.fn(({ children }) => <>{children}</>);
     renderSheet({ ScrollContainer });
     expect(ScrollContainer).toHaveBeenCalled();
     expect(screen.getByText('Food')).toBeTruthy();
-  });
-
-  it('shows the persisted enabled state truthfully even when availability is false (#55 never-trap)', () => {
-    const onToggleLock = jest.fn();
-    renderSheet({ lockEnabled: true, lockAvailable: false, onToggleLock });
-    const lockSwitch = screen.getByLabelText('Lock');
-    // Toggle shows ON state (enabled=true), despite availability=false
-    expect(lockSwitch.props.accessibilityState.checked).toBe(true);
-  });
-
-  it('allows turning off the lock even when availability is false (#55 never-trap)', () => {
-    const onToggleLock = jest.fn();
-    renderSheet({ lockEnabled: true, lockAvailable: false, onToggleLock });
-    const lockSwitch = screen.getByLabelText('Lock');
-    // Toggle is NOT disabled (can always turn off)
-    expect(lockSwitch.props.accessibilityState.disabled).toBe(false);
-    fireEvent.press(lockSwitch);
-    expect(onToggleLock).toHaveBeenCalledWith(false);
-  });
-
-  it('disables the toggle only when lock is off AND availability is false (#55 never-trap)', () => {
-    const onToggleLock = jest.fn();
-    renderSheet({ lockEnabled: false, lockAvailable: false, onToggleLock });
-    const lockSwitch = screen.getByLabelText('Lock');
-    // Toggle is disabled (can't turn on unavailable)
-    expect(lockSwitch.props.accessibilityState.disabled).toBe(true);
-    fireEvent.press(lockSwitch);
-    expect(onToggleLock).not.toHaveBeenCalled();
-  });
-
-  it('enables the toggle when lock is on, regardless of availability (#55 never-trap)', () => {
-    const onToggleLock = jest.fn();
-    renderSheet({ lockEnabled: true, lockAvailable: true, onToggleLock });
-    const lockSwitch = screen.getByLabelText('Lock');
-    // Toggle is NOT disabled (can always turn off)
-    expect(lockSwitch.props.accessibilityState.disabled).toBe(false);
-    fireEvent.press(lockSwitch);
-    expect(onToggleLock).toHaveBeenCalledWith(false);
   });
 
   it('renders a "Delete all data" action that fires its callback (#67)', () => {
@@ -193,14 +120,6 @@ describe('SettingsSheet', () => {
     expect(deleteAll.props.accessibilityHint).toContain('entries, repeating series, and budgets');
     fireEvent.press(deleteAll);
     expect(onDeleteAllData).toHaveBeenCalled();
-  });
-
-  it('renders Open to option group reflecting the current value and fires callback on change (#68)', () => {
-    const onChangeOpenTo = jest.fn();
-    renderSheet({ openTo: 'calendar', onChangeOpenTo });
-    expect(screen.getByText('Calendar')).toBeTruthy();
-    fireEvent.press(screen.getByText('Entry'));
-    expect(onChangeOpenTo).toHaveBeenCalledWith('entry');
   });
 
   it('labels the category input and disabled Add button for accessibility (#76)', () => {

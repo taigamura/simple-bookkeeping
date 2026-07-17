@@ -17,8 +17,7 @@ V1 is a small, local-first personal income and expense tracker. It includes:
 
 - Calendar-based income and expense entry, editing, and deletion.
 - Monthly totals, category breakdowns, and total or per-category budgets.
-- Editable categories, four display currencies, dark/light themes, and an
-  optional Face ID/device-passcode lock.
+- Editable categories, four display currencies, and dark/light themes.
 - Japanese and English UI selected from the device locale.
 - Zaim-compatible CSV import and export, including Shift-JIS import.
 - Corrupt-load recovery through a separately stashed, exportable backup.

@@ -23,8 +23,6 @@ export interface Strings {
     cancel: string;
     import: string;
     delete: string;
-    on: string;
-    off: string;
   };
   a11y: {
     selected: string;
@@ -86,12 +84,6 @@ export interface Strings {
     appearance: string;
     dark: string;
     light: string;
-    /** Launch mode setting (#68). */
-    openTo: string;
-    /** Option to open to Calendar on launch (#68). */
-    openToCalendar: string;
-    /** Option to open to Entry sheet on launch (#68). */
-    openToEntry: string;
     currency: string;
     categories: string;
     addCategory: string;
@@ -150,13 +142,6 @@ export interface Strings {
     saveFailedTitle: string;
     saveFailedMessage: string;
   };
-  lock: {
-    label: string;
-    unavailableExplanation: string;
-    prompt: string;
-    lockedTitle: string;
-    unlockButton: string;
-  };
   zaim: {
     notZaimTitle: string;
     notZaimMessage: string;
@@ -179,8 +164,6 @@ export const en: Strings = {
     cancel: 'Cancel',
     import: 'Import',
     delete: 'Delete',
-    on: 'On',
-    off: 'Off',
   },
   a11y: {
     selected: 'Selected',
@@ -247,9 +230,6 @@ export const en: Strings = {
     appearance: 'Appearance',
     dark: 'Dark',
     light: 'Light',
-    openTo: 'Open to',
-    openToCalendar: 'Calendar',
-    openToEntry: 'Entry',
     currency: 'Currency',
     categories: 'Categories',
     addCategory: 'Add category',
@@ -306,13 +286,6 @@ export const en: Strings = {
     saveFailedMessage:
       'This change could not be saved to this device. Export your entries now and try restarting before making more changes.',
   },
-  lock: {
-    label: 'Lock',
-    unavailableExplanation: 'Set up Face ID, Touch ID, or a passcode on this device to use this.',
-    prompt: 'Unlock Kaji',
-    lockedTitle: 'Kaji is locked',
-    unlockButton: 'Unlock',
-  },
   zaim: {
     notZaimTitle: "Doesn't look like a Zaim export",
     notZaimMessage: 'No entries were imported.',
@@ -342,8 +315,6 @@ export const ja: Strings = {
     cancel: 'キャンセル',
     import: '読み込む',
     delete: '削除',
-    on: 'オン',
-    off: 'オフ',
   },
   a11y: {
     selected: '選択中',
@@ -410,9 +381,6 @@ export const ja: Strings = {
     appearance: '外観',
     dark: 'ダーク',
     light: 'ライト',
-    openTo: '起動時に開く',
-    openToCalendar: 'カレンダー',
-    openToEntry: '入力',
     currency: '通貨',
     categories: 'カテゴリ',
     addCategory: 'カテゴリを追加',
@@ -467,13 +435,6 @@ export const ja: Strings = {
     saveFailedTitle: '変更を保存できません',
     saveFailedMessage:
       'この変更を端末に保存できませんでした。今すぐ記録を書き出し、追加の変更をする前にアプリを再起動してください。',
-  },
-  lock: {
-    label: 'ロック',
-    unavailableExplanation: 'この端末でFace ID・Touch ID・パスコードを設定すると使えます。',
-    prompt: 'Kajiのロックを解除',
-    lockedTitle: 'Kajiはロックされています',
-    unlockButton: '解除する',
   },
   zaim: {
     notZaimTitle: 'Zaimのエクスポートではないようです',

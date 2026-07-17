@@ -1,0 +1,299 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --bg:#0E1116; --card:#171B22; --card2:#1A1F28; --card3:#242B35;
+    --ink:#EAEEF3; --muted:#9AA4B2; --dim:#6B7480;
+    --green:#2BD48A; --red:#F0766C; --on-green:#0B0E12;
+    --hair:rgba(255,255,255,.06); --line:rgba(255,255,255,.10); --border:rgba(255,255,255,.08);
+    --fur:#E6DCC8; --fur2:#F2EAD8; --patch:#3A4250; --earpink:#E8A99C;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#05070A;font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+    -webkit-font-smoothing:antialiased;padding:40px;display:flex;flex-direction:column;gap:48px;align-items:flex-start}
+
+  .shot{display:flex;gap:28px;position:relative;background:#05070A}
+  .phone{width:402px;height:730px;background:var(--bg);border-radius:34px;overflow:hidden;
+    position:relative;border:1px solid rgba(255,255,255,.09);flex-shrink:0;display:flex;flex-direction:column}
+  .screen{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+
+  .status{height:34px;display:flex;justify-content:space-between;align-items:center;
+    padding:0 24px;font-size:12px;color:var(--ink);position:relative;z-index:5}
+  .status .t{font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:600}
+  .status .pills{display:flex;gap:5px}
+  .status .pills i{display:block;width:14px;height:8px;border-radius:2px;background:rgba(255,255,255,.35)}
+
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:14px 20px 0;position:relative;z-index:5}
+  .hdr h1{color:var(--ink);font-size:24px;font-weight:700;letter-spacing:-.48px}
+  .hdr .sub{color:var(--muted);font-size:12px;font-weight:500;margin-top:2px}
+  .gear{width:34px;height:34px;border-radius:17px;background:var(--card2);color:var(--muted);
+    display:grid;place-items:center;font-size:15px;border:1px solid var(--border)}
+
+  .content{padding:16px 20px 0;display:flex;flex-direction:column;gap:14px;position:relative;z-index:2}
+  .card{background:var(--card);border-radius:18px;padding:18px;border:1px solid var(--border);
+    display:flex;flex-direction:column;gap:11px;box-shadow:0 8px 24px rgba(0,0,0,.4);position:relative}
+  .eyebrow{color:var(--dim);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:10.5px;
+    font-weight:600;letter-spacing:1.47px;text-transform:uppercase}
+  .net{color:var(--green);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:40px;font-weight:700;letter-spacing:-1.2px}
+  .split{height:8px;border-radius:6px;overflow:hidden;display:flex;background:var(--card3)}
+  .split .in{width:73%;background:var(--green)} .split .out{flex:1;background:var(--red)}
+  .legend{display:flex;gap:18px}
+  .legend .item{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;font-weight:500}
+  .legend .dot{width:8px;height:8px;border-radius:4px}
+  .legend .amt{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;font-weight:600}
+
+  .tabbar{height:78px;border-top:1px solid var(--hair);display:flex;align-items:center;
+    justify-content:space-around;padding:0 30px;background:rgba(14,17,22,.9);position:relative;z-index:6}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--dim);font-size:10px;font-weight:600}
+  .tab.on{color:var(--ink)}
+  .tab .ic{font-size:19px}
+  .fab{width:54px;height:54px;border-radius:27px;background:var(--green);color:var(--on-green);
+    display:grid;place-items:center;font-size:24px;font-weight:700;margin-top:-26px;
+    box-shadow:0 8px 22px rgba(43,212,138,.32)}
+  .tag{position:absolute;left:0;right:0;bottom:-34px;text-align:center;color:#5A6472;
+    font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase}
+
+  /* ---- calendar ---- */
+  .dowrow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:0 20px;margin-top:14px}
+  .dow{color:var(--dim);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:9px;text-align:center;letter-spacing:1px}
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:6px 20px 0;position:relative;z-index:2}
+  .day{height:46px;border-radius:11px;background:var(--card);border:1px solid var(--hair);
+    padding:5px 0 0 8px;position:relative}
+  .day .n{color:var(--ink);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;font-weight:600}
+  .day .tot{position:absolute;left:8px;bottom:4px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:8.5px;font-weight:600}
+  .day.blank{visibility:hidden}
+  .day.today{border-color:rgba(43,212,138,.55)}
+  .day.future .n{color:var(--dim)}
+  .cal-note{padding:14px 20px 0;color:var(--dim);font-size:11px;font-weight:500;display:flex;align-items:center;gap:7px}
+  .cal-note .pawdot{opacity:.7}
+
+  /* ---- entry sheet ---- */
+  .sheet{position:absolute;left:0;right:0;bottom:0;top:56px;background:var(--card2);
+    border-radius:26px 26px 0 0;border:1px solid var(--border);border-bottom:none;
+    display:flex;flex-direction:column;padding:18px 20px 20px;z-index:4}
+  .sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--card3);align-self:center;margin-bottom:14px}
+  .sheet-head{display:flex;justify-content:space-between;align-items:center}
+  .sheet-head .x{color:var(--dim);font-size:16px}
+  .sheet-head .title{color:var(--muted);font-size:12px;font-weight:600}
+  .seg{display:flex;background:var(--card3);border-radius:999px;padding:3px;gap:2px}
+  .seg span{padding:4px 12px;border-radius:999px;font-size:10.5px;font-weight:700;color:var(--dim)}
+  .seg .on{background:var(--red);color:#0B0E12}
+  .hero-amt{color:var(--ink);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:58px;
+    font-weight:600;letter-spacing:-2.3px;text-align:center;margin:16px 0 4px}
+  .hero-amt .yen{color:var(--dim)}
+  .chips{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:8px 0 2px}
+  .chip{padding:6px 13px;border-radius:999px;background:var(--card3);color:var(--muted);font-size:11.5px;font-weight:600}
+  .chip.on{background:var(--green);color:var(--on-green)}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 26px 0}
+  .key{height:47px;border-radius:15px;background:var(--card);border:1px solid var(--hair);
+    display:grid;place-items:center;color:var(--ink);
+    font-family:"JetBrains Mono",ui-monospace,monospace;font-size:17px;font-weight:600}
+  .cta{height:54px;border-radius:16px;background:var(--green);color:var(--on-green);
+    display:grid;place-items:center;font-size:14px;font-weight:700;margin-top:14px;
+    box-shadow:0 8px 24px rgba(43,212,138,.26)}
+  .purr-strip{display:flex;align-items:center;gap:14px;margin-top:12px;justify-content:center}
+  .purr-label{color:var(--dim);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:10px;letter-spacing:2px}
+  .purr-label b{color:var(--green);font-weight:600}
+
+  /* ---- cat positioning ---- */
+  .cat-abs{position:absolute;z-index:3}
+  .hdr-right{display:flex;align-items:center;gap:8px}
+  .mech{display:flex;justify-content:space-between;align-items:flex-end;width:100%;
+    background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px 30px}
+  .m{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .ml{color:var(--ink);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:10.5px;font-weight:600;letter-spacing:1.5px}
+  .ms{color:var(--dim);font-size:10.5px;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="shot" data-shot="6-neko" style="flex-direction:column;gap:24px">
+ <div style="display:flex;gap:28px">
+
+  <!-- ============ PHONE A · CALENDAR — over pace: the cat sprints ============ -->
+  <div class="phone"><div class="screen">
+    <div class="status"><span class="t">9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+    <div class="hdr"><div><h1>Calendar</h1><div class="sub">July 2026</div></div>
+      <div class="hdr-right"><span data-cat="A" data-px="2" data-lines="3"></span><div class="gear">⚙</div></div></div>
+    <div class="dowrow"><span class="dow">M</span><span class="dow">T</span><span class="dow">W</span><span class="dow">T</span><span class="dow">F</span><span class="dow">S</span><span class="dow">S</span></div>
+    <div class="calgrid" id="calgrid"></div>
+
+    <div style="flex:1"></div>
+    <div class="tabbar">
+      <div class="tab"><span class="ic">◎</span>Summary</div>
+      <div class="fab">＋</div>
+      <div class="tab on"><span class="ic">▦</span>Calendar</div>
+    </div>
+  </div></div>
+
+  <!-- ============ PHONE B · ENTRY SAVED — the cat purrs ============ -->
+  <div class="phone"><div class="screen">
+    <div class="status"><span class="t">9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheet-head">
+        <span class="x">✕</span>
+        <div class="seg"><span class="on">Expense</span><span>Income</span></div>
+        <span style="display:flex;align-items:center;gap:4px"><span data-cat="purr" data-px="1.6"></span><span class="title">Jul 17</span></span>
+      </div>
+      <div class="hero-amt"><span class="yen">−¥</span>1,200</div>
+      <div class="chips">
+        <span class="chip on">Food</span><span class="chip">Groceries</span><span class="chip">Bills</span><span class="chip">Fun</span>
+      </div>
+      <div class="keypad">
+        <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+        <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+        <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+        <div class="key">00</div><div class="key">0</div><div class="key">⌫</div>
+      </div>
+      <div class="cta">Save entry</div>
+
+      <div class="purr-label" style="text-align:center;margin-top:16px">ゴロゴロ… · <b>SAVED</b></div>
+    </div>
+  </div></div>
+
+  <!-- ============ PHONE C · SUMMARY — the cat lounges ============ -->
+  <div class="phone"><div class="screen">
+    <div class="status"><span class="t">9:41</span><span class="pills"><i></i><i></i><i></i></span></div>
+    <div class="hdr"><div><h1>Summary</h1><div class="sub">July 2026</div></div>
+      <div class="hdr-right"><span data-cat="sleep" data-px="2"></span><div class="gear">⚙</div></div></div>
+
+    <div class="content">
+      <div class="card">
+        <div class="eyebrow">Net this month</div>
+        <div class="net">+¥76,070</div>
+        <div class="split"><div class="in"></div><div class="out"></div></div>
+        <div class="legend">
+          <div class="item"><span class="dot" style="background:var(--green)"></span>In <span class="amt" style="color:var(--green)">¥120,000</span></div>
+          <div class="item"><span class="dot" style="background:var(--red)"></span>Out <span class="amt" style="color:var(--red)">¥43,930</span></div>
+        </div>
+      </div>
+
+      <div class="card" style="flex-direction:row;justify-content:space-between;align-items:center;padding:14px 18px">
+        <div>
+          <div class="eyebrow" style="margin-bottom:5px">Mochi's month</div>
+          <div style="color:var(--muted);font-size:11.5px;font-weight:500">Purred 12 times · happiest on Jul 12</div>
+        </div>
+        <svg width="42" height="34" viewBox="0 0 20 20">
+          <ellipse cx="10" cy="13" rx="5.5" ry="4.5" fill="rgba(230,220,200,.8)"/>
+          <circle cx="4" cy="7" r="2.2" fill="rgba(230,220,200,.8)"/><circle cx="10" cy="5" r="2.2" fill="rgba(230,220,200,.8)"/><circle cx="16" cy="7" r="2.2" fill="rgba(230,220,200,.8)"/>
+        </svg>
+      </div>
+    </div>
+
+    <div style="flex:1"></div>
+    <div class="tabbar">
+      <div class="tab on"><span class="ic">◎</span>Summary</div>
+      <div class="fab">＋</div>
+      <div class="tab"><span class="ic">▦</span>Calendar</div>
+    </div>
+  </div></div>
+
+ </div>
+
+ <!-- state mapping strip -->
+ <div class="mech">
+   <div class="m"><span data-cat="sleep" data-px="5"></span><div class="ml">SLEEP</div><div class="ms">no spend today</div></div>
+   <div class="m"><span data-cat="B" data-px="5"></span><div class="ml">STROLL</div><div class="ms">under pace</div></div>
+   <div class="m"><span data-cat="A" data-px="5" data-lines="1"></span><div class="ml">TROT</div><div class="ms">on pace</div></div>
+   <div class="m"><span data-cat="A" data-px="5" data-lines="3"></span><div class="ml">SPRINT</div><div class="ms">over pace</div></div>
+   <div class="m"><span data-cat="purr" data-px="5"></span><div class="ml" style="color:var(--green)">PURR</div><div class="ms">entry saved</div></div>
+ </div>
+
+  <div class="tag">Idea 6 · Mochi — a RunCat for your money: lives in the header, runs at your spending pace</div>
+</div>
+
+<script>
+/* calendar grid: July 2026 starts Wednesday, 31 days */
+const grid=document.getElementById('calgrid');
+const totals={1:'-2.4k',3:'-1.2k',4:'-6.8k',6:'-0.9k',8:'-3.1k',10:'+120k',12:'-4.2k',14:'-1.8k',16:'-2.2k',17:'-1.2k'};
+for(let i=0;i<35;i++){
+  const day=i-1;
+  const cell=document.createElement('div');
+  if(day<1||day>31){cell.className='day blank';grid.appendChild(cell);continue;}
+  cell.className='day'+(day===17?' today':'')+(day>17?' future':'');
+  let t='';
+  if(totals[day]) t=`<span class="tot" style="color:${totals[day][0]==='+'?'var(--green)':'var(--red)'}">${totals[day]}</span>`;
+  cell.innerHTML=`<span class="n">${day}</span>${t}`;
+  grid.appendChild(cell);
+}
+/* RunCat-style pixel cat: 16x10 frames rendered crisp at any scale */
+const FRAMES={
+  A:[ // full stretch (running)
+    "......................#....#..",
+    "......................##..##..",
+    ".##...................######..",
+    "..##..................#######.",
+    "...##.................######..",
+    "....##...........###########..",
+    ".....####......##############.",
+    "......#######################.",
+    "......######################..",
+    ".......####################...",
+    ".......###...........###......",
+    "......###.............###.....",
+    ".....###...............###....",
+    "....###.................###...",
+    "...###...................###..",
+  ],
+  B:[ // gathered, airborne (strolling)
+    "......................#....#..",
+    "......................##..##..",
+    "#.....................######..",
+    ".#....................#######.",
+    "..#...................######..",
+    "...##............###########..",
+    "....##........###############.",
+    "......######################..",
+    ".......####################...",
+    "........##################....",
+    ".........###......###.........",
+    ".........###.....###..........",
+    "..........##....##............",
+    "..............................",
+    "..............................",
+  ],
+  sleep:[ // curled, head resting right, tail tucked
+    "..............................",
+    "..............................",
+    "..............................",
+    "..................#.#.........",
+    ".................#####........",
+    "..............#########.......",
+    "...........#############......",
+    ".........###############......",
+    "........#################.....",
+    "........#################.....",
+    ".........###############......",
+    "..........#############.......",
+    "........#####.................",
+    "..............................",
+    "..............................",
+  ],
+};
+document.querySelectorAll('[data-cat]').forEach(el=>{
+  const kind=el.dataset.cat, px=parseFloat(el.dataset.px)||2, lines=parseInt(el.dataset.lines||'0',10);
+  const f=FRAMES[kind==='purr'?'sleep':kind];
+  let rects='';
+  f.forEach((row,y)=>{[...row].forEach((c,x)=>{if(c==='#')rects+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;});});
+  let fx='';
+  for(let i=0;i<lines;i++){
+    const y=[4,7.5,11][i];
+    fx+=`<line x1="${-8+i*0.8}" y1="${y}" x2="${-3+i*0.5}" y2="${y}" stroke="rgba(154,164,178,.55)" stroke-width="1.1" stroke-linecap="round" opacity="${1-i*.25}"/>`;
+  }
+  if(kind==='purr'){
+    fx+=`<g fill="none" stroke="rgba(43,212,138,.65)" stroke-linecap="round">
+      <path d="M2 6 A6 6 0 0 0 2 14" stroke-width="1.1"/>
+      <path d="M-1.5 4 A9 9 0 0 0 -1.5 16" stroke-width="1" opacity=".45"/>
+      <path d="M28 6 A6 6 0 0 1 28 14" stroke-width="1.1"/>
+      <path d="M31.5 4 A9 9 0 0 1 31.5 16" stroke-width="1" opacity=".45"/></g>`;
+  }
+  el.style.display='flex'; el.style.alignItems='center';
+  el.innerHTML=`<svg width="${44*px}" height="${17*px}" viewBox="-10 -1 44 17" style="display:block;overflow:visible">
+    <g fill="#C2B69B" shape-rendering="crispEdges">${rects}</g>${fx}</svg>`;
+});
+</script>
+</body>
+</html>

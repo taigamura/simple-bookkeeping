@@ -38,8 +38,6 @@ export interface AppState {
   expCats: string[];
   incCats: string[];
   currency: Currency;
-  /** Face ID / passcode gate on launch (#30); default off, web never gates. */
-  lockEnabled: boolean;
   /** Recurring monthly budget per expense category (#49); absent = no budget.
    *  Added after v1 blobs shipped — the merge-by-known-keys load fills it with
    *  the empty default, so no schema version bump. */
@@ -50,9 +48,6 @@ export interface AppState {
   /** Total monthly budget amount in total mode (#66); 0 = no total budget.
    *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
   totalBudget: number;
-  /** What the app opens to on launch (#68): 'calendar' for Calendar, 'entry' for Entry sheet.
-   *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
-  openTo: 'calendar' | 'entry';
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -62,11 +57,9 @@ export const DEFAULT_STATE: AppState = {
   expCats: DEFAULT_EXP_CATS,
   incCats: DEFAULT_INC_CATS,
   currency: DEFAULT_CURRENCY,
-  lockEnabled: false,
   budgets: {},
   budgetMode: 'category',
   totalBudget: 0,
-  openTo: 'calendar',
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */
@@ -81,11 +74,9 @@ const stateKeys = Object.keys(DEFAULT_STATE) as StateKey[];
 const additiveStateKeys: StateKey[] = [
   'recurrenceRules',
   'currency',
-  'lockEnabled',
   'budgets',
   'budgetMode',
   'totalBudget',
-  'openTo',
 ];
 const txTypes: TxType[] = ['income', 'expense'];
 const repeats: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
@@ -235,16 +226,12 @@ function validateField(key: StateKey, value: unknown): boolean {
       return isCategoryArray(value);
     case 'currency':
       return isCurrency(value);
-    case 'lockEnabled':
-      return typeof value === 'boolean';
     case 'budgets':
       return isBudgets(value);
     case 'budgetMode':
       return value === 'category' || value === 'total';
     case 'totalBudget':
       return typeof value === 'number' && Number.isFinite(value) && value >= 0;
-    case 'openTo':
-      return value === 'calendar' || value === 'entry';
   }
 }
 

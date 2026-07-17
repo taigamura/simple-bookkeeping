@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --bg:#0E1116; --card:#171B22; --card2:#1A1F28; --card3:#242B35;
+    --ink:#EAEEF3; --muted:#9AA4B2; --dim:#6B7480;
+    --green:#2BD48A; --hair:rgba(255,255,255,.06); --border:rgba(255,255,255,.08);
+    --sand:#C2B69B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#05070A;font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+    -webkit-font-smoothing:antialiased;padding:40px}
+  .shot{display:flex;flex-direction:column;gap:14px;background:#05070A;padding:6px;width:1240px}
+  .sheet-title{color:var(--dim);font-family:"JetBrains Mono",ui-monospace,monospace;
+    font-size:11px;letter-spacing:2.5px;text-transform:uppercase;padding:4px 6px 2px}
+  .frames{display:flex;gap:14px}
+  .pose{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:18px;
+    display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 10px 16px}
+  .pose .art{height:110px;display:flex;align-items:center;justify-content:center}
+  .pose .lab{color:var(--ink);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:10.5px;letter-spacing:2px;font-weight:600}
+  .pose .sub{color:var(--dim);font-size:10.5px;font-weight:500;margin-top:-4px}
+  .ctxrow{display:flex;gap:14px}
+  .hctx{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:16px;
+    padding:16px 18px;display:flex;justify-content:space-between;align-items:center}
+  .hctx .tt .h1{color:var(--ink);font-size:22px;font-weight:700;letter-spacing:-.44px}
+  .hctx .tt .sub{color:var(--muted);font-size:11px;font-weight:500;margin-top:2px}
+  .hctx .right{display:flex;align-items:center;gap:9px}
+  .gear{width:33px;height:33px;border-radius:17px;background:var(--card2);color:var(--muted);
+    display:grid;place-items:center;font-size:14px;border:1px solid var(--border)}
+  .strip-note{color:var(--dim);font-family:"JetBrains Mono",ui-monospace,monospace;
+    font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;padding-left:4px}
+</style>
+</head>
+<body>
+
+<div class="shot" data-shot="cat-fine">
+  <div class="sheet-title">Mochi · fine pixel — 30×15 grid, RunCat-grade run cycle</div>
+
+  <div class="frames">
+    <div class="pose"><div class="art" data-cat="stretch" data-px="5.4"></div><div class="lab">RUN · FRAME 1</div><div class="sub">full stretch</div></div>
+    <div class="pose"><div class="art" data-cat="gather" data-px="5.4"></div><div class="lab">RUN · FRAME 2</div><div class="sub">gathered, airborne</div></div>
+    <div class="pose"><div class="art" data-cat="sleep" data-px="5.4"></div><div class="lab">SLEEP</div><div class="sub">no spend today</div></div>
+    <div class="pose"><div class="art" data-cat="purr" data-px="5.4"></div><div class="lab" style="color:var(--green)">PURR</div><div class="sub">entry saved</div></div>
+  </div>
+
+  <div class="strip-note">Real size · in the header</div>
+  <div class="ctxrow">
+    <div class="hctx">
+      <div class="tt"><div class="h1">Summary</div><div class="sub">July 2026 · sprinting — over pace</div></div>
+      <div class="right"><span data-cat="stretch" data-px="1.5" data-lines="3"></span><div class="gear">⚙</div></div>
+    </div>
+    <div class="hctx">
+      <div class="tt"><div class="h1">Summary</div><div class="sub">July 2026 · trotting — on pace</div></div>
+      <div class="right"><span data-cat="gather" data-px="1.5" data-lines="1"></span><div class="gear">⚙</div></div>
+    </div>
+  </div>
+  <div class="ctxrow">
+    <div class="hctx">
+      <div class="tt"><div class="h1">Summary</div><div class="sub">July 2026 · asleep — nothing spent today</div></div>
+      <div class="right"><span data-cat="sleep" data-px="1.5"></span><div class="gear">⚙</div></div>
+    </div>
+    <div class="hctx">
+      <div class="tt"><div class="h1">New entry</div><div class="sub">saved · ゴロゴロ…</div></div>
+      <div class="right"><span data-cat="purr" data-px="1.5"></span><div class="gear">⚙</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* 30-wide fine pixel frames */
+const FRAMES={
+  stretch:[ // full extension
+    "......................#....#..",
+    "......................##..##..",
+    ".##...................######..",
+    "..##..................#######.",
+    "...##.................######..",
+    "....##...........###########..",
+    ".....####......##############.",
+    "......#######################.",
+    "......######################..",
+    ".......####################...",
+    ".......###...........###......",
+    "......###.............###.....",
+    ".....###...............###....",
+    "....###.................###...",
+    "...###...................###..",
+  ],
+  gather:[ // compressed, legs tucked, airborne
+    "......................#....#..",
+    "......................##..##..",
+    "#.....................######..",
+    ".#....................#######.",
+    "..#...................######..",
+    "...##............###########..",
+    "....##........###############.",
+    "......######################..",
+    ".......####################...",
+    "........##################....",
+    ".........###......###.........",
+    ".........###.....###..........",
+    "..........##....##............",
+    "..............................",
+    "..............................",
+  ],
+  sleep:[ // curled, head resting right, tail wrapped
+    "..............................",
+    "..............................",
+    "..............................",
+    "..................#.#.........",
+    ".................#####........",
+    "..............#########.......",
+    "...........#############......",
+    ".........###############......",
+    "........#################.....",
+    "........#################.....",
+    ".........###############......",
+    "..........#############.......",
+    "........#####.................",
+    "..............................",
+    "..............................",
+  ],
+};
+document.querySelectorAll('[data-cat]').forEach(el=>{
+  const kind=el.dataset.cat, px=parseFloat(el.dataset.px)||2, lines=parseInt(el.dataset.lines||'0',10);
+  const f=FRAMES[kind==='purr'?'sleep':kind];
+  let cells='';
+  f.forEach((row,y)=>{[...row].forEach((c,x)=>{if(c==='#')cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;});});
+  let fx='';
+  for(let i=0;i<lines;i++){
+    const y=[4,7.5,11][i];
+    fx+=`<line x1="${-8+i*0.8}" y1="${y}" x2="${-3+i*0.5}" y2="${y}" stroke="rgba(154,164,178,.55)" stroke-width="1.1" stroke-linecap="round" opacity="${1-i*.25}"/>`;
+  }
+  if(kind==='purr'){
+    fx+=`<g fill="none" stroke="rgba(43,212,138,.65)" stroke-linecap="round">
+      <path d="M2 6 A6 6 0 0 0 2 14" stroke-width="1.1"/>
+      <path d="M-1.5 4 A9 9 0 0 0 -1.5 16" stroke-width="1" opacity=".45"/>
+      <path d="M28 6 A6 6 0 0 1 28 14" stroke-width="1.1"/>
+      <path d="M31.5 4 A9 9 0 0 1 31.5 16" stroke-width="1" opacity=".45"/></g>`;
+  }
+  el.style.display='flex'; el.style.alignItems='center';
+  el.innerHTML=`<svg width="${44*px}" height="${17*px}" viewBox="-10 -1 44 17" style="display:block;overflow:visible">
+    <g fill="var(--sand)" shape-rendering="crispEdges">${cells}</g>${fx}</svg>`;
+});
+</script>
+</body>
+</html>

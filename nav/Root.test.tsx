@@ -20,9 +20,6 @@ jest.mock('react-native-safe-area-context', () =>
 );
 // Platform seams Root imports at module scope; none of their behavior is under
 // test here, and the underlying expo natives don't load in jest.
-jest.mock('../platform/auth', () => ({
-  isAuthAvailable: jest.fn().mockResolvedValue(false),
-}));
 jest.mock('../platform/haptics', () => ({ entrySaved: jest.fn(), keypadTap: jest.fn() }));
 jest.mock('../platform/shareFile', () => ({ shareTextFile: jest.fn() }));
 jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
@@ -365,11 +362,11 @@ describe('Root sheet state management (#60)', () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it('auto-presents the Entry sheet on cold launch when openTo is "entry" (#68)', async () => {
+  it('does not auto-present the Entry sheet on launch', () => {
     render(
       <ThemeProvider>
         <Root
-          state={{ ...DEFAULT_STATE, openTo: 'entry' }}
+          state={DEFAULT_STATE}
           update={jest.fn()}
           showCorruptNotice={false}
           hasCorruptStash={false}
@@ -378,26 +375,6 @@ describe('Root sheet state management (#60)', () => {
       </ThemeProvider>,
     );
 
-    // Entry sheet is auto-presented on cold launch when openTo='entry'. The
-    // present is deferred a frame (so gorhom lays out before present() runs, see
-    // Root's openTo effect), hence waitFor rather than a synchronous assertion.
-    await waitFor(() => expect(screen.getByTestId('entry-sheet')).toBeTruthy());
-  });
-
-  it('does not auto-present the Entry sheet when openTo is "calendar" (#68)', () => {
-    render(
-      <ThemeProvider>
-        <Root
-          state={{ ...DEFAULT_STATE, openTo: 'calendar' }}
-          update={jest.fn()}
-          showCorruptNotice={false}
-          hasCorruptStash={false}
-          readCorruptStash={async () => null}
-        />
-      </ThemeProvider>,
-    );
-
-    // Entry sheet is not auto-presented when openTo='calendar'
     expect(screen.queryByTestId('entry-sheet')).toBeNull();
   });
 

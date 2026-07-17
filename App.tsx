@@ -1,13 +1,14 @@
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { LockGate, Root } from './nav';
+import { Root } from './nav';
 import { useStore } from './store';
 import { ThemeProvider } from './theme';
 import { useAppFonts } from './theme/useAppFonts';
+import { SummaryGrowthPrototype } from './screens/SummaryGrowthPrototype';
 
 // Keep the native splash screen (asset + dark background configured via the
 // expo-splash-screen plugin in app.json, #25) up past its own auto-hide, so it
@@ -42,6 +43,22 @@ export default function App() {
 
   if (!appReady) return null;
 
+  // THROWAWAY UI PROTOTYPE. Development web only; production always mounts
+  // the real app. Open with `?prototype=growth&variant=A`.
+  const growthPrototype =
+    process.env.NODE_ENV !== 'production' &&
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('prototype') === 'growth';
+
+  if (growthPrototype) {
+    return (
+      <GestureHandlerRootView style={styles.root}>
+        <SummaryGrowthPrototype />
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
     // GestureHandlerRootView (#39) must wrap the whole app so gesture-handler —
     // and the @gorhom/bottom-sheet drags it powers — receive touches. flex:1 so
@@ -52,16 +69,14 @@ export default function App() {
         onModeChange={(mode) => update({ theme: mode })}
       >
         <StatusBar style="auto" />
-        <LockGate enabled={state.lockEnabled}>
-          <Root
-            state={state}
-            update={update}
-            showCorruptNotice={showCorruptNotice}
-            hasCorruptStash={hasCorruptStash}
-            readCorruptStash={readCorruptStash}
-            persistenceNotice={persistenceNotice}
-          />
-        </LockGate>
+        <Root
+          state={state}
+          update={update}
+          showCorruptNotice={showCorruptNotice}
+          hasCorruptStash={hasCorruptStash}
+          readCorruptStash={readCorruptStash}
+          persistenceNotice={persistenceNotice}
+        />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

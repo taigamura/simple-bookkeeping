@@ -105,14 +105,6 @@ describe('createStore', () => {
     expect(loaded.recurrenceRules).toEqual([]);
   });
 
-  it('round-trips lockEnabled (#30): saved true survives a reload', async () => {
-    const store = createStore(createMemoryPersistence());
-
-    await store.save(stateWith({ lockEnabled: true }));
-
-    expect((await store.load()).lockEnabled).toBe(true);
-  });
-
   it('round-trips budgets (#49): saved category budgets survive a reload', async () => {
     const store = createStore(createMemoryPersistence());
 
@@ -137,11 +129,9 @@ describe('createStore', () => {
   it('loads valid older envelopes without additive fields and preserves ledger data', async () => {
     const {
       currency: _currency,
-      lockEnabled: _lockEnabled,
       budgets: _budgets,
       budgetMode: _budgetMode,
       totalBudget: _totalBudget,
-      openTo: _openTo,
       ...legacyState
     } = stateWith({ entries: [sampleEntry], theme: 'light' });
     const blob = JSON.stringify({ version: SCHEMA_VERSION, state: legacyState });
@@ -152,11 +142,9 @@ describe('createStore', () => {
     expect(loaded.entries).toEqual([sampleEntry]);
     expect(loaded.theme).toBe('light');
     expect(loaded.currency).toEqual(DEFAULT_STATE.currency);
-    expect(loaded.lockEnabled).toBe(false);
     expect(loaded.budgets).toEqual({});
     expect(loaded.budgetMode).toBe('category');
     expect(loaded.totalBudget).toBe(0);
-    expect(loaded.openTo).toBe('calendar');
   });
 
   it('ignores a legacy premium field when loading older persisted state (#77)', async () => {
@@ -173,6 +161,25 @@ describe('createStore', () => {
 
     expect(loaded).toEqual(stateWith({ entries: [sampleEntry], theme: 'light' }));
     expect(loaded).not.toHaveProperty('premium');
+    expect(store.wasLastLoadCorrupt()).toBe(false);
+  });
+
+  it('ignores removed Lock and Open-to fields in persisted state', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: {
+        ...stateWith({ entries: [sampleEntry] }),
+        lockEnabled: true,
+        openTo: 'entry',
+      },
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    const loaded = await store.load();
+
+    expect(loaded.entries).toEqual([sampleEntry]);
+    expect(loaded).not.toHaveProperty('lockEnabled');
+    expect(loaded).not.toHaveProperty('openTo');
     expect(store.wasLastLoadCorrupt()).toBe(false);
   });
 
