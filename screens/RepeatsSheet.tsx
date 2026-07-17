@@ -16,7 +16,6 @@ import {
   type Transaction,
 } from '../domain';
 import { strings } from '../i18n';
-import { IconButton } from '../nav/IconButton';
 import { Txt, useTheme } from '../theme';
 
 interface ScrollContainerProps {
@@ -48,8 +47,15 @@ export function RepeatsSheet({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <IconButton name="chevron-left" accessibilityLabel={strings.nav.back} onPress={onDone} />
         <Txt variant="screenTitle">{strings.repeats.title}</Txt>
+        <Pressable
+          onPress={onDone}
+          accessibilityRole="button"
+          accessibilityLabel={strings.nav.done}
+          style={({ pressed }) => pressed && { opacity: 0.6 }}
+        >
+          <Txt variant="listItem" tone="positive">{strings.nav.done}</Txt>
+        </Pressable>
       </View>
       <ScrollContainer
         style={styles.scroll}
@@ -113,6 +119,7 @@ const styles = StyleSheet.create({
   container: { gap: 4, flexShrink: 1, minHeight: 0 },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
     marginBottom: 8,
