@@ -53,6 +53,9 @@ interface SettingsSheetProps {
   onChangeCurrency: (currency: Currency) => void;
   onChangeExpCats: (list: string[]) => void;
   onChangeIncCats: (list: string[]) => void;
+  /** Active recurrence segments shown by the Repeats management sheet. */
+  activeRepeatCount: number;
+  onOpenRepeats: () => void;
   /** Drill into the Budgets sheet (#49) — Settings dismisses, Budgets presents. */
   onOpenBudgets: () => void;
   onLoadSample: () => void;
@@ -87,6 +90,8 @@ export function SettingsSheet({
   onChangeCurrency,
   onChangeExpCats,
   onChangeIncCats,
+  activeRepeatCount,
+  onOpenRepeats,
   onOpenBudgets,
   onLoadSample,
   onExportData,
@@ -123,6 +128,7 @@ export function SettingsSheet({
           onChangeExpCats={onChangeExpCats}
           onChangeIncCats={onChangeIncCats}
         />
+        <RepeatsLink count={activeRepeatCount} onPress={onOpenRepeats} />
         <BudgetsLink onPress={onOpenBudgets} />
         <DataActions
           onLoadSample={onLoadSample}
@@ -465,6 +471,33 @@ function BudgetsLink({ onPress }: { onPress: () => void }) {
       >
         <Txt variant="listItem" tone="ink" style={styles.linkLabel}>
           {strings.budgets.title}
+        </Txt>
+        <Txt variant="listItem" tone="dim">
+          ›
+        </Txt>
+      </Pressable>
+    </Section>
+  );
+}
+
+function RepeatsLink({ count, onPress }: { count: number; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Section label={strings.repeats.title}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={strings.repeats.title}
+        style={({ pressed }) => [
+          styles.linkRow,
+          { backgroundColor: pressed ? colors.card3 : colors.card2 },
+        ]}
+      >
+        <Txt variant="listItem" tone="ink" style={styles.linkLabel}>
+          {strings.repeats.title}
+        </Txt>
+        <Txt variant="secondary" tone="dim">
+          {strings.repeats.activeCount(count)}
         </Txt>
         <Txt variant="listItem" tone="dim">
           ›

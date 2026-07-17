@@ -2,6 +2,7 @@
  * Persistent recurrence behavior through the public ledger interface.
  */
 import {
+  activeRecurrences,
   deleteLedgerItem,
   entriesThrough,
   entriesForMonth,
@@ -26,6 +27,41 @@ const draft = (over: Partial<EntryDraft> = {}): EntryDraft => ({
 });
 
 describe('persistent recurrence', () => {
+  it('lists only repeat segments with a visible occurrence today or later', () => {
+    const active = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: 2026, m: 6, day: 17, repeat: 'daily' }),
+      'off',
+    );
+    const ended = {
+      ...active.recurrenceRules[0],
+      id: 'ended',
+      start: { y: 2026, m: 6, day: 1 },
+      endsBefore: '2026-07-17',
+    };
+
+    expect(
+      activeRecurrences([ended, active.recurrenceRules[0]], { y: 2026, m: 6, day: 17 }),
+    ).toEqual([
+      expect.objectContaining({
+        rule: active.recurrenceRules[0],
+        next: expect.objectContaining({ y: 2026, m: 6, day: 17 }),
+      }),
+    ]);
+  });
+
+  it('skips a weekend-shifted monthly occurrence already displayed before today', () => {
+    const ledger = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: 2026, m: 6, day: 19, repeat: 'monthly' }),
+      'before',
+    );
+
+    expect(
+      activeRecurrences(ledger.recurrenceRules, { y: 2026, m: 6, day: 18 })[0].next,
+    ).toMatchObject({ y: 2026, m: 7, day: 19 });
+  });
+
   it('projects an infinite monthly rule without losing its original day after February', () => {
     const ledger = saveLedgerItem(
       { entries: [], recurrenceRules: [] },
@@ -108,7 +144,7 @@ describe('persistent recurrence', () => {
     expect(entriesForMonth(edited, { y: 2027, m: 3 })[0].amount).toBe(1200);
   });
 
-  it('anchors a changed cadence to the displayed occurrence date', () => {
+  it('anchors a changed cadence to the scheduled occurrence date', () => {
     const original = saveLedgerItem(
       { entries: [], recurrenceRules: [] },
       draft({ y: 2026, m: 0, day: 31, repeat: 'monthly' }),
@@ -123,10 +159,36 @@ describe('persistent recurrence', () => {
       movedToFebruary,
     );
 
-    expect(entriesForMonth(edited, { y: 2026, m: 0 })).toEqual([]);
-    expect(entriesForMonth(edited, { y: 2026, m: 1 }).map((entry) => entry.day).slice(0, 2)).toEqual([
-      2,
-      3,
+    expect(entriesForMonth(edited, { y: 2026, m: 0 })).toEqual([
+      expect.objectContaining({ day: 31, repeat: 'daily' }),
+    ]);
+    expect(entriesForMonth(edited, { y: 2026, m: 1 }).map((entry) => entry.day).slice(0, 2)).toEqual([1, 2]);
+  });
+
+  it('preserves a bounded segment cutoff when editing its future occurrences', () => {
+    const original = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: 2026, m: 6, day: 20, repeat: 'daily' }),
+      'off',
+    );
+    original.recurrenceRules[0].endsBefore = '2026-07-23';
+    const next = activeRecurrences(
+      original.recurrenceRules,
+      { y: 2026, m: 6, day: 21 },
+    )[0].next;
+
+    const edited = saveLedgerItem(
+      original,
+      draft({ y: 2026, m: 6, day: 21, amountStr: '1200', repeat: 'daily' }),
+      'off',
+      next,
+    );
+
+    expect(edited.recurrenceRules.at(-1)?.endsBefore).toBe('2026-07-23');
+    expect(entriesForMonth(edited, { y: 2026, m: 6 }).map((entry) => entry.day)).toEqual([
+      20,
+      21,
+      22,
     ]);
   });
 

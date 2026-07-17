@@ -121,6 +121,20 @@ export interface Strings {
     /** Placeholder shown in an amount field with no budget set. */
     none: string;
   };
+  repeats: {
+    title: string;
+    activeCount: (count: number) => string;
+    emptyTitle: string;
+    emptyMessage: string;
+    date: (y: number, m: number, day: number) => string;
+    next: (date: string) => string;
+    editRepeat: (name: string) => string;
+    stopRepeat: string;
+    chooseCurrentCategory: string;
+    stopConfirmTitle: string;
+    stopConfirmMessage: string;
+    endsBefore: (date: string) => string;
+  };
   keypad: {
     delete: string;
   };
@@ -258,6 +272,20 @@ export const en: Strings = {
     totalBudgetLabel: 'Total budget',
     budgetFor: (name) => `Budget for ${name}`,
     none: 'None',
+  },
+  repeats: {
+    title: 'Repeats',
+    activeCount: (count) => `${count} active`,
+    emptyTitle: 'No active repeats',
+    emptyMessage: 'Create one by setting Repeat on a new entry.',
+    date: (y, m, day) => `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m]} ${day}, ${y}`,
+    next: (date) => `Next ${date}`,
+    editRepeat: (name) => `Edit repeat: ${name}`,
+    stopRepeat: 'Stop repeat',
+    chooseCurrentCategory: 'Choose a current category before saving.',
+    stopConfirmTitle: 'Stop this repeat?',
+    stopConfirmMessage: 'This will stop the repeat from its next occurrence. Past entries will not change.',
+    endsBefore: (date) => `Ends before ${date}`,
   },
   keypad: {
     delete: 'Delete',
@@ -407,6 +435,20 @@ export const ja: Strings = {
     totalBudgetLabel: '合計予算',
     budgetFor: (name) => `${name}の予算`,
     none: 'なし',
+  },
+  repeats: {
+    title: '繰り返し',
+    activeCount: (count) => `${count}件有効`,
+    emptyTitle: '有効な繰り返しはありません',
+    emptyMessage: '新しい入力で「繰り返し」を設定すると作成できます。',
+    date: (y, m, day) => `${y}年${m + 1}月${day}日`,
+    next: (date) => `次回 ${date}`,
+    editRepeat: (name) => `${name}の繰り返しを編集`,
+    stopRepeat: '繰り返しを停止',
+    chooseCurrentCategory: '保存する前に現在のカテゴリを選択してください。',
+    stopConfirmTitle: 'この繰り返しを停止しますか？',
+    stopConfirmMessage: '次回以降の繰り返しを停止します。過去の記録は変更されません。',
+    endsBefore: (date) => `${date}より前に終了`,
   },
   keypad: {
     delete: '削除',

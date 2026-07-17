@@ -48,10 +48,12 @@ export {
   type Split,
 } from './summary';
 export {
+  activeRecurrences,
   saveLedgerItem,
   entriesForMonth,
   deleteLedgerItem,
   entriesThrough,
+  type ActiveRecurrence,
 } from './recurrence';
 export {
   CURRENCIES,

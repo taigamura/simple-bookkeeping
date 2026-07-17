@@ -131,3 +131,31 @@ describe('EntrySheet (edit mode, #43)', () => {
     expect(screen.queryByLabelText('Delete entry')).toBeNull();
   });
 });
+
+describe('EntrySheet (repeat management)', () => {
+  it('cycles recurring cadences without offering Never and uses a Stop repeat action', () => {
+    renderSheet({
+      editing: editingEntry({ repeat: 'yearly' }),
+      repeatManagement: true,
+      onDelete: () => {},
+    });
+
+    fireEvent.press(screen.getByLabelText('↻ Repeat: Every year'));
+    expect(screen.getByLabelText('↻ Repeat: Every day')).toBeTruthy();
+    expect(screen.queryByText('Never')).toBeNull();
+    expect(screen.getByLabelText('Stop repeat')).toBeTruthy();
+  });
+
+  it('requires a current category when the saved category was removed', () => {
+    renderSheet({
+      editing: editingEntry({ category: 'Old category', repeat: 'monthly' }),
+      repeatManagement: true,
+    });
+
+    expect(screen.getByText('Choose a current category before saving.')).toBeTruthy();
+    expect(screen.getByLabelText('Save this and future').props.accessibilityState.disabled).toBe(true);
+
+    fireEvent.press(screen.getByRole('radio', { name: 'Food' }));
+    expect(screen.getByLabelText('Save this and future').props.accessibilityState.disabled).toBe(false);
+  });
+});

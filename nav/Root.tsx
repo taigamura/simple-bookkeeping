@@ -14,6 +14,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 
 import {
+  activeRecurrences,
   clampDay,
   decodeZaimBytes,
   deleteLedgerItem,
@@ -39,6 +40,7 @@ import { shareTextFile } from '../platform/shareFile';
 import { BudgetsSheet } from '../screens/BudgetsSheet';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
+import { RepeatsSheet } from '../screens/RepeatsSheet';
 import { SettingsSheet } from '../screens/SettingsSheet';
 import { SummaryScreen } from '../screens/SummaryScreen';
 import type { AppState, UseStore } from '../store';
@@ -143,6 +145,10 @@ function Shell({
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
   // real current month, with the selected day defaulting to today.
   const today = useMemo(() => new Date(), []);
+  const todayDate = useMemo(
+    () => ({ y: today.getFullYear(), m: today.getMonth(), day: today.getDate() }),
+    [today],
+  );
   const [cursor, setCursor] = useState<YM>({ y: today.getFullYear(), m: today.getMonth() });
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
@@ -169,6 +175,10 @@ function Shell({
 
   const symbol = state.currency.symbol;
   const ledger = { entries: state.entries, recurrenceRules: state.recurrenceRules };
+  const activeRepeats = useMemo(
+    () => activeRecurrences(state.recurrenceRules, todayDate),
+    [state.recurrenceRules, todayDate],
+  );
   // Keep the pager's neighboring months populated during a swipe. Screens still
   // filter this finite projection to their requested cursor month.
   const visibleEntries = useMemo(
@@ -221,6 +231,7 @@ function Shell({
   const closeSheet = () => setSheet(null);
 
   const openSettings = () => setSheet('settings');
+  const openRepeats = () => setSheet('repeats');
   const openBudgets = () => setSheet('budgets');
   const backToSettings = () => setSheet('settings');
 
@@ -236,6 +247,11 @@ function Shell({
     setEditing(entry);
     setSelectedDay(entry.day);
     setSheet('entry');
+  };
+
+  const openRepeatEdit = (entry: Transaction) => {
+    setEditing(entry);
+    setSheet('repeat-entry');
   };
 
   // loadSample(): replace the ledger with the July-2026 demo set (stable ids)
@@ -357,6 +373,10 @@ function Shell({
     if (next === ledger) return;
     entrySaved();
     update(next);
+    if (sheet === 'repeat-entry') {
+      setSheet('repeats');
+      return;
+    }
     if (editing) setSelectedDay(editing.day);
     else {
       let landing = { y: draft.y, m: draft.m, day: draft.day };
@@ -390,6 +410,19 @@ function Shell({
   // handleDelete(): one-time entries use the existing destructive confirm;
   // recurring occurrences offer delete-only-this and this-and-future scopes.
   const handleDelete = (entry: Transaction) => {
+    if (sheet === 'repeat-entry') {
+      confirm(
+        strings.repeats.stopConfirmTitle,
+        strings.repeats.stopConfirmMessage,
+        () => {
+          update(deleteLedgerItem(ledger, entry, 'future'));
+          setSheet('repeats');
+        },
+        strings.repeats.stopRepeat,
+        true,
+      );
+      return;
+    }
     const remove = (scope: 'one' | 'future') => {
       update(deleteLedgerItem(ledger, entry, scope));
       setSelectedDay(entry.day);
@@ -465,8 +498,12 @@ function Shell({
           The sheet state selects which body renders. Transitions between non-null
           values are content swaps inside the open sheet; only null→sheet and
           sheet→null trigger present/dismiss. Sheet bodies mount unconditionally. */}
-      <BottomSheet visible={sheet !== null} onClose={closeSheet} testID={sheet ? `${sheet}-sheet` : undefined}>
-        {sheet === 'entry' && (
+      <BottomSheet
+        visible={sheet !== null}
+        onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
+        testID={sheet ? `${sheet}-sheet` : undefined}
+      >
+        {(sheet === 'entry' || sheet === 'repeat-entry') && (
           <EntrySheet
             expCats={state.expCats}
             incCats={state.incCats}
@@ -475,9 +512,10 @@ function Shell({
             day={selectedDay}
             symbol={symbol}
             editing={editing ?? undefined}
+            repeatManagement={sheet === 'repeat-entry'}
             onSave={handleSubmit}
             onDelete={handleDelete}
-            onClose={closeSheet}
+            onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
           />
         )}
         {sheet === 'settings' && (
@@ -490,6 +528,8 @@ function Shell({
               update({ expCats, budgets: pruneBudgets(state.budgets, expCats) })
             }
             onChangeIncCats={(incCats) => update({ incCats })}
+            activeRepeatCount={activeRepeats.length}
+            onOpenRepeats={openRepeats}
             onOpenBudgets={openBudgets}
             onLoadSample={loadSample}
             onExportData={exportData}
@@ -516,6 +556,16 @@ function Shell({
             onChangeBudgets={(budgets) => update({ budgets })}
             onChangeBudgetMode={(budgetMode) => update({ budgetMode })}
             onChangeTotalBudget={(totalBudget) => update({ totalBudget })}
+            onDone={backToSettings}
+            ScrollContainer={BottomSheetScrollView}
+          />
+        )}
+        {sheet === 'repeats' && (
+          <RepeatsSheet
+            recurrenceRules={state.recurrenceRules}
+            today={todayDate}
+            symbol={symbol}
+            onEdit={openRepeatEdit}
             onDone={backToSettings}
             ScrollContainer={BottomSheetScrollView}
           />

@@ -176,6 +176,145 @@ describe('Root sheet click behavior', () => {
     expect(screen.getByText(strings.nav.settings)).toBeTruthy();
   });
 
+  it('drills from Settings into the Repeats management sheet', () => {
+    renderRoot();
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.repeats.title));
+
+    expect(screen.getByTestId('repeats-sheet')).toBeTruthy();
+    expect(screen.getByText(strings.repeats.emptyTitle)).toBeTruthy();
+  });
+
+  it('opens a repeat in the management editor and closes back to the list', () => {
+    const now = new Date();
+    const state = {
+      ...DEFAULT_STATE,
+      recurrenceRules: [
+        {
+          id: 'managed-repeat',
+          start: { y: now.getFullYear(), m: now.getMonth(), day: now.getDate() },
+          anchorDay: now.getDate(),
+          type: 'expense' as const,
+          amount: 850,
+          category: DEFAULT_STATE.expCats[0],
+          note: '—',
+          repeat: 'daily' as const,
+          weekendShift: 'off' as const,
+          exceptions: [],
+        },
+      ],
+    };
+    render(
+      <ThemeProvider>
+        <Root
+          state={state}
+          update={jest.fn()}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.repeats.title));
+    fireEvent.press(screen.getByLabelText(strings.repeats.editRepeat(DEFAULT_STATE.expCats[0])));
+    expect(screen.getByTestId('repeat-entry-sheet')).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText(strings.nav.close));
+    expect(screen.getByTestId('repeats-sheet')).toBeTruthy();
+  });
+
+  it('saves repeat edits from today forward and returns to the list', () => {
+    const now = new Date();
+    const update = jest.fn();
+    const category = DEFAULT_STATE.expCats[0];
+    const state = {
+      ...DEFAULT_STATE,
+      recurrenceRules: [{
+        id: 'managed-save',
+        start: { y: 2026, m: 0, day: 1 },
+        anchorDay: 1,
+        type: 'expense' as const,
+        amount: 850,
+        category,
+        note: '—',
+        repeat: 'daily' as const,
+        weekendShift: 'off' as const,
+        exceptions: [],
+      }],
+    };
+    render(
+      <ThemeProvider>
+        <Root state={state} update={update} showCorruptNotice={false} hasCorruptStash={false} readCorruptStash={async () => null} />
+      </ThemeProvider>,
+    );
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.repeats.title));
+    fireEvent.press(screen.getByLabelText(strings.repeats.editRepeat(category)));
+    fireEvent.press(screen.getByLabelText(strings.entry.saveThisAndFuture));
+
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
+      recurrenceRules: expect.arrayContaining([
+        expect.objectContaining({ endsBefore: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}` }),
+      ]),
+    }));
+    expect(screen.getByTestId('repeats-sheet')).toBeTruthy();
+  });
+
+  it('confirms stopping a managed repeat without offering occurrence scopes', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const update = jest.fn();
+    const now = new Date();
+    const category = DEFAULT_STATE.expCats[0];
+    const state = {
+      ...DEFAULT_STATE,
+      recurrenceRules: [{
+        id: 'managed-stop',
+        start: { y: now.getFullYear(), m: now.getMonth(), day: now.getDate() },
+        anchorDay: now.getDate(),
+        type: 'expense' as const,
+        amount: 850,
+        category,
+        note: '—',
+        repeat: 'daily' as const,
+        weekendShift: 'off' as const,
+        exceptions: [],
+      }],
+    };
+    render(
+      <ThemeProvider>
+        <Root
+          state={state}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+    fireEvent.press(screen.getByLabelText(strings.nav.settings));
+    fireEvent.press(screen.getByLabelText(strings.repeats.title));
+    fireEvent.press(screen.getByLabelText(strings.repeats.editRepeat(category)));
+    fireEvent.press(screen.getByLabelText(strings.repeats.stopRepeat));
+
+    expect(alert).toHaveBeenCalledWith(
+      strings.repeats.stopConfirmTitle,
+      strings.repeats.stopConfirmMessage,
+      expect.any(Array),
+    );
+    const buttons = alert.mock.calls[0][2]!;
+    expect(buttons.map((button) => button.text)).toEqual([
+      strings.common.cancel,
+      strings.repeats.stopRepeat,
+    ]);
+    await act(async () => buttons[1].onPress?.());
+    expect(update.mock.calls[0][0].recurrenceRules[0].endsBefore).toBe(
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+    );
+    alert.mockRestore();
+  });
+
   it('sheet content swaps entry → settings on state change (#60)', () => {
     renderRoot();
     fireEvent.press(screen.getByLabelText(strings.nav.addEntry));

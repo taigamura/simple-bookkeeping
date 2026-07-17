@@ -15,12 +15,70 @@ import type {
   YM,
 } from './types';
 
+export interface ActiveRecurrence {
+  rule: RecurrenceRule;
+  next: Transaction;
+}
+
 function dateKey(date: RecurrenceDate): string {
   return `${String(date.y).padStart(4, '0')}-${String(date.m + 1).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
 }
 
 function compareDate(a: RecurrenceDate, b: RecurrenceDate): number {
   return a.y - b.y || a.m - b.m || a.day - b.day;
+}
+
+function nextDay(date: RecurrenceDate): RecurrenceDate {
+  const value = new Date(date.y, date.m, date.day + 1);
+  return { y: value.getFullYear(), m: value.getMonth(), day: value.getDate() };
+}
+
+/** Active repeat segments paired with the next occurrence visible on the calendar. */
+export function activeRecurrences(
+  rules: RecurrenceRule[],
+  today: RecurrenceDate,
+): ActiveRecurrence[] {
+  return rules
+    .flatMap((rule) => {
+      const next = nextVisibleOccurrence(rule, today);
+      return next ? [{ rule, next }] : [];
+    })
+    .sort((a, b) => compareDate(a.next, b.next) || a.rule.id.localeCompare(b.rule.id));
+}
+
+function nextVisibleOccurrence(
+  rule: RecurrenceRule,
+  today: RecurrenceDate,
+): Transaction | null {
+  if (rule.repeat === 'daily') {
+    let scheduled = compareDate(rule.start, today) > 0 ? rule.start : today;
+    while (!rule.endsBefore || dateKey(scheduled) < rule.endsBefore) {
+      const next = occurrence(rule, scheduled);
+      if (next && compareDate(next, today) >= 0) return next;
+      scheduled = nextDay(scheduled);
+    }
+    return null;
+  }
+
+  if (rule.repeat === 'monthly') {
+    let period = shiftMonth({ y: today.y, m: today.m }, -1);
+    while (true) {
+      const scheduled = scheduledInPeriod(rule, period);
+      if (rule.endsBefore && dateKey(scheduled) >= rule.endsBefore) return null;
+      const next = occurrence(rule, scheduled);
+      if (next && compareDate(next, today) >= 0) return next;
+      period = shiftMonth(period, 1);
+    }
+  }
+
+  let year = today.y - 1;
+  while (true) {
+    const scheduled = scheduledInPeriod(rule, { y: year, m: rule.start.m });
+    if (rule.endsBefore && dateKey(scheduled) >= rule.endsBefore) return null;
+    const next = occurrence(rule, scheduled);
+    if (next && compareDate(next, today) >= 0) return next;
+    year += 1;
+  }
 }
 
 function shiftedDate(date: RecurrenceDate, shift: WeekendShift): RecurrenceDate {
@@ -128,9 +186,7 @@ export function saveLedgerItem(
       };
     }
     const sameCadence = draft.repeat === source.repeat;
-    const nextStart = sameCadence
-      ? editing.occurrence.scheduled
-      : { y: editing.y, m: editing.m, day: editing.day };
+    const nextStart = editing.occurrence.scheduled;
     return {
       entries: ledger.entries,
       recurrenceRules: [
@@ -148,6 +204,7 @@ export function saveLedgerItem(
           exceptions: sameCadence
             ? source.exceptions.filter((exception) => exception >= cutoff)
             : [],
+          endsBefore: source.endsBefore,
         },
       ],
     };

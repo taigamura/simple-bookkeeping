@@ -20,6 +20,8 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         onChangeCurrency={() => {}}
         onChangeExpCats={() => {}}
         onChangeIncCats={() => {}}
+        activeRepeatCount={0}
+        onOpenRepeats={() => {}}
         onOpenBudgets={() => {}}
         onLoadSample={() => {}}
         onExportData={() => {}}
@@ -76,6 +78,15 @@ describe('SettingsSheet', () => {
     renderSheet({ onOpenBudgets });
     fireEvent.press(screen.getByLabelText('Budgets'));
     expect(onOpenBudgets).toHaveBeenCalled();
+  });
+
+  it('always renders a Repeats drill-in row with its active segment count', () => {
+    const onOpenRepeats = jest.fn();
+    renderSheet({ activeRepeatCount: 2, onOpenRepeats });
+
+    expect(screen.getByText('2 active')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Repeats'));
+    expect(onOpenRepeats).toHaveBeenCalled();
   });
 
   it('renders an "Import from Zaim" action that fires its callback', () => {

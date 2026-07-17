@@ -42,6 +42,8 @@ interface EntrySheetProps {
    * Existing concrete or projected occurrence to edit (#43).
    */
   editing?: Transaction;
+  /** Settings management route: recurring cadences only and explicit stop copy. */
+  repeatManagement?: boolean;
   /** Collects the draft on save; the host stores or splits the corresponding ledger item. */
   onSave: (draft: EntryDraft, weekendShift: WeekendShift) => void;
   /** Edit mode only: request deletion of `editing` (the host chooses scope). */
@@ -78,6 +80,7 @@ export function EntrySheet({
   day,
   symbol,
   editing,
+  repeatManagement = false,
   onSave,
   onDelete,
   onClose,
@@ -97,7 +100,8 @@ export function EntrySheet({
   );
 
   const value = amountValue(amountStr);
-  const canSave = value > 0;
+  const categoryIsCurrent = catsFor(txType).includes(category);
+  const canSave = value > 0 && (!repeatManagement || categoryIsCurrent);
   const heroText = yen(value, symbol);
   const showWeekend = repeat === 'monthly' || repeat === 'yearly';
   const editsSeries =
@@ -152,6 +156,11 @@ export function EntrySheet({
         selected={category}
         onSelect={setCategory}
       />
+      {repeatManagement && !categoryIsCurrent && (
+        <Txt variant="secondary" tone="negative" style={styles.categoryWarning}>
+          {strings.repeats.chooseCurrentCategory}
+        </Txt>
+      )}
 
       <View style={[styles.rowsCard, { backgroundColor: colors.card2 }]}>
         <CycleRow
@@ -167,7 +176,11 @@ export function EntrySheet({
           active={repeat !== 'never'}
           activeTone="positive"
           accessibilityHint={strings.a11y.recurrenceHint}
-          onPress={() => setRepeat((r) => next(REPEAT_ORDER, r))}
+          onPress={() =>
+            setRepeat((r) =>
+              next(repeatManagement ? REPEAT_ORDER.slice(1) : REPEAT_ORDER, r),
+            )
+          }
         />
         {showWeekend && (
           <CycleRow
@@ -203,11 +216,11 @@ export function EntrySheet({
         <Pressable
           onPress={() => onDelete(editing)}
           accessibilityRole="button"
-          accessibilityLabel={strings.entry.deleteEntry}
+          accessibilityLabel={repeatManagement ? strings.repeats.stopRepeat : strings.entry.deleteEntry}
           style={({ pressed }) => [styles.deleteRow, pressed && { opacity: 0.6 }]}
         >
           <Txt variant="listItem" tone="negative">
-            {strings.entry.deleteEntry}
+            {repeatManagement ? strings.repeats.stopRepeat : strings.entry.deleteEntry}
           </Txt>
         </Pressable>
       )}
@@ -284,4 +297,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   deleteRow: { alignItems: 'center', justifyContent: 'center', paddingVertical: 6 },
+  categoryWarning: { textAlign: 'center' },
 });
