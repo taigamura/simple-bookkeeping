@@ -61,6 +61,11 @@ export interface Strings {
     budgetLeft: string;
   };
   entry: {
+    dateRowLabel: string;
+    datePlaceholder: string;
+    today: string;
+    useToday: string;
+    invalidDate: string;
     noteRowLabel: string;
     repeatRowLabel: string;
     weekendRowLabel: string;
@@ -207,6 +212,11 @@ export const en: Strings = {
     budgetLeft: 'Budget left',
   },
   entry: {
+    dateRowLabel: 'Date',
+    datePlaceholder: 'YYYY-MM-DD',
+    today: 'Today',
+    useToday: 'Use today',
+    invalidDate: 'Enter a valid date.',
     noteRowLabel: 'Note',
     repeatRowLabel: '↻ Repeat',
     weekendRowLabel: 'If on weekend',
@@ -365,6 +375,11 @@ export const ja: Strings = {
     budgetLeft: '予算の残り',
   },
   entry: {
+    dateRowLabel: '日付',
+    datePlaceholder: 'YYYY-MM-DD',
+    today: '今日',
+    useToday: '今日にする',
+    invalidDate: '有効な日付を入力してください。',
     noteRowLabel: 'メモ',
     repeatRowLabel: '↻ 繰り返し',
     weekendRowLabel: '週末の場合',

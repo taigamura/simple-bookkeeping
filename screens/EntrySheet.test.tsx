@@ -19,6 +19,7 @@ const renderSheet = (props: Partial<React.ComponentProps<typeof EntrySheet>> = {
         y={2026}
         m={6}
         day={2}
+        today={{ y: 2026, m: 6, day: 26 }}
         symbol="¥"
         onSave={() => {}}
         onClose={() => {}}
@@ -93,6 +94,7 @@ describe('EntrySheet (edit mode, #43)', () => {
     expect(screen.getByLabelText('Note: Card')).toBeTruthy();
     const cta = screen.getByLabelText('Save');
     expect(cta.props.accessibilityState.disabled).toBe(false);
+    expect(screen.queryByLabelText('Date YYYY-MM-DD')).toBeNull();
   });
 
   it('prefills the selected category chip', () => {

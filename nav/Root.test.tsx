@@ -187,6 +187,37 @@ describe('Root sheet click behavior', () => {
     );
   });
 
+  it('persists a new entry on the date entered in the sheet', () => {
+    const update = jest.fn();
+    render(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText(strings.nav.addEntry));
+    fireEvent.changeText(
+      screen.getByLabelText(`${strings.entry.dateRowLabel} ${strings.entry.datePlaceholder}`),
+      '2030-12-24',
+    );
+    fireEvent.press(screen.getByLabelText('1'));
+    fireEvent.press(screen.getByLabelText(strings.entry.addExpense));
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entries: [
+          expect.objectContaining({ y: 2030, m: 11, day: 24 }),
+        ],
+      }),
+    );
+  });
+
   it('tapping the Settings gear opens the Settings sheet without a style crash', () => {
     renderRoot();
     expect(screen.queryByTestId('settings-sheet')).toBeNull();

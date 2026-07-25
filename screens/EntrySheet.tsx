@@ -12,7 +12,7 @@
  * land (it passes the target `y`/`m`/`day`).
  */
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import {
   amountValue,
@@ -21,13 +21,23 @@ import {
   type EntryDraft,
   type KeypadKey,
   type Repeat,
+  type RecurrenceDate,
   type Transaction,
   type TxType,
   type WeekendShift,
 } from '../domain';
 import { strings } from '../i18n';
 import { CategoryChips, Keypad, SegmentedToggle } from '../ui';
-import { useTheme, metrics, accents, shadows, heroAmountSize, Txt, type Tone } from '../theme';
+import {
+  useTheme,
+  metrics,
+  accents,
+  shadows,
+  heroAmountSize,
+  mono,
+  Txt,
+  type Tone,
+} from '../theme';
 import { IconButton } from '../nav/IconButton';
 
 interface EntrySheetProps {
@@ -37,6 +47,8 @@ interface EntrySheetProps {
   y: number;
   m: number;
   day: number;
+  /** Current local date, used by the create form's quick "today" action. */
+  today: RecurrenceDate;
   symbol: string;
   /**
    * Existing concrete or projected occurrence to edit (#43).
@@ -72,12 +84,35 @@ const SHIFT_LABEL: Record<WeekendShift, string> = strings.entry.weekendLabels;
 const next = <T,>(order: T[], value: T): T =>
   order[(order.indexOf(value) + 1) % order.length];
 
+const formatDate = ({ y, m, day }: RecurrenceDate): string =>
+  `${String(y).padStart(4, '0')}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+const parseDate = (value: string): RecurrenceDate | null => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const y = Number(match[1]);
+  const m = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  if (y === 0 || m < 0 || m > 11 || day < 1) return null;
+  const candidate = new Date(`${value}T00:00:00.000Z`);
+  if (
+    Number.isNaN(candidate.getTime()) ||
+    candidate.getUTCFullYear() !== y ||
+    candidate.getUTCMonth() !== m ||
+    candidate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return { y, m, day };
+};
+
 export function EntrySheet({
   expCats,
   incCats,
   y,
   m,
   day,
+  today,
   symbol,
   editing,
   repeatManagement = false,
@@ -98,10 +133,15 @@ export function EntrySheet({
   const [weekendShift, setWeekendShift] = useState<WeekendShift>(
     editing?.occurrence?.weekendShift ?? 'after',
   );
+  const [dateText, setDateText] = useState(() => formatDate({ y, m, day }));
 
   const value = amountValue(amountStr);
+  const enteredDate = parseDate(dateText);
   const categoryIsCurrent = catsFor(txType).includes(category);
-  const canSave = value > 0 && (!repeatManagement || categoryIsCurrent);
+  const canSave =
+    value > 0 &&
+    (isEditing || enteredDate !== null) &&
+    (!repeatManagement || categoryIsCurrent);
   const heroText = yen(value, symbol);
   const showWeekend = repeat === 'monthly' || repeat === 'yearly';
   const editsSeries =
@@ -123,7 +163,12 @@ export function EntrySheet({
   };
 
   const save = () => {
-    onSave({ type: txType, amountStr, category, note, y, m, day, repeat }, weekendShift);
+    const target = isEditing ? { y, m, day } : enteredDate;
+    if (!target) return;
+    onSave(
+      { type: txType, amountStr, category, note, ...target, repeat },
+      weekendShift,
+    );
   };
 
   return (
@@ -163,6 +208,43 @@ export function EntrySheet({
       )}
 
       <View style={[styles.rowsCard, { backgroundColor: colors.card2 }]}>
+        {!isEditing && (
+          <View style={styles.dateSection}>
+            <View style={styles.dateRow}>
+              <Txt variant="optionLabel" tone="dim">
+                {strings.entry.dateRowLabel}
+              </Txt>
+              <View style={styles.dateControls}>
+                <TextInput
+                  value={dateText}
+                  onChangeText={setDateText}
+                  placeholder={strings.entry.datePlaceholder}
+                  placeholderTextColor={colors.dim}
+                  accessibilityLabel={`${strings.entry.dateRowLabel} ${strings.entry.datePlaceholder}`}
+                  accessibilityValue={{ text: dateText }}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={10}
+                  returnKeyType="done"
+                  style={[styles.dateInput, { color: colors.ink }]}
+                />
+                <Pressable
+                  onPress={() => setDateText(formatDate(today))}
+                  accessibilityRole="button"
+                  accessibilityLabel={strings.entry.useToday}
+                  style={({ pressed }) => [styles.todayButton, pressed && { opacity: 0.6 }]}
+                >
+                  <Txt variant="optionLabel" tone="positive">{strings.entry.today}</Txt>
+                </Pressable>
+              </View>
+            </View>
+            {!enteredDate && (
+              <Txt variant="secondary" tone="negative" style={styles.dateWarning}>
+                {strings.entry.invalidDate}
+              </Txt>
+            )}
+          </View>
+        )}
         <CycleRow
           first
           label={strings.entry.noteRowLabel}
@@ -289,6 +371,38 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     height: 46,
+  },
+  dateSection: {
+    minHeight: 46,
+  },
+  dateRow: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  dateControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateInput: {
+    width: 94,
+    minHeight: 44,
+    paddingHorizontal: 0,
+    fontFamily: mono.semibold,
+    fontSize: 14.5,
+    textAlign: 'right',
+  },
+  todayButton: {
+    minHeight: 44,
+    paddingLeft: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateWarning: {
+    paddingBottom: 10,
+    textAlign: 'right',
   },
   cta: {
     height: metrics.ctaHeight,

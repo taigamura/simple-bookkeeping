@@ -483,6 +483,7 @@ function Shell({
             y={cursor.y}
             m={cursor.m}
             day={selectedDay}
+            today={todayDate}
             symbol={symbol}
             editing={editing ?? undefined}
             repeatManagement={sheet === 'repeat-entry'}
