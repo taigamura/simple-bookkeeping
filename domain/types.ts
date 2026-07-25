@@ -16,6 +16,10 @@ export type WeekendShift = 'after' | 'before' | 'off';
 
 export interface Transaction {
   id: string;
+  /** ISO-8601 instant when this ledger item was created or imported. */
+  timestamp: string;
+  /** True only when migration had to infer a timestamp for legacy data. */
+  timestampInferred?: true;
   y: number; // full year, e.g. 2026
   m: number; // 0-based month (Jan = 0 … Dec = 11)
   day: number; // day-of-month within (y, m)
@@ -46,6 +50,10 @@ export interface RecurrenceOccurrence {
 /** Persisted description of an unbounded repeating transaction. */
 export interface RecurrenceRule {
   id: string;
+  /** ISO-8601 instant when this recurring ledger item was created. */
+  timestamp: string;
+  /** True only when migration had to infer a timestamp for legacy data. */
+  timestampInferred?: true;
   start: RecurrenceDate;
   /** Original requested day, retained across short months. */
   anchorDay: number;

@@ -8,6 +8,7 @@ import type { Transaction } from './types';
 
 const tx = (over: Partial<Transaction>): Transaction => ({
   id: over.id ?? 'x',
+  timestamp: '2026-07-01T00:00:00.000Z',
   y: 2026,
   m: 6,
   day: 1,

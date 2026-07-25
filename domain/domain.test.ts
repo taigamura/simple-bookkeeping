@@ -19,6 +19,7 @@ import type { Transaction } from './types';
 
 const tx = (over: Partial<Transaction>): Transaction => ({
   id: over.id ?? 'x',
+  timestamp: '2026-07-01T00:00:00.000Z',
   y: 2026,
   m: 6,
   day: 1,
@@ -144,8 +145,17 @@ describe('makeEntry (save rules)', () => {
   });
 
   it('builds a transaction for a positive amount', () => {
-    const e = makeEntry({ ...base, amountStr: '850' })!;
-    expect(e).toMatchObject({ type: 'expense', amount: 850, category: 'Food', day: 2, m: 6, y: 2026 });
+    const timestamp = '2026-07-25T04:05:06.789Z';
+    const e = makeEntry({ ...base, amountStr: '850' }, timestamp)!;
+    expect(e).toMatchObject({
+      type: 'expense',
+      amount: 850,
+      category: 'Food',
+      day: 2,
+      m: 6,
+      y: 2026,
+      timestamp,
+    });
     expect(e.id).toBeTruthy();
   });
 

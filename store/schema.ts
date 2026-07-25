@@ -119,6 +119,17 @@ function isBudgets(value: unknown): value is Budgets {
   );
 }
 
+function isTimestamp(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value;
+}
+
+/** Deterministic timestamp for data saved before timestamps were introduced. */
+function legacyTimestamp(y: number, m: number, day: number): string {
+  return new Date(Date.UTC(y, m, day, 12)).toISOString();
+}
+
 function normalizeDate(value: unknown): RecurrenceDate | null {
   if (!isRecord(value)) return null;
   if (!isInteger(value.y)) return null;
@@ -146,6 +157,8 @@ function normalizeRecurrenceRule(value: unknown): RecurrenceRule | null {
   const start = normalizeDate(value.start);
   if (!start) return null;
   if (typeof value.id !== 'string' || value.id.length === 0) return null;
+  if (value.timestamp !== undefined && !isTimestamp(value.timestamp)) return null;
+  if (value.timestampInferred !== undefined && value.timestampInferred !== true) return null;
   if (!isInteger(value.anchorDay) || value.anchorDay < 1 || value.anchorDay > 31) return null;
   if (!txTypes.includes(value.type as TxType)) return null;
   if (!isInteger(value.amount) || value.amount <= 0) return null;
@@ -166,6 +179,7 @@ function normalizeRecurrenceRule(value: unknown): RecurrenceRule | null {
   }
   const normalized: RecurrenceRule = {
     id: value.id,
+    timestamp: value.timestamp ?? legacyTimestamp(start.y, start.m, start.day),
     start,
     anchorDay: value.anchorDay,
     type: value.type as TxType,
@@ -176,6 +190,9 @@ function normalizeRecurrenceRule(value: unknown): RecurrenceRule | null {
     weekendShift: value.weekendShift as WeekendShift,
     exceptions: [...value.exceptions] as string[],
   };
+  if (value.timestamp === undefined || value.timestampInferred === true) {
+    normalized.timestampInferred = true;
+  }
   if (typeof value.endsBefore === 'string') normalized.endsBefore = value.endsBefore;
   return normalized;
 }
@@ -194,9 +211,12 @@ function normalizeTransaction(value: unknown): Transaction | null {
   if (typeof value.note !== 'string') return null;
   if (value.repeat !== undefined && !repeats.includes(value.repeat as Repeat)) return null;
   if (value.accountId !== undefined && typeof value.accountId !== 'string') return null;
+  if (value.timestamp !== undefined && !isTimestamp(value.timestamp)) return null;
+  if (value.timestampInferred !== undefined && value.timestampInferred !== true) return null;
 
   const normalized: Transaction = {
     id: value.id,
+    timestamp: value.timestamp ?? legacyTimestamp(value.y, value.m, value.day),
     y: value.y,
     m: value.m,
     day: value.day,
@@ -209,6 +229,9 @@ function normalizeTransaction(value: unknown): Transaction | null {
   // one-time history rather than accidentally turning every old occurrence
   // into its own infinite rule.
   normalized.repeat = 'never';
+  if (value.timestamp === undefined || value.timestampInferred === true) {
+    normalized.timestampInferred = true;
+  }
   if (value.accountId !== undefined) normalized.accountId = value.accountId;
   return normalized;
 }

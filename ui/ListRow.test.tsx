@@ -16,6 +16,7 @@ const entry = (over: Partial<Transaction> = {}): Transaction => ({
   y: 2026,
   m: 6,
   day: 2,
+  timestamp: '2026-07-02T04:05:00.000Z',
   type: 'expense',
   amount: 1200,
   category: 'Food',
@@ -36,6 +37,28 @@ describe('ListRow', () => {
     renderRow();
     expect(screen.getByText('Food')).toBeTruthy();
     expect(screen.getByText('Konbini')).toBeTruthy();
+  });
+
+  it('shows a localized time for the item timestamp', () => {
+    const timestamp = '2026-07-02T04:05:00.000Z';
+    renderRow({ entry: entry({ timestamp }) });
+    const expected = new Intl.DateTimeFormat(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(timestamp));
+
+    expect(screen.getByText(expected)).toBeTruthy();
+  });
+
+  it('marks a legacy backfilled timestamp as inferred', () => {
+    const timestamp = '2026-07-02T12:00:00.000Z';
+    renderRow({ entry: entry({ timestamp, timestampInferred: true }) });
+    const expected = new Intl.DateTimeFormat(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(timestamp));
+
+    expect(screen.getByText(`~${expected}`)).toBeTruthy();
   });
 
   it('shows the note even when it equals the category', () => {

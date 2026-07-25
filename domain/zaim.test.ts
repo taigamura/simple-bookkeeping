@@ -34,6 +34,7 @@ describe('parseZaimCsv', () => {
       amount: 1200,
       category: 'Food',
     });
+    expect(entries[0].timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
   it('turns an income row into an income entry', () => {
@@ -236,6 +237,7 @@ describe('decodeZaimBytes', () => {
 describe('serializeZaimCsv', () => {
   const entry = (over: Partial<Transaction>): Transaction => ({
     id: 'ignored',
+    timestamp: '2026-07-01T00:00:00.000Z',
     y: 2026,
     m: 6,
     day: 1,
@@ -341,8 +343,14 @@ describe('serializeZaimCsv', () => {
     const csv = serializeZaimCsv(ledger);
     const first = parseZaimCsv(csv, cats({ expCats: [], incCats: [], entries: [] }));
     expect(first.entries).toHaveLength(2);
-    expect(first.entries.map(({ id: _id, repeat: _repeat, ...rest }) => rest)).toEqual(
-      ledger.map(({ id: _id, repeat: _repeat, ...rest }) => rest),
+    expect(
+      first.entries.map(
+        ({ id: _id, repeat: _repeat, timestamp: _timestamp, ...rest }) => rest,
+      ),
+    ).toEqual(
+      ledger.map(
+        ({ id: _id, repeat: _repeat, timestamp: _timestamp, ...rest }) => rest,
+      ),
     );
 
     const second = parseZaimCsv(csv, cats({ entries: first.entries }));

@@ -1,7 +1,7 @@
 /**
  * ListRow — one entry in the day list. A 2-letter `code` tile, the category as
- * the row title with the note as its subtitle (both always shown), and the
- * signed amount tinted by direction (income green, expense red). Rows share one
+ * the row title with the note and creation time beneath it, and the signed
+ * amount tinted by direction (income green, expense red). Rows share one
  * rounded card in the parent; a hairline divider sits above every row except the
  * first (`first` prop), so there is no rule above the first or below the last.
  */
@@ -16,7 +16,7 @@ import {
   type Transaction,
 } from '../domain';
 import { strings } from '../i18n';
-import { useTheme, metrics, Txt } from '../theme';
+import { useTheme, metrics, mono, Txt } from '../theme';
 
 interface ListRowProps {
   entry: Transaction;
@@ -35,6 +35,11 @@ export function ListRow({
 }: ListRowProps) {
   const { colors } = useTheme();
   const value = signedAmount(entry);
+  const timestamp = new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(entry.timestamp));
+  const timestampLabel = entry.timestampInferred ? `~${timestamp}` : timestamp;
 
   const rowStyle = [
     styles.row,
@@ -53,9 +58,14 @@ export function ListRow({
         <Txt variant="listItem" numberOfLines={1}>
           {entry.category}
         </Txt>
-        <Txt variant="secondary" tone="muted" numberOfLines={1}>
-          {entry.note}
-        </Txt>
+        <View style={styles.meta}>
+          <Txt variant="secondary" tone="muted" numberOfLines={1} style={styles.note}>
+            {entry.note}
+          </Txt>
+          <Txt variant="secondary" tone="dim" style={styles.timestamp}>
+            {timestampLabel}
+          </Txt>
+        </View>
       </View>
 
       <Txt variant="inlineAmount" tone={entry.type === 'income' ? 'positive' : 'negative'}>
@@ -95,4 +105,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   body: { flex: 1, gap: 2 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  note: { flex: 1 },
+  timestamp: { fontFamily: mono.regular },
 });

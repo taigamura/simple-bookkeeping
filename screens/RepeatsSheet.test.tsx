@@ -7,6 +7,7 @@ import type { RecurrenceRule } from '../domain';
 
 const monthly: RecurrenceRule = {
   id: 'rent',
+  timestamp: '2026-01-20T00:00:00.000Z',
   start: { y: 2026, m: 0, day: 20 },
   anchorDay: 20,
   type: 'expense',

@@ -64,7 +64,10 @@ export function uid(): string {
  * integer amount and return `null` when it is 0 (no-op), and fall back to the
  * category when the note is empty or the "—" placeholder.
  */
-export function makeEntry(draft: EntryDraft): Transaction | null {
+export function makeEntry(
+  draft: EntryDraft,
+  timestamp: string = new Date().toISOString(),
+): Transaction | null {
   const amount = amountValue(draft.amountStr);
   if (amount <= 0) return null;
 
@@ -73,6 +76,7 @@ export function makeEntry(draft: EntryDraft): Transaction | null {
 
   return {
     id: uid(),
+    timestamp,
     y: draft.y,
     m: draft.m,
     day: draft.day,

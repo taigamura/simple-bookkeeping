@@ -106,6 +106,8 @@ function occurrence(rule: RecurrenceRule, scheduled: RecurrenceDate): Transactio
     rule.repeat === 'daily' ? scheduled : shiftedDate(scheduled, rule.weekendShift);
   return {
     id: `${rule.id}@${key}`,
+    timestamp: rule.timestamp,
+    ...(rule.timestampInferred ? { timestampInferred: true as const } : {}),
     ...actual,
     type: rule.type,
     amount: rule.amount,
@@ -176,6 +178,8 @@ export function saveLedgerItem(
           ...ledger.entries,
           {
             ...normalized,
+            timestamp: editing.timestamp,
+            ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
             y: editing.y,
             m: editing.m,
             day: editing.day,
@@ -193,6 +197,8 @@ export function saveLedgerItem(
         ...recurrenceRules,
         {
           id: normalized.id,
+          timestamp: editing.timestamp,
+          ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
           start: nextStart,
           anchorDay: sameCadence ? source.anchorDay : nextStart.day,
           type: normalized.type,
@@ -236,6 +242,8 @@ export function saveLedgerItem(
         ...ledger.recurrenceRules,
         {
           id: normalized.id,
+          timestamp: editing.timestamp,
+          ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
           start,
           anchorDay: start.day,
           type: normalized.type,
@@ -255,6 +263,7 @@ export function saveLedgerItem(
   }
   const rule: RecurrenceRule = {
     id: normalized.id,
+    timestamp: normalized.timestamp,
     start: { y: draft.y, m: draft.m, day: draft.day },
     anchorDay: draft.day,
     type: normalized.type,

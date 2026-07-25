@@ -126,19 +126,25 @@ type TxType = 'income' | 'expense';
 type Repeat = 'never' | 'daily' | 'monthly' | 'yearly';
 type WeekendShift = 'after' | 'before' | 'off';   // Monday / Friday / keep
 interface Transaction {
-  id: string; day: number;            // day-of-month within ym
+  id: string; timestamp: string;      // ISO creation/import instant
+  day: number;                        // day-of-month within ym
   type: TxType; amount: number;       // integer, minor-unit-less
   category: string; note: string;
   repeat?: Repeat; accountId?: string; // accountId reserved, unused in v1
 }
 interface RecurrenceRule {
-  id: string; start: { y: number; m: number; day: number }; anchorDay: number;
+  id: string; timestamp: string;      // inherited by projected entries
+  start: { y: number; m: number; day: number }; anchorDay: number;
   type: TxType; amount: number; category: string; note: string;
   repeat: Exclude<Repeat, 'never'>; weekendShift: WeekendShift;
   exceptions: string[]; endsBefore?: string;
 }
 interface Currency { symbol: string; code: string; } // ¥/JPY etc.
 ```
+
+Persisted records created before timestamps existed are assigned a deterministic
+noon-UTC fallback on their ledger date; this is an inferred compatibility value,
+not their original creation time.
 
 Aggregation (in-memory JS, mirrors the prototype):
 - `monthEntries(ym)` — sample data lives only in July 2026 (`y:2026,m:6`); other months empty

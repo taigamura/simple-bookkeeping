@@ -11,7 +11,12 @@
 import { createStore } from './store';
 import { createMemoryPersistence } from './persistence';
 import { DEFAULT_STATE, SCHEMA_VERSION, type AppState } from './schema';
-import { saveLedgerItem, type EntryDraft, type Transaction } from '../domain';
+import {
+  saveLedgerItem,
+  type EntryDraft,
+  type RecurrenceRule,
+  type Transaction,
+} from '../domain';
 
 /** A full AppState with the given overrides, so tests state only what matters. */
 const stateWith = (over: Partial<AppState> = {}): AppState => ({
@@ -24,6 +29,7 @@ const sampleEntry: Transaction = {
   y: 2026,
   m: 6,
   day: 2,
+  timestamp: '2026-07-02T03:04:05.000Z',
   type: 'expense',
   amount: 850,
   category: 'Food',
@@ -38,6 +44,43 @@ describe('createStore', () => {
     await store.save(stateWith({ theme: 'light' }));
 
     expect((await store.load()).theme).toBe('light');
+  });
+
+  it('backfills timestamps on legacy entries and recurrence rules', async () => {
+    const legacyEntry = Object.fromEntries(
+      Object.entries(sampleEntry).filter(([key]) => key !== 'timestamp'),
+    );
+    const ledger = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      {
+        type: 'expense',
+        amountStr: '850',
+        category: 'Food',
+        y: 2026,
+        m: 6,
+        day: 2,
+        repeat: 'monthly',
+      },
+      'off',
+    );
+    const legacyRule = Object.fromEntries(
+      Object.entries(ledger.recurrenceRules[0]).filter(([key]) => key !== 'timestamp'),
+    );
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: stateWith({
+        entries: [legacyEntry as Transaction],
+        recurrenceRules: [legacyRule as RecurrenceRule],
+      }),
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    const loaded = await store.load();
+
+    expect(loaded.entries[0].timestamp).toBe('2026-07-02T12:00:00.000Z');
+    expect(loaded.entries[0].timestampInferred).toBe(true);
+    expect(loaded.recurrenceRules[0].timestamp).toBe('2026-07-02T12:00:00.000Z');
+    expect(loaded.recurrenceRules[0].timestampInferred).toBe(true);
   });
 
   it('round-trips the ledger: saved entries survive a reload', async () => {

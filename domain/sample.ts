@@ -11,7 +11,7 @@ import type { Transaction } from './types';
 const Y = 2026;
 const M = 6; // July (0-based)
 
-type Seed = Omit<Transaction, 'id' | 'y' | 'm' | 'note'> & { note?: string };
+type Seed = Omit<Transaction, 'id' | 'timestamp' | 'y' | 'm' | 'note'> & { note?: string };
 
 const SEEDS: Seed[] = [
   { day: 1, type: 'income', amount: 320000, category: 'Salary' },
@@ -37,6 +37,7 @@ export function sampleEntries(): Transaction[] {
     id: `sample-${i + 1}`,
     y: Y,
     m: M,
+    timestamp: `2026-07-${String(seed.day).padStart(2, '0')}T12:00:00.000Z`,
     day: seed.day,
     type: seed.type,
     amount: seed.amount,

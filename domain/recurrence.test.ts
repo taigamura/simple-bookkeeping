@@ -8,7 +8,7 @@ import {
   entriesForMonth,
   saveLedgerItem,
 } from './recurrence';
-import type { EntryDraft } from './entries';
+import { makeEntry, type EntryDraft } from './entries';
 
 // July 2026: the 1st is a Wednesday. Sat/Sun that month: 4,5 · 11,12 · 18,19 · 25,26.
 const Y = 2026;
@@ -75,6 +75,54 @@ describe('persistent recurrence', () => {
     expect(entriesForMonth(ledger, { y: 2027, m: 2 })).toEqual([
       expect.objectContaining({ y: 2027, m: 2, day: 31, repeat: 'monthly' }),
     ]);
+  });
+
+  it('gives every projected item its recurrence rule timestamp', () => {
+    const ledger = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: 2027, m: 0, day: 31, repeat: 'monthly' }),
+      'off',
+    );
+
+    expect(ledger.recurrenceRules[0].timestamp).toBeTruthy();
+    expect(entriesForMonth(ledger, { y: 2027, m: 1 })[0].timestamp).toBe(
+      ledger.recurrenceRules[0].timestamp,
+    );
+  });
+
+  it('preserves the item timestamp when an edit changes its recurrence shape', () => {
+    const original = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: 2027, m: 0, day: 31, repeat: 'monthly' }),
+      'off',
+    );
+    const timestamp = original.recurrenceRules[0].timestamp;
+    const february = entriesForMonth(original, { y: 2027, m: 1 })[0];
+
+    const splitRule = saveLedgerItem(
+      original,
+      draft({ y: 2027, m: 1, day: 28, repeat: 'daily' }),
+      'off',
+      february,
+    );
+    expect(splitRule.recurrenceRules.at(-1)?.timestamp).toBe(timestamp);
+
+    const oneTime = saveLedgerItem(
+      original,
+      draft({ y: 2027, m: 1, day: 28, repeat: 'never' }),
+      'off',
+      february,
+    );
+    expect(oneTime.entries.at(-1)?.timestamp).toBe(timestamp);
+
+    const sourceEntry = makeEntry(draft({ repeat: 'never' }), timestamp)!;
+    const promoted = saveLedgerItem(
+      { entries: [sourceEntry], recurrenceRules: [] },
+      draft({ repeat: 'daily' }),
+      'off',
+      sourceEntry,
+    );
+    expect(promoted.recurrenceRules[0].timestamp).toBe(timestamp);
   });
 
   it('allows weekend movement to cross into the next month without changing its anchor', () => {

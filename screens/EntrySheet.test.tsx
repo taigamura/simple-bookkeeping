@@ -30,6 +30,7 @@ const renderSheet = (props: Partial<React.ComponentProps<typeof EntrySheet>> = {
 const editingEntry = (over: Partial<Transaction> = {}): Transaction => ({
   id: 'e1',
   y: 2026,
+  timestamp: '2026-07-02T00:00:00.000Z',
   m: 6,
   day: 2,
   type: 'expense',

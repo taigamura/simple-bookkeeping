@@ -128,6 +128,7 @@ export function parseZaimCsv(csvText: string, existing: ZaimExisting): ZaimImpor
 
     entries.push({
       id: uid(),
+      timestamp: new Date().toISOString(),
       y: row.y,
       m: row.m,
       day: row.day,

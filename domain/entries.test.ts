@@ -9,6 +9,7 @@ import type { Transaction } from './types';
 
 const tx = (over: Partial<Transaction> = {}): Transaction => ({
   id: 'a',
+  timestamp: '2026-07-02T00:00:00.000Z',
   y: 2026,
   m: 6,
   day: 2,
@@ -40,6 +41,7 @@ describe('updateEntry', () => {
 
     expect(out[0]).toEqual({
       id: 'a',
+      timestamp: '2026-07-02T00:00:00.000Z',
       y: 2026,
       m: 6,
       day: 2,
