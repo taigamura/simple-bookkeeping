@@ -5,7 +5,7 @@
  * rounded card in the parent; a hairline divider sits above every row except the
  * first (`first` prop), so there is no rule above the first or below the last.
  */
-import React from 'react';
+import React, { useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
@@ -38,6 +38,7 @@ export function ListRow({
   onDelete,
 }: ListRowProps) {
   const { colors } = useTheme();
+  const swipeInProgress = useRef(false);
   const value = signedAmount(entry);
   const timestamp = new Intl.DateTimeFormat(undefined, {
     hour: '2-digit',
@@ -90,7 +91,10 @@ export function ListRow({
 
   const row = onPress ? (
       <Pressable
-        onPress={onPress}
+        onPress={() => {
+          if (swipeInProgress.current) return;
+          onPress();
+        }}
         accessibilityRole="button"
         accessibilityLabel={strings.entry.editEntry(entry.category)}
         style={({ pressed }) => [...rowStyle, pressed && { opacity: 0.6 }]}
@@ -108,6 +112,18 @@ export function ListRow({
       testID={`swipeable-${entry.id}`}
       overshootRight={false}
       rightThreshold={40}
+      onSwipeableOpenStartDrag={() => {
+        swipeInProgress.current = true;
+      }}
+      onSwipeableCloseStartDrag={() => {
+        swipeInProgress.current = true;
+      }}
+      onSwipeableOpen={() => {
+        swipeInProgress.current = false;
+      }}
+      onSwipeableClose={() => {
+        swipeInProgress.current = false;
+      }}
       renderRightActions={(_progress, _drag, swipeable) => (
         <Pressable
           onPress={() => {

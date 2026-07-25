@@ -129,6 +129,21 @@ describe('ListRow', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  it('suppresses the trailing row press while a swipe gesture is settling', () => {
+    const onPress = jest.fn();
+    renderRow({ onPress, onDelete: () => {} });
+    const swipeable = screen.getByTestId('swipeable-t1');
+    const edit = screen.getByLabelText('Edit Food');
+
+    fireEvent(swipeable, 'swipeableOpenStartDrag', 'right');
+    fireEvent.press(edit);
+    expect(onPress).not.toHaveBeenCalled();
+
+    fireEvent(swipeable, 'swipeableOpen', 'right');
+    fireEvent.press(edit);
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
   it('reveals a Delete action for swipe-to-delete rows', () => {
     const onDelete = jest.fn();
     renderRow({ onDelete });
