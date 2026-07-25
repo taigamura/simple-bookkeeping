@@ -66,13 +66,23 @@ export function ListRow({
           <Txt variant="secondary" tone="muted" numberOfLines={1} style={styles.note}>
             {entry.note}
           </Txt>
-          <Txt variant="secondary" tone="dim" style={styles.timestamp}>
+          <Txt
+            variant="secondary"
+            tone="dim"
+            numberOfLines={1}
+            style={styles.timestamp}
+          >
             {timestampLabel}
           </Txt>
         </View>
       </View>
 
-      <Txt variant="inlineAmount" tone={entry.type === 'income' ? 'positive' : 'negative'}>
+      <Txt
+        variant="inlineAmount"
+        tone={entry.type === 'income' ? 'positive' : 'negative'}
+        numberOfLines={1}
+        style={styles.amount}
+      >
         {signed(value, symbol)}
       </Txt>
     </>
@@ -136,7 +146,15 @@ const styles = StyleSheet.create({
   body: { flex: 1, gap: 2 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   note: { flex: 1 },
-  timestamp: { fontFamily: mono.regular },
+  timestamp: {
+    width: 72,
+    fontFamily: mono.regular,
+    textAlign: 'right',
+  },
+  amount: {
+    width: 112,
+    textAlign: 'right',
+  },
   deleteAction: {
     width: 88,
     alignItems: 'center',

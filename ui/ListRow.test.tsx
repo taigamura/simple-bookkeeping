@@ -4,7 +4,7 @@
  * signed amount. The top divider is present only when the row is not first.
  */
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 
 import { type Transaction } from '../domain';
@@ -59,6 +59,45 @@ describe('ListRow', () => {
     }).format(new Date(timestamp));
 
     expect(screen.getByText(`~${expected}`)).toBeTruthy();
+  });
+
+  it('uses invariant right-aligned columns for timestamps and amounts', () => {
+    const firstTimestamp = '2026-07-02T04:05:00.000Z';
+    const secondTimestamp = '2026-07-02T12:45:00.000Z';
+    render(
+      <ThemeProvider>
+        <View>
+          <ListRow entry={entry({ id: 'short', timestamp: firstTimestamp, amount: 1 })} />
+          <ListRow
+            entry={entry({
+              id: 'long',
+              timestamp: secondTimestamp,
+              timestampInferred: true,
+              amount: 999999,
+            })}
+          />
+        </View>
+      </ThemeProvider>,
+    );
+
+    const formatTime = (timestamp: string) =>
+      new Intl.DateTimeFormat(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(new Date(timestamp));
+    const timestampStyles = [
+      screen.getByText(formatTime(firstTimestamp)),
+      screen.getByText(`~${formatTime(secondTimestamp)}`),
+    ].map((node) => StyleSheet.flatten(node.props.style));
+    const amountStyles = [
+      screen.getByText('−¥1'),
+      screen.getByText('−¥999,999'),
+    ].map((node) => StyleSheet.flatten(node.props.style));
+
+    expect(timestampStyles.map((style) => style.width)).toEqual([72, 72]);
+    expect(timestampStyles.map((style) => style.textAlign)).toEqual(['right', 'right']);
+    expect(amountStyles.map((style) => style.width)).toEqual([112, 112]);
+    expect(amountStyles.map((style) => style.textAlign)).toEqual(['right', 'right']);
   });
 
   it('shows the note even when it equals the category', () => {
