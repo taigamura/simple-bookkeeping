@@ -163,6 +163,30 @@ describe('Root sheet click behavior', () => {
     ]);
   });
 
+  it('promotes the saved category to most recently used', () => {
+    const update = jest.fn();
+    render(
+      <ThemeProvider>
+        <Root
+          state={{ ...DEFAULT_STATE, expCats: ['Food', 'Rent', 'Transport'] }}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText(strings.nav.addEntry));
+    fireEvent.press(screen.getByText('Rent'));
+    fireEvent.press(screen.getByLabelText('1'));
+    fireEvent.press(screen.getByLabelText(strings.entry.addExpense));
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ expCats: ['Rent', 'Food', 'Transport'] }),
+    );
+  });
+
   it('tapping the Settings gear opens the Settings sheet without a style crash', () => {
     renderRoot();
     expect(screen.queryByTestId('settings-sheet')).toBeNull();

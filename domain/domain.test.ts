@@ -176,13 +176,13 @@ describe('pressKey / amountValue (keypad integer rules)', () => {
     expect(pressKey('', '0')).toBe('0');
     expect(pressKey('0', '0')).toBe('0');
     expect(pressKey('0', '5')).toBe('5');
-    expect(pressKey('', '000')).toBe('0');
+    expect(pressKey('', '00')).toBe('0');
   });
 
   it('caps at 9 digits (over-cap presses ignored)', () => {
     expect(pressKey('123456789', '0')).toBe('123456789');
     expect(pressKey('12345678', '9')).toBe('123456789');
-    expect(pressKey('999999999', '000')).toBe('999999999');
+    expect(pressKey('999999999', '00')).toBe('999999999');
   });
 
   it('⌫ deletes the last digit', () => {
@@ -194,5 +194,31 @@ describe('pressKey / amountValue (keypad integer rules)', () => {
     expect(amountValue('')).toBe(0);
     expect(amountValue('0')).toBe(0);
     expect(amountValue('850')).toBe(850);
+  });
+
+  it('builds and evaluates calculator expressions with standard precedence', () => {
+    let expression = pressKey('12', 'add');
+    expression = pressKey(expression, '3');
+    expression = pressKey(expression, 'multiply');
+    expression = pressKey(expression, '4');
+
+    expect(expression).toBe('12+3×4');
+    expect(amountValue(expression)).toBe(24);
+    expect(pressKey(expression, 'equals')).toBe('24');
+  });
+
+  it('supports subtraction and division while keeping the saved amount integral', () => {
+    expect(amountValue('20÷4−2')).toBe(3);
+    expect(amountValue('10÷4')).toBe(3);
+  });
+
+  it('replaces a trailing operator and clears the whole expression', () => {
+    expect(pressKey('12+', 'subtract')).toBe('12−');
+    expect(pressKey('12+3', 'clear')).toBe('');
+  });
+
+  it('treats incomplete and divide-by-zero expressions as invalid', () => {
+    expect(amountValue('12+')).toBe(0);
+    expect(amountValue('12÷0')).toBe(0);
   });
 });

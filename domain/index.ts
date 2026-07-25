@@ -60,6 +60,7 @@ export {
   addCategory,
   removeCategory,
   moveCategory,
+  promoteCategory,
 } from './categories';
 export {
   setBudget,

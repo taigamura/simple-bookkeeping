@@ -63,6 +63,14 @@ describe('DayCell', () => {
     expect(cellBg(8)).toBe('transparent');
   });
 
+  it('keeps today visible with a green outline when another day is selected', () => {
+    renderCell({ day: 8, selected: false, today: true });
+    const flat = StyleSheet.flatten(screen.getByLabelText('Day 8').props.style);
+    expect(flat.borderColor).toBe(accents.positive);
+    expect(flat.borderWidth).toBeGreaterThan(0);
+    expect(flat.backgroundColor).toBe('transparent');
+  });
+
   it('renders the selected-day total in translucent near-black (design §1)', () => {
     renderCell({ day: 10, net: 1200, selected: true });
     const total = StyleSheet.flatten(screen.getByText('+1,200').props.style);

@@ -22,6 +22,7 @@ import {
   signed,
   yen,
   type Budgets,
+  type RecurrenceDate,
   type Transaction,
   type YM,
 } from '../domain';
@@ -41,10 +42,13 @@ interface CalendarScreenProps {
   y: number;
   m: number;
   day: number;
+  today?: RecurrenceDate;
   symbol: string;
   onSelectDay: (day: number) => void;
   /** Tap a day-list row to edit that entry (#43). */
   onEditEntry: (entry: Transaction) => void;
+  /** Swipe a day-list row left, then delete it through the existing flow. */
+  onDeleteEntry?: (entry: Transaction) => void;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   /** Pager settle: adopt the absolute month it landed on (#48). */
@@ -62,9 +66,11 @@ export function CalendarScreen({
   y,
   m,
   day,
+  today,
   symbol,
   onSelectDay,
   onEditEntry,
+  onDeleteEntry,
   onPrevMonth,
   onNextMonth,
   onMonthChange,
@@ -126,6 +132,7 @@ export function CalendarScreen({
         y={y}
         m={m}
         selectedDay={day}
+        today={today}
         onSelectDay={onSelectDay}
         onMonthChange={onMonthChange}
       />
@@ -155,6 +162,7 @@ export function CalendarScreen({
                 symbol={symbol}
                 first={i === 0}
                 onPress={() => onEditEntry(entry)}
+                onDelete={onDeleteEntry ? () => onDeleteEntry(entry) : undefined}
               />
             ))}
           </View>

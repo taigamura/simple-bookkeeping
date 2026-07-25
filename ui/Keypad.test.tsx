@@ -27,10 +27,24 @@ const tap = (label: string) => fireEvent.press(screen.getByLabelText(label));
 describe('Keypad', () => {
   beforeEach(() => render(<Harness />));
 
-  it('renders digit keys 0–9, 000 and a delete key', () => {
-    for (const label of ['0', '1', '5', '9', '000', 'Delete']) {
+  it('renders digits, 00, calculator operations, clear, equals, and delete', () => {
+    for (const label of [
+      '0',
+      '1',
+      '5',
+      '9',
+      '00',
+      'Add',
+      'Subtract',
+      'Multiply',
+      'Divide',
+      'Clear',
+      'Equals',
+      'Delete',
+    ]) {
       expect(screen.getByLabelText(label)).toBeTruthy();
     }
+    expect(screen.queryByLabelText('000')).toBeNull();
   });
 
   it('appends pressed digits', () => {
@@ -59,5 +73,18 @@ describe('Keypad', () => {
     tap('2');
     tap('Delete');
     expect(shown()).toBe('1');
+  });
+
+  it('calculates an expression and clears it', () => {
+    tap('1');
+    tap('2');
+    tap('Add');
+    tap('3');
+    tap('Multiply');
+    tap('4');
+    tap('Equals');
+    expect(shown()).toBe('24');
+    tap('Clear');
+    expect(shown()).toBe('EMPTY');
   });
 });

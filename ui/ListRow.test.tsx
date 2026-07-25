@@ -89,4 +89,13 @@ describe('ListRow', () => {
     fireEvent.press(screen.getByLabelText('Edit Food'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it('reveals a Delete action for swipe-to-delete rows', () => {
+    const onDelete = jest.fn();
+    renderRow({ onDelete });
+
+    fireEvent.press(screen.getByLabelText('Delete Food'));
+
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
 });

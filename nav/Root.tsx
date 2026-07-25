@@ -21,6 +21,7 @@ import {
   entriesForMonth,
   entriesThrough,
   parseZaimCsv,
+  promoteCategory,
   pruneBudgets,
   sampleEntries,
   saveLedgerItem,
@@ -36,6 +37,7 @@ import {
 import { strings } from '../i18n';
 import { entrySaved } from '../platform/haptics';
 import { shareTextFile } from '../platform/shareFile';
+import { useToday } from '../platform/useToday';
 import { BudgetsSheet } from '../screens/BudgetsSheet';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
@@ -143,7 +145,7 @@ function Shell({
 
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
   // real current month, with the selected day defaulting to today.
-  const today = useMemo(() => new Date(), []);
+  const today = useToday();
   const todayDate = useMemo(
     () => ({ y: today.getFullYear(), m: today.getMonth(), day: today.getDate() }),
     [today],
@@ -336,7 +338,12 @@ function Shell({
     const next = saveLedgerItem(ledger, draft, weekendShift, editing ?? undefined);
     if (next === ledger) return;
     entrySaved();
-    update(next);
+    update({
+      ...next,
+      ...(draft.type === 'expense'
+        ? { expCats: promoteCategory(state.expCats, draft.category) }
+        : { incCats: promoteCategory(state.incCats, draft.category) }),
+    });
     if (sheet === 'repeat-entry') {
       setSheet('repeats');
       return;
@@ -434,9 +441,11 @@ function Shell({
             y={cursor.y}
             m={cursor.m}
             day={selectedDay}
+            today={todayDate}
             symbol={symbol}
             onSelectDay={setSelectedDay}
             onEditEntry={openEdit}
+            onDeleteEntry={handleDelete}
             onPrevMonth={() => goMonth(-1)}
             onNextMonth={() => goMonth(1)}
             onMonthChange={setMonth}

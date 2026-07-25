@@ -6,6 +6,7 @@ import {
   CURRENCIES,
   addCategory,
   moveCategory,
+  promoteCategory,
   removeCategory,
 } from './categories';
 
@@ -59,6 +60,22 @@ describe('moveCategory', () => {
     const list = ['A', 'B'];
     moveCategory(list, 0, 1);
     expect(list).toEqual(['A', 'B']);
+  });
+});
+
+describe('promoteCategory', () => {
+  it('moves the most recently used category to the front without dropping others', () => {
+    expect(promoteCategory(['Food', 'Rent', 'Transport'], 'Rent')).toEqual([
+      'Rent',
+      'Food',
+      'Transport',
+    ]);
+  });
+
+  it('is a no-op for the first or an unknown category', () => {
+    const list = ['Food', 'Rent'];
+    expect(promoteCategory(list, 'Food')).toBe(list);
+    expect(promoteCategory(list, 'Unknown')).toBe(list);
   });
 });
 

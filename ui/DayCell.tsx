@@ -21,10 +21,12 @@ interface DayCellProps {
   /** Signed daily net; 0 renders no amount line. */
   net: number;
   selected: boolean;
+  /** The real current date, independently outlined when it is not selected. */
+  today?: boolean;
   onPress: (day: number) => void;
 }
 
-export function DayCell({ day, net, selected, onPress }: DayCellProps) {
+export function DayCell({ day, net, selected, today = false, onPress }: DayCellProps) {
   const hasNet = net !== 0;
   const netTone = net > 0 ? 'positive' : 'negative';
   const netText = signed(net, '');
@@ -41,6 +43,7 @@ export function DayCell({ day, net, selected, onPress }: DayCellProps) {
       style={[
         styles.cell,
         { backgroundColor: selected ? accents.positive : 'transparent' },
+        today && styles.today,
       ]}
     >
       <Txt variant="calendarDay" tone={selected ? 'onPositive' : 'ink'}>
@@ -69,5 +72,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 2,
     paddingHorizontal: 2,
+  },
+  today: {
+    borderWidth: 1.5,
+    borderColor: accents.positive,
   },
 });

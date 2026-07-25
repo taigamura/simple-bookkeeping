@@ -30,7 +30,14 @@ import {
   View,
 } from 'react-native';
 
-import { clampDay, monthEntries, shiftMonth, type Transaction, type YM } from '../domain';
+import {
+  clampDay,
+  monthEntries,
+  shiftMonth,
+  type RecurrenceDate,
+  type Transaction,
+  type YM,
+} from '../domain';
 import { CalendarGrid } from './CalendarGrid';
 
 interface MonthPagerProps {
@@ -39,6 +46,7 @@ interface MonthPagerProps {
   y: number;
   m: number;
   selectedDay: number;
+  today?: RecurrenceDate;
   onSelectDay: (day: number) => void;
   /** Commit the absolute month the pager settled on. */
   onMonthChange: (ym: YM) => void;
@@ -69,6 +77,7 @@ export function MonthPager({
   y,
   m,
   selectedDay,
+  today,
   onSelectDay,
   onMonthChange,
 }: MonthPagerProps) {
@@ -148,6 +157,7 @@ export function MonthPager({
           m={m}
           monthEntries={monthEntries(entries, { y, m })}
           selectedDay={selectedDay}
+          today={today}
           onSelectDay={onSelectDay}
         />
       </View>
@@ -176,6 +186,7 @@ export function MonthPager({
               // Neighbours preview the carried-over selection, clamped in-range;
               // only the committed month's grid takes day taps.
               selectedDay={clampDay(selectedDay, item.y, item.m)}
+              today={today}
               onSelectDay={sameYM(item, { y, m }) ? onSelectDay : () => {}}
             />
           </View>

@@ -6,7 +6,7 @@
  * commits, so all four columns move in the same render).
  */
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { Budgets, Transaction } from '../domain';
 import { ThemeProvider } from '../theme';
@@ -108,5 +108,37 @@ describe('CalendarScreen strip BUDGET column (#50)', () => {
     );
     expect(screen.getByText('¥5,000')).toBeTruthy();
     expect(screen.queryByText('¥20,000')).toBeNull();
+  });
+});
+
+describe('CalendarScreen entry actions', () => {
+  it('wires each row swipe Delete action to that entry', () => {
+    const onDeleteEntry = jest.fn();
+    const item = tx({ id: 'delete-me' });
+    render(
+      <ThemeProvider>
+        <CalendarScreen
+          entries={[item]}
+          budgets={{}}
+          budgetMode="category"
+          totalBudget={0}
+          y={2026}
+          m={6}
+          day={1}
+          symbol="¥"
+          onSelectDay={() => {}}
+          onEditEntry={() => {}}
+          onDeleteEntry={onDeleteEntry}
+          onPrevMonth={() => {}}
+          onNextMonth={() => {}}
+          onMonthChange={() => {}}
+          onSettings={() => {}}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText('Delete Food'));
+
+    expect(onDeleteEntry).toHaveBeenCalledWith(item);
   });
 });

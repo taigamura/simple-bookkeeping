@@ -1,8 +1,7 @@
 /**
- * Keypad — the 3-column integer pad (decision 11): 1–9, then `000`, `0`, and ⌫
- * (Feather delete icon, decision 6). It is presentational: each press reports a
- * `KeypadKey` and the parent applies `pressKey` from the domain to its amount
- * string. Digits are mono; the pad never holds state itself.
+ * Keypad — a compact 4-column entry calculator with digits, `00`, arithmetic operators,
+ * clear, equals, and ⌫. It is presentational: each press reports a `KeypadKey`
+ * and the parent applies `pressKey` from the domain.
  */
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
@@ -13,10 +12,34 @@ import { strings } from '../i18n';
 import { keypadTap } from '../platform/haptics';
 import { useTheme, metrics, Txt } from '../theme';
 
-const KEYS: KeypadKey[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', 'del'];
+const KEYS: KeypadKey[] = [
+  'clear', 'divide', 'multiply', 'del',
+  '7', '8', '9', 'subtract',
+  '4', '5', '6', 'add',
+  '1', '2', '3', 'equals',
+  '00', '0',
+];
+
+const DISPLAY: Partial<Record<KeypadKey, string>> = {
+  clear: 'C',
+  divide: '÷',
+  multiply: '×',
+  add: '+',
+  subtract: '−',
+  equals: '=',
+};
 
 export function Keypad({ onKey }: { onKey: (key: KeypadKey) => void }) {
   const { colors } = useTheme();
+  const accessibilityLabels: Partial<Record<KeypadKey, string>> = {
+    clear: strings.keypad.clear,
+    add: strings.keypad.add,
+    subtract: strings.keypad.subtract,
+    multiply: strings.keypad.multiply,
+    divide: strings.keypad.divide,
+    equals: strings.keypad.equals,
+    del: strings.keypad.delete,
+  };
   return (
     <View style={styles.grid}>
       {KEYS.map((key) => (
@@ -27,9 +50,10 @@ export function Keypad({ onKey }: { onKey: (key: KeypadKey) => void }) {
             onKey(key);
           }}
           accessibilityRole="button"
-          accessibilityLabel={key === 'del' ? strings.keypad.delete : key}
+          accessibilityLabel={accessibilityLabels[key] ?? key}
           style={({ pressed }) => [
             styles.key,
+            (key === '00' || key === '0') && styles.wideKey,
             { backgroundColor: pressed ? colors.card3 : colors.card2 },
           ]}
         >
@@ -37,7 +61,7 @@ export function Keypad({ onKey }: { onKey: (key: KeypadKey) => void }) {
             <Feather name="delete" size={20} color={colors.muted} />
           ) : (
             <Txt variant="summaryNet" style={styles.digit}>
-              {key}
+              {DISPLAY[key] ?? key}
             </Txt>
           )}
         </Pressable>
@@ -54,12 +78,13 @@ const styles = StyleSheet.create({
     rowGap: metrics.keypadGap,
   },
   key: {
-    // Three columns with a gap; percentage keeps it fluid inside the sheet.
-    width: '31.5%',
+    // Four columns keep the calculator short enough for compact phone sheets.
+    width: '23%',
     height: metrics.keypadKeySize,
     borderRadius: metrics.keypadKeyRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  wideKey: { width: '48.5%' },
   digit: { fontSize: 22 },
 });

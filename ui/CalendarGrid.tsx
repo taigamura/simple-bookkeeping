@@ -17,6 +17,7 @@ import {
   daysInMonth,
   firstWeekday,
   WEEKDAYS,
+  type RecurrenceDate,
   type Transaction,
 } from '../domain';
 import { Txt } from '../theme';
@@ -28,6 +29,7 @@ interface CalendarGridProps {
   /** Entries already filtered to (y, m). */
   monthEntries: Transaction[];
   selectedDay: number;
+  today?: RecurrenceDate;
   onSelectDay: (day: number) => void;
 }
 
@@ -56,6 +58,7 @@ export function CalendarGrid({
   m,
   monthEntries,
   selectedDay,
+  today,
   onSelectDay,
 }: CalendarGridProps) {
   const weeks = monthWeeks(y, m);
@@ -82,6 +85,7 @@ export function CalendarGrid({
                     day={day}
                     net={dayNet(monthEntries, day)}
                     selected={day === selectedDay}
+                    today={today?.y === y && today.m === m && today.day === day}
                     onPress={onSelectDay}
                   />
                 )}

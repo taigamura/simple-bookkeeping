@@ -59,6 +59,7 @@ below, the amendment describes the current product.
 | 9 | **Theme: dark default, manual only** | Default dark; two-button Appearance control (Dark / Light); OS appearance ignored (no `useColorScheme`). Choice persists. |
 | 10 | **Web = phone-width container** | On web only, center the app in a `maxWidth: 402` full-height rounded container with subtle shadow on a neutral backdrop. Native = full-screen with `SafeAreaView`. **No** faux status bar / dynamic island / home indicator anywhere. |
 | 11 | **Currency: symbol-only** | ¥ JPY / $ USD / € EUR / £ GBP swap the symbol + reformat only; **no** FX conversion, no per-entry currency, **integer amounts, no cents**, `en-US` grouping (comma thousands). Keypad is integer-only, leading zeros stripped, 9-digit cap. |
+| 12 | **Fast entry interactions** | The entry keypad is a compact four-column calculator with `00`, `+`, `−`, `×`, `÷`, clear, equals, and delete. Saving promotes the chosen category to the front of its type list. Today keeps a green calendar outline independently of selection, and day-list rows reveal Delete when swiped left. |
 
 ## Design tokens (preserve verbatim)
 
@@ -93,7 +94,7 @@ for every number and uppercase micro-label (the signature).
 Design frame 402×874 · screen h-padding 20–22 · status offset padding-top 52 (→ SafeArea on
 native) · card radius 16–20 · bottom-sheet radius 26 (top only) · pills/chips/avatars 999 ·
 keypad key radius 15 · icon tile radius 9–11 · calendar day cell radius 11 / ~46px tall ·
-progress bars radius 5–6 / height 7–8 · tab bar height 92 · keypad 3 cols · gap 9 · 52px keys ·
+progress bars radius 5–6 / height 7–8 · tab bar height 92 · keypad 4 cols · gap 9 · 52px keys ·
 round nav buttons 34×34 · primary CTA height 54 / radius 16 · card shadow (dark) 0 8 24
 rgba(0,0,0,.4) · CTA glow 0 8 24 rgba(43,212,138,.26).
 
@@ -101,14 +102,16 @@ rgba(0,0,0,.4) · CTA glow 0 8 24 rgba(43,212,138,.26).
 
 1. **Calendar (home)** — header (month+year title, ‹ › month nav, ⚙ settings); In/Out/Net
    strip bounded by hairlines; weekday row; 7-col month grid with signed daily net (selected
-   day = solid green cell, near-black text); selected-day label + net; that day's entries as
-   list rows or empty state; tab bar.
+   day = solid green cell, near-black text; today = green outline); selected-day label + net;
+   that day's entries as list rows with swipe-left Delete or empty state; tab bar.
 2. **Summary** — header ("Summary" + ⚙) + month subtitle; Net card (large mono net + in/out
    split bar + legend); spending-by-category ranked bars (highest first, scaled to max).
 3. **New Entry (＋ sheet)** — grab handle; Expense/Income segmented toggle centered; ✕ close;
    large centered amount + type micro-label; horizontally-scrolling category chips; Note row
-   (cycles options); Repeat row (cycles); "If on weekend" row (monthly/yearly only); 3-col
-   keypad (1–9, 000, 0, ⌫); full-width primary CTA (disabled until amount>0).
+   (cycles options); Repeat row (cycles); "If on weekend" row (monthly/yearly only);
+   compact 4-col calculator keypad (digits, 00, +, −, ×, ÷, clear, equals, ⌫);
+   full-width primary CTA (disabled until amount>0). Saving promotes the chosen category to
+   the front of its expense/income list as most recently used.
 4. **Settings sheet** — grab handle; title + Done; Appearance (Dark/Light); Currency (4-grid);
    Categories (Expense/Income sub-tabs; rows = 2-letter code tile + label + ↑/↓/✕; add field +
    green Add); Load sample data.

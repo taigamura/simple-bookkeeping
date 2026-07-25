@@ -72,6 +72,7 @@ export interface Strings {
     save: string;
     saveThisAndFuture: string;
     editEntry: (name: string) => string;
+    deleteFromList: (name: string) => string;
     deleteEntry: string;
     deleteConfirmTitle: string;
     deleteConfirmMessage: string;
@@ -129,6 +130,12 @@ export interface Strings {
   };
   keypad: {
     delete: string;
+    clear: string;
+    add: string;
+    subtract: string;
+    multiply: string;
+    divide: string;
+    equals: string;
   };
   corruptNotice: {
     title: string;
@@ -218,6 +225,7 @@ export const en: Strings = {
     save: 'Save',
     saveThisAndFuture: 'Save this and future',
     editEntry: (name) => `Edit ${name}`,
+    deleteFromList: (name) => `Delete ${name}`,
     deleteEntry: 'Delete entry',
     deleteConfirmTitle: 'Delete this entry?',
     deleteConfirmMessage: 'This cannot be undone.',
@@ -269,6 +277,12 @@ export const en: Strings = {
   },
   keypad: {
     delete: 'Delete',
+    clear: 'Clear',
+    add: 'Add',
+    subtract: 'Subtract',
+    multiply: 'Multiply',
+    divide: 'Divide',
+    equals: 'Equals',
   },
   corruptNotice: {
     title: 'Backup kept',
@@ -369,6 +383,7 @@ export const ja: Strings = {
     save: '保存',
     saveThisAndFuture: 'これ以降を保存',
     editEntry: (name) => `${name}を編集`,
+    deleteFromList: (name) => `${name}を削除`,
     deleteEntry: '記録を削除',
     deleteConfirmTitle: 'この記録を削除しますか？',
     deleteConfirmMessage: 'この操作は取り消せません。',
@@ -420,6 +435,12 @@ export const ja: Strings = {
   },
   keypad: {
     delete: '削除',
+    clear: 'クリア',
+    add: '足す',
+    subtract: '引く',
+    multiply: '掛ける',
+    divide: '割る',
+    equals: '計算',
   },
   corruptNotice: {
     title: 'バックアップを保持しました',

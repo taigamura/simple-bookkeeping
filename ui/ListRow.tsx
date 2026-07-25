@@ -7,6 +7,7 @@
  */
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import {
   code,
@@ -16,7 +17,7 @@ import {
   type Transaction,
 } from '../domain';
 import { strings } from '../i18n';
-import { useTheme, metrics, mono, Txt } from '../theme';
+import { useTheme, metrics, mono, accents, Txt } from '../theme';
 
 interface ListRowProps {
   entry: Transaction;
@@ -25,6 +26,8 @@ interface ListRowProps {
   first?: boolean;
   /** When set, the row is pressable (tap to edit the entry, #43). */
   onPress?: () => void;
+  /** When set, swiping left reveals a destructive action. */
+  onDelete?: () => void;
 }
 
 export function ListRow({
@@ -32,6 +35,7 @@ export function ListRow({
   symbol = DEFAULT_CURRENCY.symbol,
   first = false,
   onPress,
+  onDelete,
 }: ListRowProps) {
   const { colors } = useTheme();
   const value = signedAmount(entry);
@@ -74,8 +78,7 @@ export function ListRow({
     </>
   );
 
-  if (onPress) {
-    return (
+  const row = onPress ? (
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
@@ -84,10 +87,36 @@ export function ListRow({
       >
         {content}
       </Pressable>
+    ) : (
+      <View style={rowStyle}>{content}</View>
     );
-  }
 
-  return <View style={rowStyle}>{content}</View>;
+  if (!onDelete) return row;
+
+  return (
+    <Swipeable
+      testID={`swipeable-${entry.id}`}
+      overshootRight={false}
+      rightThreshold={40}
+      renderRightActions={(_progress, _drag, swipeable) => (
+        <Pressable
+          onPress={() => {
+            swipeable.close();
+            onDelete();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={strings.entry.deleteFromList(entry.category)}
+          style={styles.deleteAction}
+        >
+          <Txt variant="listItem" style={{ color: accents.onPositive }}>
+            {strings.common.delete}
+          </Txt>
+        </Pressable>
+      )}
+    >
+      {row}
+    </Swipeable>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -108,4 +137,10 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   note: { flex: 1 },
   timestamp: { fontFamily: mono.regular },
+  deleteAction: {
+    width: 88,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: accents.negative,
+  },
 });

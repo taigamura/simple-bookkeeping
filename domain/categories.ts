@@ -53,3 +53,10 @@ export function moveCategory(
   [next[index], next[target]] = [next[target], next[index]];
   return next;
 }
+
+/** Move the saved entry's category to the front as the most recently used. */
+export function promoteCategory(list: string[], category: string): string[] {
+  const index = list.indexOf(category);
+  if (index <= 0) return list;
+  return [list[index], ...list.slice(0, index), ...list.slice(index + 1)];
+}
