@@ -72,7 +72,6 @@ export {
   getRemainingBudget,
   type Budgets,
 } from './budgets';
-export { sampleEntries } from './sample';
 export {
   decodeZaimBytes,
   parseZaimCsv,

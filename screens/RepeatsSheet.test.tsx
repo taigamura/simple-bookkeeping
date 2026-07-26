@@ -41,11 +41,11 @@ describe('RepeatsSheet', () => {
     expect(screen.getByText('Create one by setting Repeat on a new entry.')).toBeTruthy();
   });
 
-  it('returns to Settings from the Done action', () => {
+  it('returns to Settings from the Back action', () => {
     const onDone = jest.fn();
     renderSheet({ onDone });
 
-    fireEvent.press(screen.getByLabelText('Done'));
+    fireEvent.press(screen.getByLabelText('Back'));
     expect(onDone).toHaveBeenCalled();
   });
 

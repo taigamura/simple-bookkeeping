@@ -84,7 +84,7 @@ export function MonthPager({
   const [width, setWidth] = useState(0);
   const [months, setMonths] = useState<YM[]>(() => buildWindow({ y, m }, WINDOW_RADIUS));
   // Remount the list (re-applying `initialScrollIndex`) when the window is
-  // rebuilt around a far-off cursor jump, e.g. loading the sample data.
+  // rebuilt around a far-off cursor jump initiated by the host.
   const [generation, setGeneration] = useState(0);
 
   const listRef = useRef<FlatList<YM>>(null);
@@ -99,7 +99,7 @@ export function MonthPager({
     if (w > 0 && w !== width) setWidth(w);
   };
 
-  // External cursor moves (‹ › chevrons, sample-data jump): slide to the new
+  // External cursor moves (‹ › chevrons or other host navigation): slide to the new
   // month, or rebuild the window around it when it falls outside.
   useEffect(() => {
     const cur: YM = { y, m };

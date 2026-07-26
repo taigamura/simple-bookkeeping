@@ -135,6 +135,9 @@ describe('Root sheet click behavior', () => {
     // Pre-fix this threw the dev-web error the moment the sheet content
     // rendered: "StyleSheet.compose() only accepts 2 arguments, received 3".
     expect(screen.getByTestId('entry-sheet')).toBeTruthy();
+    const entrySnapPoints =
+      require('../test-utils/gorhomBottomSheetWebMock').getLastBottomSheetModalProps().snapPoints;
+    expect(entrySnapPoints[0]).toBe(Math.round((entrySnapPoints[1] + 44) * 0.83));
   });
 
   it('saves a new Repeat selection as an infinite rule instead of materialized entries', () => {
@@ -269,6 +272,9 @@ describe('Root sheet click behavior', () => {
 
     expect(screen.getByTestId('settings-sheet')).toBeTruthy();
     expect(screen.getByText(strings.nav.settings)).toBeTruthy();
+    const settingsSnapPoints =
+      require('../test-utils/gorhomBottomSheetWebMock').getLastBottomSheetModalProps().snapPoints;
+    expect(settingsSnapPoints[0]).toBe(Math.round((settingsSnapPoints[1] + 44) * 0.8));
   });
 
   it('drills from Settings into the Repeats management sheet', () => {
@@ -287,13 +293,13 @@ describe('Root sheet click behavior', () => {
       recurrenceRules: [
         {
           id: 'managed-repeat',
+          timestamp: new Date().toISOString(),
           start: { y: now.getFullYear(), m: now.getMonth(), day: now.getDate() },
           anchorDay: now.getDate(),
           type: 'expense' as const,
           amount: 850,
           category: DEFAULT_STATE.expCats[0],
           note: '—',
-          timestamp: new Date().toISOString(),
           repeat: 'daily' as const,
           weekendShift: 'off' as const,
           exceptions: [],
@@ -329,13 +335,13 @@ describe('Root sheet click behavior', () => {
       ...DEFAULT_STATE,
       recurrenceRules: [{
         id: 'managed-save',
+        timestamp: '2026-01-01T00:00:00.000Z',
         start: { y: 2026, m: 0, day: 1 },
         anchorDay: 1,
         type: 'expense' as const,
         amount: 850,
         category,
         note: '—',
-        timestamp: '2026-01-01T00:00:00.000Z',
         repeat: 'daily' as const,
         weekendShift: 'off' as const,
         exceptions: [],
@@ -368,13 +374,13 @@ describe('Root sheet click behavior', () => {
       ...DEFAULT_STATE,
       recurrenceRules: [{
         id: 'managed-stop',
+        timestamp: new Date().toISOString(),
         start: { y: now.getFullYear(), m: now.getMonth(), day: now.getDate() },
         anchorDay: now.getDate(),
         type: 'expense' as const,
         amount: 850,
         category,
         note: '—',
-        timestamp: new Date().toISOString(),
         repeat: 'daily' as const,
         weekendShift: 'off' as const,
         exceptions: [],
@@ -566,13 +572,13 @@ describe('Root sheet state management (#60)', () => {
             entries: [
               {
                 id: 'e1',
+                timestamp: '2026-07-02T00:00:00.000Z',
                 y: 2026,
                 m: 6,
                 day: 2,
                 type: 'expense',
                 amount: 850,
                 category: 'Food',
-                timestamp: '2026-07-02T00:00:00.000Z',
                 note: 'Food',
                 repeat: 'never',
               },
@@ -658,13 +664,13 @@ describe('Root sheet state management (#60)', () => {
 describe('Root CSV backup flow (#75)', () => {
   const entry = (over: Partial<Transaction>): Transaction => ({
     id: 'entry-id',
+    timestamp: '2026-07-01T00:00:00.000Z',
     y: 2026,
     m: 6,
     day: 1,
     type: 'expense',
     amount: 1200,
     category: 'Food',
-    timestamp: '2026-07-01T00:00:00.000Z',
     note: 'Lunch',
     repeat: 'never',
     ...over,

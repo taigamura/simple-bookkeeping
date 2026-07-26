@@ -86,7 +86,7 @@ the suite to be green in CI.
 ## Project structure
 
 - `domain/` — pure logic: types, calendar math, recurrence, category
-  aggregation, summary, Zaim CSV import, sample data. No React/RN imports.
+  aggregation, summary, and Zaim CSV import. No React/RN imports.
 - `store/` — app state, AsyncStorage persistence, and the schema for
   persisted data.
 - `theme/` — design tokens, `ThemeProvider` (dark/light), font loading

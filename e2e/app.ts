@@ -12,7 +12,12 @@ import { expect, type Locator, type Page } from '@playwright/test';
 /** How long a tapped sheet gets to become visible before we call the open failed. */
 export const OPEN_TIMEOUT = 5_000;
 
-export type SheetId = 'entry-sheet' | 'settings-sheet' | 'budgets-sheet';
+export type SheetId =
+  | 'entry-sheet'
+  | 'repeat-entry-sheet'
+  | 'settings-sheet'
+  | 'budgets-sheet'
+  | 'repeats-sheet';
 
 /**
  * A fresh cold page load: navigate, then wait for the app to pass its

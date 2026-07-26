@@ -67,9 +67,9 @@ export interface Strings {
     useToday: string;
     invalidDate: string;
     noteRowLabel: string;
+    notePlaceholder: string;
     repeatRowLabel: string;
     weekendRowLabel: string;
-    notePresets: Record<'expense' | 'income', string[]>;
     repeatLabels: { never: string; daily: string; monthly: string; yearly: string };
     weekendLabels: { after: string; before: string; off: string };
     addExpense: string;
@@ -97,7 +97,6 @@ export interface Strings {
     moveCategoryDown: (name: string) => string;
     removeCategory: (name: string) => string;
     data: string;
-    loadSampleData: string;
     exportData: string;
     importFromZaim: string;
     exportUnreadableBackup: string;
@@ -218,12 +217,9 @@ export const en: Strings = {
     useToday: 'Use today',
     invalidDate: 'Enter a valid date.',
     noteRowLabel: 'Note',
+    notePlaceholder: 'Optional',
     repeatRowLabel: '↻ Repeat',
     weekendRowLabel: 'If on weekend',
-    notePresets: {
-      expense: ['—', 'Cash', 'Card', 'Konbini', 'Online'],
-      income: ['—', 'Bank transfer', 'Cash', 'Bonus'],
-    },
     repeatLabels: { never: 'Never', daily: 'Every day', monthly: 'Every month', yearly: 'Every year' },
     weekendLabels: {
       after: 'Move to Monday',
@@ -255,7 +251,6 @@ export const en: Strings = {
     moveCategoryDown: (name) => `Move ${name} down`,
     removeCategory: (name) => `Remove ${name}`,
     data: 'Data',
-    loadSampleData: 'Load sample data',
     exportData: 'Export data',
     importFromZaim: 'Import from Zaim',
     exportUnreadableBackup: 'Export unreadable backup',
@@ -381,12 +376,9 @@ export const ja: Strings = {
     useToday: '今日にする',
     invalidDate: '有効な日付を入力してください。',
     noteRowLabel: 'メモ',
+    notePlaceholder: '任意',
     repeatRowLabel: '↻ 繰り返し',
     weekendRowLabel: '週末の場合',
-    notePresets: {
-      expense: ['—', '現金', 'カード', 'コンビニ', 'オンライン'],
-      income: ['—', '振込', '現金', 'ボーナス'],
-    },
     repeatLabels: { never: 'なし', daily: '毎日', monthly: '毎月', yearly: '毎年' },
     weekendLabels: {
       after: '月曜に移動',
@@ -418,7 +410,6 @@ export const ja: Strings = {
     moveCategoryDown: (name) => `${name}を下に移動`,
     removeCategory: (name) => `${name}を削除`,
     data: 'データ',
-    loadSampleData: 'サンプルデータを読み込む',
     exportData: 'データを書き出す',
     importFromZaim: 'Zaimから読み込む',
     exportUnreadableBackup: '読み取れないバックアップを書き出す',

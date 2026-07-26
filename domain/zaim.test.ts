@@ -299,7 +299,7 @@ describe('serializeZaimCsv', () => {
     expect(incCats).toContain('Freelance');
   });
 
-  it('round-trips a note equal to its category (the no-note fallback case)', () => {
+  it('round-trips a note that happens to equal its category', () => {
     const ledger = [entry({ category: 'Rent', note: 'Rent' })];
     const csv = serializeZaimCsv(ledger);
     const { entries } = parseZaimCsv(csv, cats({ entries: [] }));

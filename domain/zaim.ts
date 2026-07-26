@@ -259,8 +259,8 @@ function composeNote(row: ParsedRow): string {
  * validation and re-imports through `parseZaimCsv` unchanged. Each entry's
  * note is written to the メモ (memo) column alone — `composeNote` joins just
  * that one non-empty part back into the original note, so the round trip
- * holds whether or not the note happens to equal the category (`makeEntry`'s
- * fallback case). `repeat` has no column and is not preserved; re-imported
+ * holds whether or not the note happens to equal the category. `repeat` has no
+ * column and is not preserved; re-imported
  * entries land as one-offs, matching existing Zaim-import behavior.
  */
 export function serializeZaimCsv(entries: Transaction[]): string {

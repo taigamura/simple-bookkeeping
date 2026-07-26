@@ -159,9 +159,9 @@ describe('makeEntry (save rules)', () => {
     expect(e.id).toBeTruthy();
   });
 
-  it('falls back to the category when the note is empty or "—"', () => {
-    expect(makeEntry({ ...base, amountStr: '5' })!.note).toBe('Food');
-    expect(makeEntry({ ...base, amountStr: '5', note: '—' })!.note).toBe('Food');
+  it('keeps an optional note blank and preserves entered text', () => {
+    expect(makeEntry({ ...base, amountStr: '5' })!.note).toBe('');
+    expect(makeEntry({ ...base, amountStr: '5', note: '—' })!.note).toBe('—');
     expect(makeEntry({ ...base, amountStr: '5', note: 'Lunch' })!.note).toBe('Lunch');
   });
 });

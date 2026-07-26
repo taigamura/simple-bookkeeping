@@ -45,15 +45,21 @@ function Frame({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    // Bottom edge is deliberately NOT inset here (#41): the TabBar paints its own
-    // card background flush to the physical screen bottom and pads itself by the
-    // bottom inset, so the app reaches the device edge with no detached strip.
-    <SafeAreaView
-      edges={['top', 'left', 'right']}
-      style={[styles.native, { backgroundColor: colors.bg }]}
-    >
-      <BottomSheetModalProvider>{children}</BottomSheetModalProvider>
-    </SafeAreaView>
+    // Keep the modal portal at the full native window boundary. If the provider
+    // sits inside SafeAreaView, gorhom measures an already top-inset container
+    // and BottomSheet's topInset subtracts the same safe area a second time.
+    // That can collapse or misplace fixed detents on tall-notch iPhones.
+    <BottomSheetModalProvider>
+      {/* Bottom edge is deliberately NOT inset here (#41): the TabBar paints its
+          own card background flush to the physical screen bottom and pads itself
+          by the bottom inset, so the app reaches the device edge. */}
+      <SafeAreaView
+        edges={['top', 'left', 'right']}
+        style={[styles.native, { backgroundColor: colors.bg }]}
+      >
+        {children}
+      </SafeAreaView>
+    </BottomSheetModalProvider>
   );
 }
 

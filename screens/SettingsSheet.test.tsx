@@ -23,7 +23,6 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         activeRepeatCount={0}
         onOpenRepeats={() => {}}
         onOpenBudgets={() => {}}
-        onLoadSample={() => {}}
         onExportData={() => {}}
         onImportZaim={() => {}}
         hasCorruptStash={false}
@@ -86,6 +85,11 @@ describe('SettingsSheet', () => {
     renderSheet({ onExportData });
     fireEvent.press(screen.getByLabelText('Export data'));
     expect(onExportData).toHaveBeenCalled();
+  });
+
+  it('does not offer sample data loading', () => {
+    renderSheet();
+    expect(screen.queryByText('Load sample data')).toBeNull();
   });
 
   it('renders no Premium/Remove-ads toggle (stripped for v1, #23)', () => {

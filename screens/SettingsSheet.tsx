@@ -58,7 +58,6 @@ interface SettingsSheetProps {
   onOpenRepeats: () => void;
   /** Drill into the Budgets sheet (#49) — Settings dismisses, Budgets presents. */
   onOpenBudgets: () => void;
-  onLoadSample: () => void;
   onExportData: () => void;
   onImportZaim: () => void;
   /** Whether a corrupt-stash blob exists (#28) — gates the recovery row. */
@@ -86,7 +85,6 @@ export function SettingsSheet({
   activeRepeatCount,
   onOpenRepeats,
   onOpenBudgets,
-  onLoadSample,
   onExportData,
   onImportZaim,
   hasCorruptStash,
@@ -117,7 +115,6 @@ export function SettingsSheet({
         <RepeatsLink count={activeRepeatCount} onPress={onOpenRepeats} />
         <BudgetsLink onPress={onOpenBudgets} />
         <DataActions
-          onLoadSample={onLoadSample}
           onExportData={onExportData}
           onImportZaim={onImportZaim}
           hasCorruptStash={hasCorruptStash}
@@ -411,19 +408,17 @@ function RepeatsLink({ count, onPress }: { count: number; onPress: () => void })
 }
 
 /**
- * Load-sample-data (decision 8, #12), Export/Import-from-Zaim (#24, #12),
- * the conditional unreadable-backup recovery row (#28), and
+ * Export/Import-from-Zaim (#24, #12), the conditional unreadable-backup
+ * recovery row (#28), and
  * the Delete all data action (#67). Premium/ads stripped for v1 (#23).
  */
 function DataActions({
-  onLoadSample,
   onExportData,
   onImportZaim,
   hasCorruptStash,
   onExportCorruptStash,
   onDeleteAllData,
 }: {
-  onLoadSample: () => void;
   onExportData: () => void;
   onImportZaim: () => void;
   hasCorruptStash: boolean;
@@ -432,22 +427,11 @@ function DataActions({
 }) {
   const { colors } = useTheme();
   const rowStyle = ({ pressed }: { pressed: boolean }) => [
-    styles.sampleBtn,
+    styles.dataBtn,
     { backgroundColor: pressed ? colors.card3 : colors.card2 },
   ];
   return (
     <Section label={strings.settings.data}>
-      <Pressable
-        onPress={onLoadSample}
-        accessibilityRole="button"
-        accessibilityLabel={strings.settings.loadSampleData}
-        style={rowStyle}
-      >
-        <Txt variant="listItem" tone="ink">
-          {strings.settings.loadSampleData}
-        </Txt>
-      </Pressable>
-
       <Pressable
         onPress={onExportData}
         accessibilityRole="button"
@@ -531,7 +515,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sampleBtn: {
+  dataBtn: {
     height: 46,
     borderRadius: metrics.iconTileRadius,
     alignItems: 'center',

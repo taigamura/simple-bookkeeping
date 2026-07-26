@@ -271,8 +271,9 @@ const styles = StyleSheet.create({
   container: { gap: 4, flexShrink: 1, minHeight: 0 },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
+    gap: 10,
     marginBottom: 8,
   },
   scroll: { flex: 1, minHeight: 0 },

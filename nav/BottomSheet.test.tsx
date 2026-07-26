@@ -28,7 +28,7 @@ jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default,
 );
 
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import React from 'react';
 import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -98,14 +98,14 @@ describe('BottomSheet', () => {
     expect(screen.getByTestId('test-sheet')).toBeTruthy();
   });
 
-  test('content view carries base padding and the min-height floor (#60)', () => {
+  test('content view fills the selected fixed-height detent', () => {
     renderSheet();
     const applied = appliedContentStyle();
     expect(applied.paddingHorizontal).toBe(20);
     expect(applied.paddingTop).toBe(4);
     // paddingBottom includes base 28 + bottom safe-area inset (#69)
     expect(applied.paddingBottom).toBe(28); // mock default inset is 0
-    expect(applied.minHeight).toBe(200);
+    expect(applied.height).toBe(modalProps().snapPoints[0] - 40);
   });
 
   test('caller style is applied, not silently dropped, and wins over defaults', () => {
@@ -127,35 +127,38 @@ describe('BottomSheet', () => {
     // On device: verify grab bar drag visibly tracks finger and fling dismisses
   });
 
-  test('offers an expanded snap point while retaining dynamic natural sizing', () => {
+  test('offers fixed 80% and expanded snap points', () => {
     renderSheet();
-    expect(modalProps().enableDynamicSizing).toBe(true);
-    expect(modalProps().snapPoints).toEqual([appliedContentStyle().maxHeight]);
+    const [defaultHeight, expandedHeight] = modalProps().snapPoints;
+    expect(modalProps().enableDynamicSizing).toBe(false);
+    expect(defaultHeight).toBe(Math.round((expandedHeight + 44) * 0.8));
+    expect(expandedHeight - 40).toBe(appliedContentStyle().maxHeight);
   });
 
-  test('retains the greatest laid-out height during an open sheet session', () => {
+  test('content viewport follows the settled sheet detent', () => {
     renderSheet();
+    const [defaultHeight, expandedHeight] = modalProps().snapPoints;
+    expect(appliedContentStyle().height).toBe(defaultHeight - 40);
 
-    fireEvent(screen.getByTestId('test-sheet'), 'layout', {
-      nativeEvent: { layout: { height: 480, width: 320, x: 0, y: 0 } },
-    });
+    act(() => modalProps().onChange(1));
+    expect(appliedContentStyle().height).toBe(expandedHeight - 40);
 
-    expect(appliedContentStyle().minHeight).toBe(480);
-
-    fireEvent(screen.getByTestId('test-sheet'), 'layout', {
-      nativeEvent: { layout: { height: 260, width: 320, x: 0, y: 0 } },
-    });
-    expect(appliedContentStyle().minHeight).toBe(480);
+    act(() => modalProps().onChange(0));
+    expect(appliedContentStyle().height).toBe(defaultHeight - 40);
   });
 
-  test('redirects an expanded downward drag to dismissal', () => {
-    const onClose = jest.fn();
-    renderSheet({ onClose });
-
-    modalProps().onAnimate(1, 0, 44, 300);
-    expect(onClose).toHaveBeenCalledTimes(1);
-
-    modalProps().onAnimate(0, 1, 300, 44);
-    expect(onClose).toHaveBeenCalledTimes(1);
+  test('supports a content-specific fixed opening ratio', () => {
+    renderSheet({ defaultHeightRatio: 0.83 });
+    const [defaultHeight, expandedHeight] = modalProps().snapPoints;
+    expect(defaultHeight).toBe(Math.round((expandedHeight + 44) * 0.83));
+    expect(appliedContentStyle().height).toBe(defaultHeight - 40);
   });
+
+  test('grows the opening detent to contain a measured non-scrollable body', () => {
+    const contentHeight = 650;
+    renderSheet({ contentHeight, defaultHeightRatio: 0.5 });
+    const [defaultHeight, expandedHeight] = modalProps().snapPoints;
+    expect(defaultHeight).toBe(Math.min(contentHeight + 40 + 4 + 28, expandedHeight));
+  });
+
 });

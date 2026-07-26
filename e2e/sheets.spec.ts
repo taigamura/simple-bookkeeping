@@ -27,6 +27,7 @@ import {
   center,
   coldLoad,
   deadZoneBelowContent,
+  OPEN_TIMEOUT,
   expectCalendarTappable,
   expectSheetGone,
   expectSheetOpen,
@@ -42,6 +43,147 @@ const COLD_LOADS = 12;
 /** Allowed gap under the last rendered content inside a sheet (the sheet's own
  * 28px bottom padding plus breathing room). */
 const DEAD_ZONE_TOLERANCE = 80;
+
+async function expectSheetHeadingInViewport(
+  page: Parameters<typeof sheet>[0],
+  id: Parameters<typeof sheet>[1],
+  title: string,
+) {
+  const heading = sheet(page, id).getByText(title, { exact: true }).first();
+  await expect(heading).toBeVisible();
+  const viewport = page.viewportSize()!;
+  await expect(async () => {
+    const box = (await heading.boundingBox())!;
+    expect(box.y, `${title} heading should not be pushed above the viewport`).toBeGreaterThanOrEqual(24);
+    expect(box.y + box.height, `${title} heading should be visible`).toBeLessThan(viewport.height);
+  }).toPass({ timeout: OPEN_TIMEOUT });
+}
+
+async function expectEveryButtonAccessible(
+  page: Parameters<typeof sheet>[0],
+  id: Parameters<typeof sheet>[1],
+  finalActionLabel: string,
+) {
+  await expectSheetOpen(page, id);
+  const surface = sheet(page, id);
+  const surfaceBox = (await surface.boundingBox())!;
+  const buttons = await surface.getByRole('button').all();
+  expect(buttons.length, `${id} should expose at least one button`).toBeGreaterThan(0);
+
+  for (const button of buttons) {
+    const box = (await button.boundingBox())!;
+    const label = (await button.getAttribute('aria-label')) ?? 'unlabelled button';
+    expect(box.x, `${label} should not clip on the left`).toBeGreaterThanOrEqual(surfaceBox.x);
+    expect(box.x + box.width, `${label} should not clip on the right`)
+      .toBeLessThanOrEqual(surfaceBox.x + surfaceBox.width);
+    expect(box.y, `${label} should not clip above the sheet`).toBeGreaterThanOrEqual(surfaceBox.y);
+    expect(box.y + box.height, `${label} should not clip below the sheet`)
+      .toBeLessThanOrEqual(surfaceBox.y + surfaceBox.height);
+  }
+
+  const finalAction = surface.getByLabel(finalActionLabel, { exact: true });
+  const actionBox = (await finalAction.boundingBox())!;
+  const bottomClearance = surfaceBox.y + surfaceBox.height - (actionBox.y + actionBox.height);
+  expect(bottomClearance, `${finalActionLabel} should retain bottom breathing room`)
+    .toBeGreaterThanOrEqual(28);
+  expect(bottomClearance, `${finalActionLabel} should not leave an oversized bottom gap`)
+    .toBeLessThanOrEqual(48);
+}
+
+test('Settings, Repeats, and Budgets render visible bodies after opening and drill-in', async ({ page }) => {
+  const { gear } = await coldLoad(page);
+  await tapAt(page, gear);
+  await expectSheetHeadingInViewport(page, 'settings-sheet', 'Settings');
+  const defaultHeight = (await sheet(page, 'settings-sheet').boundingBox())!.height;
+
+  const repeats = sheet(page, 'settings-sheet').getByLabel('Repeats', { exact: true });
+  await repeats.scrollIntoViewIfNeeded();
+  await tapAt(page, await center(repeats));
+  await expectSheetHeadingInViewport(page, 'repeats-sheet', 'Repeats');
+  await expect(sheet(page, 'repeats-sheet').getByText('No active repeats')).toBeVisible();
+  expect((await sheet(page, 'repeats-sheet').boundingBox())!.height).toBeCloseTo(defaultHeight, 0);
+
+  await tapAt(page, await center(sheet(page, 'repeats-sheet').getByLabel('Back', { exact: true })));
+  await expectSheetHeadingInViewport(page, 'settings-sheet', 'Settings');
+  expect((await sheet(page, 'settings-sheet').boundingBox())!.height).toBeCloseTo(defaultHeight, 0);
+
+  const budgets = sheet(page, 'settings-sheet').getByLabel('Budgets', { exact: true });
+  await budgets.scrollIntoViewIfNeeded();
+  await tapAt(page, await center(budgets));
+  await expectSheetHeadingInViewport(page, 'budgets-sheet', 'Budgets');
+  expect((await sheet(page, 'budgets-sheet').boundingBox())!.height).toBeCloseTo(defaultHeight, 0);
+});
+
+test('Settings can scroll through the final Data action', async ({ page }) => {
+  const { gear } = await coldLoad(page);
+  await tapAt(page, gear);
+  await expectSheetHeadingInViewport(page, 'settings-sheet', 'Settings');
+
+  const settings = sheet(page, 'settings-sheet');
+  const finalDataAction = settings.getByLabel('Delete all data', { exact: true });
+  const viewport = page.viewportSize()!;
+  await page.mouse.move(viewport.width / 2, viewport.height - 120);
+  await page.mouse.wheel(0, 2_000);
+
+  await expect(async () => {
+    const actionBox = (await finalDataAction.boundingBox())!;
+    expect(actionBox.y + actionBox.height, 'final Data action should scroll fully inside the viewport')
+      .toBeLessThanOrEqual(viewport.height);
+  }).toPass({ timeout: OPEN_TIMEOUT });
+});
+
+test('Entry opens with its non-scrollable primary action fully accessible', async ({ page }) => {
+  const { fab } = await coldLoad(page);
+  await tapAt(page, fab);
+  const entry = sheet(page, 'entry-sheet');
+  await expect(entry).toBeVisible({ timeout: OPEN_TIMEOUT });
+  const primaryAction = entry.getByLabel('Add expense', { exact: true });
+  await expect(async () => {
+    const surface = (await entry.boundingBox())!;
+    const action = (await primaryAction.boundingBox())!;
+    expect(action.x, 'Entry primary action should not clip on the left').toBeGreaterThanOrEqual(surface.x);
+    expect(action.x + action.width, 'Entry primary action should not clip on the right')
+      .toBeLessThanOrEqual(surface.x + surface.width);
+    expect(action.y, 'Entry primary action should not clip above the sheet').toBeGreaterThanOrEqual(surface.y);
+    const bottomClearance = surface.y + surface.height - (action.y + action.height);
+    expect(
+      bottomClearance,
+      'Entry primary action should retain its full 28px bottom breathing room',
+    ).toBeGreaterThanOrEqual(28);
+    expect(bottomClearance, 'Entry should not leave an oversized gap below its primary action')
+      .toBeLessThanOrEqual(48);
+  }).toPass({ timeout: OPEN_TIMEOUT });
+});
+
+test('Entry and repeat editing grow to keep every button accessible without scrolling', async ({ page }) => {
+  const { fab, gear } = await coldLoad(page);
+  await tapAt(page, fab);
+  const entry = sheet(page, 'entry-sheet');
+  await expect(entry).toBeVisible({ timeout: OPEN_TIMEOUT });
+  await expectEveryButtonAccessible(page, 'entry-sheet', 'Add expense');
+
+  await tapAt(page, await center(entry.getByLabel('↻ Repeat: Never', { exact: true })));
+  await tapAt(page, await center(entry.getByLabel('↻ Repeat: Every day', { exact: true })));
+  await expect(entry.getByLabel('If on weekend: Move to Monday', { exact: true })).toBeVisible();
+  await expectEveryButtonAccessible(page, 'entry-sheet', 'Add expense');
+
+  await tapAt(page, await center(entry.getByLabel('1', { exact: true })));
+  await tapAt(page, await center(entry.getByLabel('Add expense', { exact: true })));
+  await expectSheetGone(page, 'entry-sheet');
+
+  await tapAt(page, gear);
+  await expectSheetHeadingInViewport(page, 'settings-sheet', 'Settings');
+  const repeats = sheet(page, 'settings-sheet').getByLabel('Repeats', { exact: true });
+  await repeats.scrollIntoViewIfNeeded();
+  await tapAt(page, await center(repeats));
+  await expectSheetHeadingInViewport(page, 'repeats-sheet', 'Repeats');
+  await tapAt(page, await center(sheet(page, 'repeats-sheet').getByLabel(/^Edit repeat:/)));
+
+  const editor = sheet(page, 'repeat-entry-sheet');
+  await expect(editor.getByLabel('Save this and future', { exact: true })).toBeVisible();
+  await expect(editor.getByLabel('Stop repeat', { exact: true })).toBeVisible();
+  await expectEveryButtonAccessible(page, 'repeat-entry-sheet', 'Stop repeat');
+});
 
 test.describe('cold-load first tap', () => {
   test(`＋ opens the Entry sheet on the first tap, ${COLD_LOADS}/${COLD_LOADS} fresh loads`, async ({ page }) => {

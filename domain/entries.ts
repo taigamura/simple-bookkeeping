@@ -61,8 +61,8 @@ export function uid(): string {
 
 /**
  * Build a `Transaction` from a draft, applying the save() rules: parse the
- * integer amount and return `null` when it is 0 (no-op), and fall back to the
- * category when the note is empty or the "—" placeholder.
+ * integer amount and return `null` when it is 0 (no-op). Notes are trimmed but
+ * otherwise preserved; an omitted or whitespace-only note remains empty.
  */
 export function makeEntry(
   draft: EntryDraft,
@@ -71,8 +71,7 @@ export function makeEntry(
   const amount = amountValue(draft.amountStr);
   if (amount <= 0) return null;
 
-  const trimmed = draft.note?.trim();
-  const note = !trimmed || trimmed === '—' ? draft.category : trimmed;
+  const note = draft.note?.trim() ?? '';
 
   return {
     id: uid(),
@@ -101,8 +100,7 @@ export function updateEntry(
 ): Transaction[] {
   return entries.map((t) => {
     if (t.id !== id) return t;
-    const trimmed = draft.note?.trim();
-    const note = !trimmed || trimmed === '—' ? draft.category : trimmed;
+    const note = draft.note?.trim() ?? '';
     return {
       ...t,
       y: draft.y,

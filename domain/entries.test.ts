@@ -54,10 +54,10 @@ describe('updateEntry', () => {
     expect(out[1]).toEqual(entries[1]);
   });
 
-  it('falls back to the category when the draft note is blank or the dash', () => {
-    expect(updateEntry([tx()], 'a', draft({ note: '—' }))[0].note).toBe('Salary');
-    expect(updateEntry([tx()], 'a', draft({ note: '  ' }))[0].note).toBe('Salary');
-    expect(updateEntry([tx()], 'a', draft({ note: undefined }))[0].note).toBe('Salary');
+  it('keeps an optional note blank and preserves entered text', () => {
+    expect(updateEntry([tx()], 'a', draft({ note: '—' }))[0].note).toBe('—');
+    expect(updateEntry([tx()], 'a', draft({ note: '  ' }))[0].note).toBe('');
+    expect(updateEntry([tx()], 'a', draft({ note: undefined }))[0].note).toBe('');
   });
 
   it('is a no-op for a missing id (content unchanged) and returns a new array', () => {

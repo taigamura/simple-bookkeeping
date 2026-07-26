@@ -23,7 +23,6 @@ import {
   parseZaimCsv,
   promoteCategory,
   pruneBudgets,
-  sampleEntries,
   saveLedgerItem,
   serializeZaimCsv,
   shiftMonth,
@@ -142,6 +141,7 @@ function Shell({
   const [sheet, setSheet] = useState<Sheet>(null);
   // Which entry the Entry sheet is editing (#43); null = create mode.
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [entryContentHeight, setEntryContentHeight] = useState(0);
 
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
   // real current month, with the selected day defaulting to today.
@@ -204,6 +204,7 @@ function Shell({
   // openEntry(): the ＋ button — always create mode (clear any prior editing).
   const openEntry = () => {
     setEditing(null);
+    setEntryContentHeight(0);
     setSheet('entry');
   };
 
@@ -211,23 +212,15 @@ function Shell({
   // Calendar returns to it after save/delete.
   const openEdit = (entry: Transaction) => {
     setEditing(entry);
+    setEntryContentHeight(0);
     setSelectedDay(entry.day);
     setSheet('entry');
   };
 
   const openRepeatEdit = (entry: Transaction) => {
     setEditing(entry);
+    setEntryContentHeight(0);
     setSheet('repeat-entry');
-  };
-
-  // loadSample(): replace the ledger with the July-2026 demo set (stable ids)
-  // and jump the cursor there so the entries are immediately visible.
-  const loadSample = () => {
-    update({ entries: sampleEntries(), recurrenceRules: [] });
-    setCursor({ y: 2026, m: 6 });
-    setSelectedDay(1);
-    setTab('calendar');
-    setSheet(null);
   };
 
   // exportData(): serialize the full ledger to a Zaim-format CSV and hand it
@@ -471,6 +464,8 @@ function Shell({
       <BottomSheet
         visible={sheet !== null}
         onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
+        defaultHeightRatio={sheet === 'entry' || sheet === 'repeat-entry' ? 0.83 : 0.8}
+        contentHeight={sheet === 'entry' || sheet === 'repeat-entry' ? entryContentHeight : 0}
         testID={sheet ? `${sheet}-sheet` : undefined}
       >
         {(sheet === 'entry' || sheet === 'repeat-entry') && (
@@ -487,6 +482,7 @@ function Shell({
             onSave={handleSubmit}
             onDelete={handleDelete}
             onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
+            onContentHeightChange={setEntryContentHeight}
           />
         )}
         {sheet === 'settings' && (
@@ -502,7 +498,6 @@ function Shell({
             activeRepeatCount={activeRepeats.length}
             onOpenRepeats={openRepeats}
             onOpenBudgets={openBudgets}
-            onLoadSample={loadSample}
             onExportData={exportData}
             onImportZaim={importZaim}
             hasCorruptStash={hasCorruptStash}

@@ -1,10 +1,11 @@
 /**
  * EntrySheet fidelity test (design §6–§8): sentence-case CTA label that flips
- * with the type toggle and is disabled at amount 0; per-type Note presets cycled
- * by the Note row (expense → 'Cash', income → 'Bank transfer').
+ * with the type toggle and is disabled at amount 0; Note is an editable text
+ * field whose value is included in the saved draft.
  */
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import { StyleSheet, type ViewStyle } from 'react-native';
 
 import { type Transaction } from '../domain';
 import { ThemeProvider } from '../theme';
@@ -30,8 +31,8 @@ const renderSheet = (props: Partial<React.ComponentProps<typeof EntrySheet>> = {
 
 const editingEntry = (over: Partial<Transaction> = {}): Transaction => ({
   id: 'e1',
-  y: 2026,
   timestamp: '2026-07-02T00:00:00.000Z',
+  y: 2026,
   m: 6,
   day: 2,
   type: 'expense',
@@ -43,6 +44,15 @@ const editingEntry = (over: Partial<Transaction> = {}): Transaction => ({
 });
 
 describe('EntrySheet', () => {
+  it('reports intrinsic layout height for its non-scrollable sheet host', () => {
+    const onContentHeightChange = jest.fn();
+    renderSheet({ onContentHeightChange });
+    fireEvent(screen.getByTestId('entry-content'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 360, height: 640 } },
+    });
+    expect(onContentHeightChange).toHaveBeenCalledWith(640);
+  });
+
   it('shows a sentence-case CTA that is disabled until an amount is entered', () => {
     renderSheet();
     const cta = screen.getByLabelText('Add expense');
@@ -55,18 +65,56 @@ describe('EntrySheet', () => {
     expect(screen.getByLabelText('Add income')).toBeTruthy();
   });
 
-  it('cycles the expense Note presets starting from the default dash', () => {
-    renderSheet();
-    expect(screen.getByLabelText('Note: —')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Note: —'));
-    expect(screen.getByLabelText('Note: Cash')).toBeTruthy();
+  it('accepts an arbitrary note and includes it in the saved draft', () => {
+    const onSave = jest.fn();
+    renderSheet({ onSave });
+
+    fireEvent.changeText(screen.getByLabelText('Note'), 'Lunch with friends');
+    fireEvent.press(screen.getByLabelText('1'));
+    fireEvent.press(screen.getByLabelText('Add expense'));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ note: 'Lunch with friends' }),
+      'after',
+    );
   });
 
-  it('uses income-specific Note presets after switching type', () => {
+  it('defaults a new entry date to the calendar selection', () => {
     renderSheet();
-    fireEvent.press(screen.getByLabelText('Income'));
-    fireEvent.press(screen.getByLabelText('Note: —'));
-    expect(screen.getByLabelText('Note: Bank transfer')).toBeTruthy();
+    const dateInput = screen.getByLabelText('Date YYYY-MM-DD');
+    expect(dateInput.props.value).toBe('2026-07-02');
+    expect(StyleSheet.flatten(dateInput.props.style).fontFamily).toBe(
+      'JetBrainsMono_600SemiBold',
+    );
+  });
+
+  it('can use today without changing the calendar selection first', () => {
+    renderSheet();
+    fireEvent.press(screen.getByLabelText('Use today'));
+    expect(screen.getByLabelText('Date YYYY-MM-DD').props.value).toBe('2026-07-26');
+  });
+
+  it('saves a new entry on the separately entered date', () => {
+    const onSave = jest.fn();
+    renderSheet({ onSave });
+
+    fireEvent.changeText(screen.getByLabelText('Date YYYY-MM-DD'), '2026-08-15');
+    fireEvent.press(screen.getByLabelText('1'));
+    fireEvent.press(screen.getByLabelText('Add expense'));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ y: 2026, m: 7, day: 15 }),
+      'after',
+    );
+  });
+
+  it('does not save an invalid date', () => {
+    renderSheet();
+    fireEvent.changeText(screen.getByLabelText('Date YYYY-MM-DD'), '2026-02-30');
+    fireEvent.press(screen.getByLabelText('1'));
+
+    expect(screen.getByText('Enter a valid date.')).toBeTruthy();
+    expect(screen.getByLabelText('Add expense').props.accessibilityState.disabled).toBe(true);
   });
 
   it('defaults the Repeat row to Never', () => {
@@ -91,7 +139,8 @@ describe('EntrySheet (edit mode, #43)', () => {
   it('prefills from the edited entry (amount, note) and shows an enabled Save CTA', () => {
     renderSheet({ editing: editingEntry() });
     expect(screen.getByText('¥1,200')).toBeTruthy();
-    expect(screen.getByLabelText('Note: Card')).toBeTruthy();
+    expect(screen.getByLabelText('Note').props.value).toBe('Card');
+    expect(screen.getByLabelText('Date YYYY-MM-DD').props.value).toBe('2026-07-02');
     const cta = screen.getByLabelText('Save');
     expect(cta.props.accessibilityState.disabled).toBe(false);
   });
@@ -129,6 +178,15 @@ describe('EntrySheet (edit mode, #43)', () => {
     renderSheet({ editing, onDelete });
     fireEvent.press(screen.getByLabelText('Delete entry'));
     expect(onDelete).toHaveBeenCalledWith(editing);
+  });
+
+  it('gives Delete a full iOS touch target above the sheet edge', () => {
+    renderSheet({ editing: editingEntry(), onDelete: () => {} });
+    const deleteAction = screen.getByLabelText('Delete entry');
+    const style = StyleSheet.flatten(deleteAction.props.style) as ViewStyle;
+
+    expect(style.minHeight).toBeGreaterThanOrEqual(44);
+    expect(style.marginBottom).toBeGreaterThanOrEqual(8);
   });
 
   it('saves the draft (unchanged fields) for the host to overwrite', () => {

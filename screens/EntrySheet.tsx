@@ -62,18 +62,14 @@ interface EntrySheetProps {
   /** Edit mode only: request deletion of `editing` (the host chooses scope). */
   onDelete?: (entry: Transaction) => void;
   onClose: () => void;
+  /** Reports intrinsic form height so the non-scrollable host can grow with conditional rows. */
+  onContentHeightChange?: (height: number) => void;
 }
 
 const TYPE_OPTIONS = [
   { value: 'expense' as TxType, label: strings.common.expense },
   { value: 'income' as TxType, label: strings.common.income },
 ];
-
-/**
- * Note presets cycled by the Note row; '—' means "fall back to the category".
- * Presets are per-type (design §7): the first entry is always the default '—'.
- */
-const NOTE_OPTIONS: Record<TxType, string[]> = strings.entry.notePresets;
 
 const REPEAT_ORDER: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
 const REPEAT_LABEL: Record<Repeat, string> = strings.entry.repeatLabels;
@@ -120,6 +116,7 @@ export function EntrySheet({
   onSave,
   onDelete,
   onClose,
+  onContentHeightChange,
 }: EntrySheetProps) {
   const { colors } = useTheme();
   const isEditing = editing != null;
@@ -129,7 +126,7 @@ export function EntrySheet({
   const [category, setCategory] = useState(
     () => editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
   );
-  const [note, setNote] = useState(editing?.note ?? '—');
+  const [note, setNote] = useState(editing?.note ?? '');
   const [repeat, setRepeat] = useState<Repeat>(editing?.repeat ?? 'never');
   const [weekendShift, setWeekendShift] = useState<WeekendShift>(
     editing?.occurrence?.weekendShift ?? 'after',
@@ -161,8 +158,6 @@ export function EntrySheet({
     setTxType(nextType);
     // Keep the selected category valid for the new type's list.
     if (!catsFor(nextType).includes(category)) setCategory(catsFor(nextType)[0]);
-    // Note presets are per-type; drop a preset that isn't in the new list.
-    if (!NOTE_OPTIONS[nextType].includes(note)) setNote('—');
   };
 
   const save = () => {
@@ -174,7 +169,13 @@ export function EntrySheet({
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      testID="entry-content"
+      style={styles.container}
+      onLayout={(event) =>
+        onContentHeightChange?.(Math.ceil(event.nativeEvent.layout.height))
+      }
+    >
       <View style={styles.topRow}>
         <View style={styles.toggleWrap}>
           {/* Active segment defaults to green + near-black (design §6). */}
@@ -247,12 +248,29 @@ export function EntrySheet({
             </Txt>
           )}
         </View>
-        <CycleRow
-          label={strings.entry.noteRowLabel}
-          value={note}
-          active={note !== '—'}
-          onPress={() => setNote((n) => next(NOTE_OPTIONS[txType], n))}
-        />
+        <View
+          style={[
+            styles.noteRow,
+            {
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: colors.hair,
+            },
+          ]}
+        >
+          <Txt variant="optionLabel" tone="dim">
+            {strings.entry.noteRowLabel}
+          </Txt>
+          <TextInput
+            value={note}
+            onChangeText={setNote}
+            placeholder={strings.entry.notePlaceholder}
+            placeholderTextColor={colors.dim}
+            accessibilityLabel={strings.entry.noteRowLabel}
+            accessibilityValue={{ text: note || strings.entry.notePlaceholder }}
+            returnKeyType="done"
+            style={[styles.noteInput, { color: colors.ink }]}
+          />
+        </View>
         <CycleRow
           label={strings.entry.repeatRowLabel}
           value={REPEAT_LABEL[repeat]}
@@ -373,6 +391,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 46,
   },
+  noteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 46,
+    gap: 12,
+  },
   dateSection: {
     minHeight: 46,
   },
@@ -405,12 +429,25 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     textAlign: 'right',
   },
+  noteInput: {
+    flex: 1,
+    minHeight: 46,
+    paddingHorizontal: 0,
+    fontSize: 14.5,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
   cta: {
     height: metrics.ctaHeight,
     borderRadius: metrics.ctaRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deleteRow: { alignItems: 'center', justifyContent: 'center', paddingVertical: 6 },
+  deleteRow: {
+    minHeight: 44,
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   categoryWarning: { textAlign: 'center' },
 });

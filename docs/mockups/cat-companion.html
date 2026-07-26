@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kaji — cat companion mockups</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080b10; --screen: #0e1116; --card: #171b22; --raised: #202630;
+      --ink: #eaeef3; --muted: #9aa4b2; --dim: #687382; --line: rgba(255,255,255,.08);
+      --green: #2bd48a; --red: #f0766c; --sand: #d9cdb4; --sand2: #f2ead8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    button { font: inherit; }
+    .page { min-height: 100vh; display: grid; place-items: center; padding: 28px 20px 108px; }
+    .phone { width: min(402px, 100%); height: 780px; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 34px; background: var(--screen); box-shadow: 0 32px 90px #0009; }
+    .status { height: 34px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; font: 600 11px ui-monospace, monospace; }
+    .signal { color: var(--muted); letter-spacing: 2px; }
+    .header { min-height: 76px; padding: 13px 20px 12px; display: flex; align-items: flex-start; justify-content: space-between; }
+    h1 { margin: 0; font-size: 24px; letter-spacing: -.5px; }
+    .sub { color: var(--muted); margin-top: 3px; font-size: 12px; }
+    .header-actions { display: flex; align-items: center; gap: 9px; }
+    .gear { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--muted); }
+    .content { padding: 4px 20px 100px; display: flex; flex-direction: column; gap: 14px; }
+    .card { border: 1px solid var(--line); border-radius: 18px; background: var(--card); padding: 18px; }
+    .eyebrow { color: var(--dim); font: 700 10px ui-monospace, monospace; letter-spacing: 1.6px; text-transform: uppercase; }
+    .net { color: var(--green); font: 700 39px ui-monospace, monospace; letter-spacing: -2px; margin: 7px 0 13px; }
+    .bar { height: 8px; display: flex; overflow: hidden; border-radius: 10px; background: var(--raised); }
+    .bar .income { width: 73%; background: var(--green); } .bar .expense { flex: 1; background: var(--red); }
+    .legend { display: flex; gap: 17px; color: var(--muted); font-size: 11px; margin-top: 10px; }
+    .legend b { color: var(--ink); font-family: ui-monospace, monospace; }
+    .categories { display: grid; gap: 12px; }
+    .catrow { display: grid; grid-template-columns: 1fr auto; gap: 7px; font-size: 13px; }
+    .catrow b { font-family: ui-monospace, monospace; } .catrow .track { grid-column: 1/-1; height: 6px; background: var(--raised); border-radius: 9px; overflow: hidden; }
+    .catrow .fill { height: 100%; border-radius: 9px; background: var(--green); }
+    .tabs { position: absolute; inset: auto 0 0; height: 82px; z-index: 5; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid var(--line); background: #0e1116f2; color: var(--dim); font-size: 10px; }
+    .tab { display: grid; place-items: center; gap: 4px; } .tab.active { color: var(--ink); }
+    .plus { width: 56px; height: 56px; margin-top: -26px; border: 0; border-radius: 50%; color: #08100c; background: var(--green); font-size: 29px; box-shadow: 0 10px 28px #2bd48a44; cursor: pointer; }
+
+    .pixel-cat { display: inline-flex; align-items: center; justify-content: center; min-width: 62px; height: 34px; }
+    .pixel-cat svg { display: block; overflow: visible; }
+    .pixel-cat.running svg { animation: bob .34s steps(2,end) infinite; }
+    .pixel-cat.purr svg { animation: purr .12s linear infinite; filter: drop-shadow(0 0 5px #2bd48a66); }
+    .pixel-cat.fed svg { animation: munch .25s ease-in-out infinite alternate; }
+    @keyframes bob { 50% { transform: translateY(-2px) scaleX(.96); } }
+    @keyframes purr { 50% { transform: translateX(1px); } }
+    @keyframes munch { to { transform: rotate(2deg) translateY(1px); } }
+
+    .toast { position: absolute; z-index: 8; left: 50%; top: 116px; transform: translate(-50%,-10px); opacity: 0; pointer-events: none; padding: 8px 13px; border-radius: 99px; background: var(--green); color: #07100b; font: 800 10px ui-monospace, monospace; letter-spacing: .8px; transition: .2s; }
+    .toast.show { opacity: 1; transform: translate(-50%,0); }
+
+    /* A — smallest possible footprint */
+    .a-caption { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; color: var(--muted); font-size: 11px; }
+    .a-caption span:last-child { color: var(--green); font-family: ui-monospace, monospace; }
+
+    /* B — the cat gets a real home */
+    .habitat { height: 220px; position: relative; overflow: hidden; padding: 0; background: linear-gradient(#18252a, #14201d 64%, #23251d 65%); }
+    .window { position: absolute; width: 76px; height: 92px; right: 24px; top: 22px; border: 6px solid #303a3b; border-radius: 38px 38px 4px 4px; background: radial-gradient(circle at 65% 25%, #eff0be 0 8%, transparent 9%), linear-gradient(#1b3342,#253f43); opacity: .8; }
+    .shelf { position: absolute; left: 0; right: 0; bottom: 53px; height: 5px; background: #675745; }
+    .habitat .bigcat { position: absolute; left: 48px; bottom: 57px; transform: scale(2.25); transform-origin: bottom left; }
+    .bowl { position: absolute; left: 66px; bottom: 25px; width: 54px; height: 20px; border-radius: 4px 4px 22px 22px; background: #b55e55; border-top: 5px solid #d08a71; }
+    .room-copy { position: absolute; left: 18px; top: 16px; z-index: 2; }
+    .room-copy strong { display: block; margin-top: 5px; font-size: 17px; }
+    .food-meter { display: flex; align-items: center; gap: 8px; margin-top: 11px; color: var(--muted); font-size: 11px; }
+    .food-meter .meter { flex: 1; height: 7px; border-radius: 8px; background: var(--raised); overflow: hidden; }
+    .food-meter .meter i { display: block; width: 68%; height: 100%; background: var(--green); }
+
+    /* C — competition is the main event */
+    .streak-card { padding: 18px 18px 21px; background: linear-gradient(145deg,#192126,#171b22); }
+    .streak-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .streak-number { font: 750 47px ui-monospace, monospace; line-height: 1; margin-top: 8px; }
+    .streak-number small { font: 700 12px ui-sans-serif, sans-serif; color: var(--muted); letter-spacing: 0; }
+    .best { color: var(--green); border: 1px solid #2bd48a55; border-radius: 99px; padding: 5px 9px; font: 700 9px ui-monospace, monospace; letter-spacing: .8px; }
+    .race { height: 100px; position: relative; margin-top: 9px; }
+    .race:after { content:""; position: absolute; left: 0; right: 0; top: 58px; border-top: 1px dashed #ffffff22; }
+    .race .runner { position: absolute; left: 66%; top: 36px; transform: scale(1.45); z-index: 2; }
+    .race .flag { position: absolute; right: 2px; top: 23px; color: var(--muted); font-size: 24px; }
+    .race-labels { position: absolute; inset: 73px 0 auto; display: flex; justify-content: space-between; color: var(--dim); font: 600 9px ui-monospace, monospace; }
+    .week { display: grid; grid-template-columns: repeat(7,1fr); gap: 7px; margin-top: 15px; }
+    .day { aspect-ratio: 1; border-radius: 10px; display: grid; place-items: center; color: var(--dim); background: var(--raised); font: 700 9px ui-monospace, monospace; }
+    .day.done { color: #07100b; background: var(--green); } .day.today { outline: 1px solid var(--green); color: var(--ink); }
+
+    .state-panel { position: fixed; z-index: 30; top: 18px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 3px; padding: 5px; border: 1px solid #ffffff18; border-radius: 99px; background: #171b22ee; box-shadow: 0 12px 35px #0008; }
+    .state-panel button { border: 0; border-radius: 99px; padding: 7px 10px; color: var(--muted); background: transparent; font: 700 9px ui-monospace, monospace; text-transform: uppercase; cursor: pointer; }
+    .state-panel button.active { background: var(--raised); color: var(--green); }
+    .switcher { position: fixed; z-index: 30; left: 50%; bottom: 22px; transform: translateX(-50%); display: grid; grid-template-columns: 42px minmax(190px,auto) 42px; align-items: center; border: 1px solid #ffffff1c; border-radius: 99px; background: #eaeef3; color: #11151b; box-shadow: 0 16px 40px #000b; overflow: hidden; }
+    .switcher button { height: 44px; border: 0; background: transparent; cursor: pointer; font-size: 18px; }
+    .switcher strong { padding: 0 12px; text-align: center; font-size: 12px; white-space: nowrap; }
+    .variant { display: none; } .variant.active { display: block; }
+    @media (max-height: 850px) { .phone { height: 700px; } .page { padding-top: 72px; } }
+  </style>
+</head>
+<body>
+  <!-- Three placements for a RunCat-like bookkeeping companion, switchable via ?variant=. -->
+  <div class="page">
+    <main class="phone" aria-live="polite">
+      <div class="toast" id="toast">ENTRY SAVED · PURR +1</div>
+      <div class="status"><span>9:41</span><span class="signal">● ● ▰</span></div>
+
+      <section class="variant" data-variant="A">
+        <header class="header"><div><h1>Summary</h1><div class="sub">July 2026</div></div><div class="header-actions"><span class="pixel-cat cat-target"></span><button class="gear">⚙</button></div></header>
+        <div class="content">
+          <div class="a-caption"><span>Mochi mirrors your pace</span><span id="aMood">ASLEEP</span></div>
+          <div class="card"><div class="eyebrow">Net this month</div><div class="net">+¥76,070</div><div class="bar"><i class="income"></i><i class="expense"></i></div><div class="legend"><span>In <b>¥120,000</b></span><span>Out <b>¥43,930</b></span></div></div>
+          <div class="card categories"><div class="eyebrow">Spending by category</div><div class="catrow"><span>Groceries</span><b>¥12,830</b><i class="track"><i class="fill" style="width:86%"></i></i></div><div class="catrow"><span>Food</span><b>¥10,600</b><i class="track"><i class="fill" style="width:71%"></i></i></div><div class="catrow"><span>Transport</span><b>¥6,400</b><i class="track"><i class="fill" style="width:43%"></i></i></div></div>
+        </div>
+        <nav class="tabs"><span class="tab active">◎<small>Summary</small></span><button class="plus log-entry">+</button><span class="tab">▦<small>Calendar</small></span></nav>
+      </section>
+
+      <section class="variant" data-variant="B">
+        <header class="header"><div><h1>Mochi's corner</h1><div class="sub">12 entries this month</div></div><button class="gear">⚙</button></header>
+        <div class="content">
+          <div class="card habitat"><div class="room-copy"><span class="eyebrow">Mood</span><strong id="bMood">Sleepy</strong></div><div class="window"></div><div class="shelf"></div><span class="pixel-cat cat-target bigcat"></span><i class="bowl"></i></div>
+          <div class="card"><div class="eyebrow">Today's care</div><div class="food-meter"><span>🥣 2 entries</span><span class="meter"><i id="foodFill"></i></span><b>68%</b></div><p class="sub" style="line-height:1.6;margin:13px 0 0">Each entry drops a snack in Mochi's bowl. Keep the daily rhythm; no punishment when you miss a day.</p></div>
+          <div class="card"><div class="eyebrow">Net this month</div><div class="net" style="font-size:31px">+¥76,070</div><div class="bar"><i class="income"></i><i class="expense"></i></div></div>
+        </div>
+        <nav class="tabs"><span class="tab">◎<small>Summary</small></span><button class="plus log-entry">+</button><span class="tab active">♧<small>Mochi</small></span></nav>
+      </section>
+
+      <section class="variant" data-variant="C">
+        <header class="header"><div><h1>Entry streak</h1><div class="sub">One tiny win a day</div></div><button class="gear">⚙</button></header>
+        <div class="content">
+          <div class="card streak-card"><div class="streak-top"><div><div class="eyebrow">Current run</div><div class="streak-number">6 <small>days</small></div></div><span class="best">BEST: 11 DAYS</span></div><div class="race"><span class="pixel-cat cat-target runner"></span><span class="flag">⚑</span><div class="race-labels"><span>DAY 1</span><span>PERSONAL BEST</span></div></div></div>
+          <div class="card"><div class="eyebrow">This week</div><div class="week"><span class="day done">M</span><span class="day done">T</span><span class="day done">W</span><span class="day done">T</span><span class="day today">F</span><span class="day">S</span><span class="day">S</span></div><p class="sub" style="line-height:1.6;margin:14px 0 0">Log anything today and Mochi reaches day 7. Streak freezes are automatic on zero-spend days.</p></div>
+          <div class="card" style="display:flex;flex-direction:row;align-items:center;justify-content:space-between"><div><div class="eyebrow">Today's goal</div><b style="display:block;margin-top:5px">1 entry to keep running</b></div><span style="font-size:25px">🏁</span></div>
+        </div>
+        <nav class="tabs"><span class="tab active">◎<small>Summary</small></span><button class="plus log-entry">+</button><span class="tab">▦<small>Calendar</small></span></nav>
+      </section>
+    </main>
+  </div>
+
+  <div class="state-panel" aria-label="Preview cat state">
+    <button data-state="sleep" class="active">Sleep</button><button data-state="run">Run</button><button data-state="purr">Purr</button><button data-state="fed">Fed</button>
+  </div>
+  <div class="switcher"><button id="prev" aria-label="Previous variant">←</button><strong id="variantLabel"></strong><button id="next" aria-label="Next variant">→</button></div>
+
+  <script>
+    const variants = [
+      { key: 'A', name: 'Header Cat' },
+      { key: 'B', name: "Mochi's Corner" },
+      { key: 'C', name: 'Entry Streak' }
+    ];
+    const frames = {
+      sleep: ["....................","....................","........#.#.........",".......#####........",".....#########......","....############....","...##############...","...##############...","....############....","..###..............."],
+      run: ["..............#..#..","..............####..","#.............##.#..",".#............#####.","..#......##########.","...##..############.",".....############...","......##......##....",".....##........##...","....##..........##.."],
+      purr: ["....................","........#.#.........",".......#####........",".....#########......","....############....","...##############...","...##############...","....############....","..###...............","...................."],
+      fed: [".............#..#...",".............####...","............#####...",".......##########...","......###########...",".......#########....",".........##.........","........####...ooo..","........####..ooooo.","..............ooooo."]
+    };
+    let state = 'sleep';
+    let variant = new URLSearchParams(location.search).get('variant') || 'A';
+    if (!variants.some(v => v.key === variant)) variant = 'A';
+
+    function catSvg(kind) {
+      let cells = '', accent = '';
+      frames[kind].forEach((row,y) => [...row].forEach((c,x) => {
+        if (c === '#') cells += `<rect x="${x}" y="${y}" width="1" height="1" fill="var(--sand)"/>`;
+        if (c === 'o') cells += `<rect x="${x}" y="${y}" width="1" height="1" fill="#d08a71"/>`;
+      }));
+      if (kind === 'purr') accent = '<path d="M1 3 Q-2 5 1 7 M19 3 Q22 5 19 7" fill="none" stroke="var(--green)" stroke-width=".7"/>';
+      return `<svg width="60" height="32" viewBox="-1 0 22 10"><g shape-rendering="crispEdges">${cells}</g>${accent}</svg>`;
+    }
+    function renderState(next) {
+      state = next;
+      document.querySelectorAll('.cat-target').forEach(el => { el.className = el.className.replace(/\b(sleep|running|purr|fed)\b/g,'').trim() + ' ' + (state === 'run' ? 'running' : state); el.innerHTML = catSvg(state); });
+      document.querySelectorAll('[data-state]').forEach(b => b.classList.toggle('active', b.dataset.state === state));
+      const labels = {sleep:'ASLEEP',run:'ON PACE',purr:'PURRING',fed:'MUNCHING'};
+      const moods = {sleep:'Sleepy',run:'Playful',purr:'Purring!',fed:'Snack time'};
+      document.getElementById('aMood').textContent = labels[state]; document.getElementById('bMood').textContent = moods[state];
+    }
+    function renderVariant(next) {
+      variant = next;
+      document.querySelectorAll('.variant').forEach(el => el.classList.toggle('active', el.dataset.variant === variant));
+      const item = variants.find(v => v.key === variant); document.getElementById('variantLabel').textContent = `${item.key} — ${item.name}`;
+      const url = new URL(location.href); url.searchParams.set('variant', variant); history.replaceState({},'',url);
+      renderState(state);
+    }
+    function cycle(delta) { const i = variants.findIndex(v => v.key === variant); renderVariant(variants[(i + delta + variants.length) % variants.length].key); }
+    function reward() {
+      const toast = document.getElementById('toast'); toast.classList.add('show'); renderState('purr');
+      setTimeout(() => renderState('fed'), 900); setTimeout(() => { toast.classList.remove('show'); renderState('run'); }, 2200);
+      document.getElementById('foodFill').style.width = '84%';
+    }
+    document.querySelectorAll('[data-state]').forEach(b => b.addEventListener('click', () => renderState(b.dataset.state)));
+    document.querySelectorAll('.log-entry').forEach(b => b.addEventListener('click', reward));
+    document.getElementById('prev').addEventListener('click', () => cycle(-1)); document.getElementById('next').addEventListener('click', () => cycle(1));
+    addEventListener('keydown', e => { if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return; if (e.key === 'ArrowLeft') cycle(-1); if (e.key === 'ArrowRight') cycle(1); });
+    renderVariant(variant);
+  </script>
+</body>
+</html>

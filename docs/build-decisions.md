@@ -55,7 +55,7 @@ below, the amendment describes the current product.
 | 5 | **Font: JetBrains Mono (bundled)** | Bundle via `@expo-google-fonts/jetbrains-mono` + `expo-font`, weights 400/500/600/700, for the mono "signature" (every number + uppercase micro-label). System sans (SF/Roboto default) for UI copy. Hold splash until fonts load. |
 | 6 | **Icons: `@expo/vector-icons`** | Map each design glyph to its intent (Feather/Ionicons/MaterialCommunity): ＋→plus, ⚙→settings, ‹›→chevrons, ✕→x, ↑↓→arrows, ↻→repeat, ⌫→delete, tabs→calendar + bar-chart, theme→moon/sun. Not literal Unicode (Android tofu risk). |
 | 7 | **No ads or Premium in V1** | V1 has no advertising, sponsored placement, purchase, subscription, Premium, or remove-ads surface. Earlier prototype ad/Premium concepts are not product behavior. |
-| 8 | **First launch: empty (A+)** | Start with **no transactions**; seed only default categories. Use the designed empty states ("No entries this day. Tap ＋ to add one."). Provide a **"Load sample data"** action in Settings that inserts the 15 July-2026 sample entries for demos. |
+| 8 | **First launch: empty (A+)** | Start with **no transactions**; seed only default categories. Use the designed empty states ("No entries this day. Tap ＋ to add one."). No demo-ledger loading feature is exposed. |
 | 9 | **Theme: dark default, manual only** | Default dark; two-button Appearance control (Dark / Light); OS appearance ignored (no `useColorScheme`). Choice persists. |
 | 10 | **Web = phone-width container** | On web only, center the app in a `maxWidth: 402` full-height rounded container with subtle shadow on a neutral backdrop. Native = full-screen with `SafeAreaView`. **No** faux status bar / dynamic island / home indicator anywhere. |
 | 11 | **Currency: symbol-only** | ¥ JPY / $ USD / € EUR / £ GBP swap the symbol + reformat only; **no** FX conversion, no per-entry currency, **integer amounts, no cents**, `en-US` grouping (comma thousands). Keypad is integer-only, leading zeros stripped, 9-digit cap. |
@@ -107,14 +107,14 @@ rgba(0,0,0,.4) · CTA glow 0 8 24 rgba(43,212,138,.26).
 2. **Summary** — header ("Summary" + ⚙) + month subtitle; Net card (large mono net + in/out
    split bar + legend); spending-by-category ranked bars (highest first, scaled to max).
 3. **New Entry (＋ sheet)** — grab handle; Expense/Income segmented toggle centered; ✕ close;
-   large centered amount + type micro-label; horizontally-scrolling category chips; Note row
-   (cycles options); Repeat row (cycles); "If on weekend" row (monthly/yearly only);
+   large centered amount + type micro-label; horizontally-scrolling category chips; editable
+   optional Note field; Repeat row (cycles); "If on weekend" row (monthly/yearly only);
    compact 4-col calculator keypad (digits, 00, +, −, ×, ÷, clear, equals, ⌫);
    full-width primary CTA (disabled until amount>0). Saving promotes the chosen category to
    the front of its expense/income list as most recently used.
 4. **Settings sheet** — grab handle; title + Done; Appearance (Dark/Light); Currency (4-grid);
    Categories (Expense/Income sub-tabs; rows = 2-letter code tile + label + ↑/↓/✕; add field +
-   green Add); Load sample data.
+   green Add).
 
 ## Components (primitives to build)
 
@@ -150,16 +150,14 @@ noon-UTC fallback on their ledger date; this is an inferred compatibility value,
 not their original creation time.
 
 Aggregation (in-memory JS, mirrors the prototype):
-- `monthEntries(ym)` — sample data lives only in July 2026 (`y:2026,m:6`); other months empty
-  until the user adds. (With real persistence, filter stored entries by `ym`; the prototype's
-  hardcoded July gate becomes: entries store their own year/month — **add `y`/`m` to the model
-  at implementation** so persistence spans months.)  ⚠ implementation note below.
+- `monthEntries(ym)` filters persisted entries by their stored year/month so the ledger spans
+  months and an empty account remains empty until the user adds or imports entries.
 - `dayNet(day)`, `income`, `expense`, `net`, category breakdown (expenses, sorted desc, bar
   width scaled to max), in/out split bar proportional to `income+expense`.
 - `save()` — parse integer amount; if 0, no-op. Persist a one-time transaction for Never or an
   unbounded recurrence rule for daily/monthly/yearly; project only the requested month. Notes
-  fall back to the category when "—". Edits split a rule at the selected scheduled occurrence,
-  preserving history while updating this and future occurrences.
+  are optional, trimmed, and otherwise preserved. Edits split a rule at the selected scheduled
+  occurrence, preserving history while updating this and future occurrences.
 - Category ops: add (trim, dedupe), remove (min 1), reorder (↑/↓ swap), per Expense/Income list.
 - `code(cat)` = first 2 chars uppercased (list-row icon tile).
 - Formatting: `yen(n)` = symbol + `Math.round(n).toLocaleString('en-US')`; `signed(n)` prefixes
@@ -202,9 +200,8 @@ except where a locked decision says otherwise. This section is the authoritative
 Design Fidelity Pass in `.ralph/fix_plan.md`; each fix must keep `tsc`/tests/web green.
 
 **Locked exceptions (do NOT "fix" back to the prototype):** icons stay `@expo/vector-icons`
-Feather glyphs, not the prototype's Unicode (decision 6); the Load-sample-data row stays
-(decision 8) — the prototype does not have it; keep it styled consistently with the rest of
-Settings. Premium, remove-ads, sponsored, and ad surfaces stay absent from V1.
+Feather glyphs, not the prototype's Unicode (decision 6). Premium, remove-ads, sponsored, and
+ad surfaces stay absent from V1.
 
 ### Required corrections (target = design)
 
@@ -226,13 +223,11 @@ Settings. Premium, remove-ads, sponsored, and ad surfaces stay absent from V1.
    `--card`. Current code fills them red.
 6. **Entry type toggle** (`screens/EntrySheet.tsx`) — active Expense/Income segment is **green**
    with near-black text (the shared selection accent), not the grey `card3`/ink it uses now.
-7. **Entry option rows** (`screens/EntrySheet.tsx`) — group Note / Repeat / weekend into **one
-   card** (radius 14) with hairline dividers. Labels are **sans 13 · dim** (not uppercase mono);
-   values are sans 600, dim when at the default else tinted (Repeat turns **green** when set).
-   Repeat label shows the ↻. Note presets are **per-type**: expense =
-   `['—','Cash','Card','Konbini','Online']`, income = `['—','Bank transfer','Cash','Bonus']`
-   (replaces the single flat list). Weekend row: options `Move to Monday / Move to Friday /
-   Keep on weekend`, default **Move to Monday**.
+7. **Entry option rows** (`screens/EntrySheet.tsx`) — group the editable optional Note field,
+   Repeat, and weekend handling into **one card** (radius 14) with hairline dividers. Labels are
+   **sans 13 · dim** (not uppercase mono); option values are sans 600, dim when at the default
+   else tinted (Repeat turns **green** when set). Repeat label shows the ↻. Weekend row:
+   options `Move to Monday / Move to Friday / Keep on weekend`, default **Move to Monday**.
 8. **Entry CTA** (`screens/EntrySheet.tsx`) — disabled state is a **`card2` fill with dim text**,
    not green-at-40%-opacity. Label is sentence-case: **"Add expense" / "Add income"**.
 9. **Settings selection styling** (`screens/SettingsSheet.tsx`) — Appearance and Currency use the
