@@ -94,7 +94,19 @@ describe('EntrySheet (edit mode, #43)', () => {
     expect(screen.getByLabelText('Note: Card')).toBeTruthy();
     const cta = screen.getByLabelText('Save');
     expect(cta.props.accessibilityState.disabled).toBe(false);
-    expect(screen.queryByLabelText('Date YYYY-MM-DD')).toBeNull();
+  });
+
+  it('saves an edited entry on the separately entered date', () => {
+    const onSave = jest.fn();
+    renderSheet({ editing: editingEntry(), onSave });
+
+    fireEvent.changeText(screen.getByLabelText('Date YYYY-MM-DD'), '2026-08-15');
+    fireEvent.press(screen.getByLabelText('Save'));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ y: 2026, m: 7, day: 15 }),
+      'after',
+    );
   });
 
   it('prefills the selected category chip', () => {

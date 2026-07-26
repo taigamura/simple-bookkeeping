@@ -1,7 +1,7 @@
 /**
  * Pure edit/delete helpers (#43): `updateEntry` overwrites one entry's mutable
- * fields (type/amount/category/note) while preserving its identity and placement
- * (id/y/m/day/repeat); `removeEntry` drops exactly one entry. Both return new
+ * fields (date/type/amount/category/note) while preserving its identity and
+ * recurrence; `removeEntry` drops exactly one entry. Both return new
  * arrays, never mutate their input, and no-op on a missing id.
  */
 import { removeEntry, updateEntry, type EntryDraft } from './entries';
@@ -26,25 +26,24 @@ const draft = (over: Partial<EntryDraft> = {}): EntryDraft => ({
   amountStr: '2500',
   category: 'Salary',
   note: 'Bonus',
-  // Deliberately different y/m/day/repeat — updateEntry must ignore these.
-  y: 2000,
-  m: 0,
-  day: 99,
+  y: 2030,
+  m: 11,
+  day: 24,
   repeat: 'daily',
   ...over,
 });
 
 describe('updateEntry', () => {
-  it('overwrites the matching entry’s fields but preserves id/y/m/day/repeat', () => {
+  it('overwrites the matching entry’s editable fields but preserves id and repeat', () => {
     const entries = [tx(), tx({ id: 'b', category: 'Rent' })];
     const out = updateEntry(entries, 'a', draft());
 
     expect(out[0]).toEqual({
       id: 'a',
       timestamp: '2026-07-02T00:00:00.000Z',
-      y: 2026,
-      m: 6,
-      day: 2,
+      y: 2030,
+      m: 11,
+      day: 24,
       type: 'income',
       amount: 2500,
       category: 'Salary',

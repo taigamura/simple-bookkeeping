@@ -180,9 +180,6 @@ export function saveLedgerItem(
             ...normalized,
             timestamp: editing.timestamp,
             ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
-            y: editing.y,
-            m: editing.m,
-            day: editing.day,
             repeat: 'never',
           },
         ],
@@ -190,7 +187,7 @@ export function saveLedgerItem(
       };
     }
     const sameCadence = draft.repeat === source.repeat;
-    const nextStart = editing.occurrence.scheduled;
+    const nextStart = { y: draft.y, m: draft.m, day: draft.day };
     return {
       entries: ledger.entries,
       recurrenceRules: [
@@ -224,6 +221,9 @@ export function saveLedgerItem(
           entry.id === editing.id
             ? {
                 ...editing,
+                y: normalized.y,
+                m: normalized.m,
+                day: normalized.day,
                 type: normalized.type,
                 amount: normalized.amount,
                 category: normalized.category,
@@ -235,7 +235,7 @@ export function saveLedgerItem(
       };
     }
     const entries = ledger.entries.filter((entry) => entry.id !== editing.id);
-    const start = { y: editing.y, m: editing.m, day: editing.day };
+    const start = { y: draft.y, m: draft.m, day: draft.day };
     return {
       entries,
       recurrenceRules: [

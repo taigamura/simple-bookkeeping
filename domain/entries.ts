@@ -90,10 +90,9 @@ export function makeEntry(
 
 /**
  * Overwrite the entry with `id` in-place (by value) from `draft`, applying the
- * same amount/note rules as `makeEntry` but preserving the entry's identity and
- * placement — `id`/`y`/`m`/`day` (and `repeat`/`accountId`) stay put, since edit
- * operates on a single occurrence and never moves it (recurrence/date are
- * create-only). Returns a new array; a missing `id` is a no-op (unchanged copy).
+ * same amount/note rules as `makeEntry` while preserving identity and recurrence
+ * metadata. Date is editable, so `y`/`m`/`day` are copied from the draft.
+ * Returns a new array; a missing `id` is a no-op (unchanged copy).
  */
 export function updateEntry(
   entries: Transaction[],
@@ -106,6 +105,9 @@ export function updateEntry(
     const note = !trimmed || trimmed === '—' ? draft.category : trimmed;
     return {
       ...t,
+      y: draft.y,
+      m: draft.m,
+      day: draft.day,
       type: draft.type,
       amount: amountValue(draft.amountStr),
       category: draft.category,

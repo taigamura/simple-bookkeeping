@@ -218,6 +218,49 @@ describe('Root sheet click behavior', () => {
     );
   });
 
+  it('persists an edited entry on the date entered in the sheet', () => {
+    const update = jest.fn();
+    const now = new Date();
+    const entry: Transaction = {
+      id: 'editable',
+      timestamp: now.toISOString(),
+      y: now.getFullYear(),
+      m: now.getMonth(),
+      day: now.getDate(),
+      type: 'expense',
+      amount: 850,
+      category: 'Food',
+      note: '',
+      repeat: 'never',
+    };
+    render(
+      <ThemeProvider>
+        <Root
+          state={{ ...DEFAULT_STATE, entries: [entry] }}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText(strings.entry.editEntry('Food')));
+    fireEvent.changeText(
+      screen.getByLabelText(`${strings.entry.dateRowLabel} ${strings.entry.datePlaceholder}`),
+      '2030-12-24',
+    );
+    fireEvent.press(screen.getByLabelText(strings.entry.save));
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entries: [
+          expect.objectContaining({ id: 'editable', y: 2030, m: 11, day: 24 }),
+        ],
+      }),
+    );
+  });
+
   it('tapping the Settings gear opens the Settings sheet without a style crash', () => {
     renderRoot();
     expect(screen.queryByTestId('settings-sheet')).toBeNull();

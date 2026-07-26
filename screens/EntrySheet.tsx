@@ -5,8 +5,9 @@
  * recurrence rule. Recurrence rows cycle their options on tap; the weekend row
  * shows only for monthly/yearly repeats.
  *
- * With `editing` set the sheet prefills every editable field and exposes a
- * Delete action. Recurring edits clearly apply to this and future occurrences.
+ * With `editing` set the sheet prefills every editable field, including date,
+ * and exposes a Delete action. Recurring edits clearly apply to this and future
+ * occurrences.
  *
  * Presentational state only — the parent owns persistence and where the entries
  * land (it passes the target `y`/`m`/`day`).
@@ -47,7 +48,7 @@ interface EntrySheetProps {
   y: number;
   m: number;
   day: number;
-  /** Current local date, used by the create form's quick "today" action. */
+  /** Current local date, used by the form's quick "today" action. */
   today: RecurrenceDate;
   symbol: string;
   /**
@@ -133,14 +134,16 @@ export function EntrySheet({
   const [weekendShift, setWeekendShift] = useState<WeekendShift>(
     editing?.occurrence?.weekendShift ?? 'after',
   );
-  const [dateText, setDateText] = useState(() => formatDate({ y, m, day }));
+  const [dateText, setDateText] = useState(() =>
+    formatDate(editing?.occurrence?.scheduled ?? editing ?? { y, m, day }),
+  );
 
   const value = amountValue(amountStr);
   const enteredDate = parseDate(dateText);
   const categoryIsCurrent = catsFor(txType).includes(category);
   const canSave =
     value > 0 &&
-    (isEditing || enteredDate !== null) &&
+    enteredDate !== null &&
     (!repeatManagement || categoryIsCurrent);
   const heroText = yen(value, symbol);
   const showWeekend = repeat === 'monthly' || repeat === 'yearly';
@@ -163,10 +166,9 @@ export function EntrySheet({
   };
 
   const save = () => {
-    const target = isEditing ? { y, m, day } : enteredDate;
-    if (!target) return;
+    if (!enteredDate) return;
     onSave(
-      { type: txType, amountStr, category, note, ...target, repeat },
+      { type: txType, amountStr, category, note, ...enteredDate, repeat },
       weekendShift,
     );
   };
@@ -208,45 +210,44 @@ export function EntrySheet({
       )}
 
       <View style={[styles.rowsCard, { backgroundColor: colors.card2 }]}>
-        {!isEditing && (
-          <View style={styles.dateSection}>
-            <View style={styles.dateRow}>
-              <Txt variant="optionLabel" tone="dim">
-                {strings.entry.dateRowLabel}
-              </Txt>
-              <View style={styles.dateControls}>
-                <TextInput
-                  value={dateText}
-                  onChangeText={setDateText}
-                  placeholder={strings.entry.datePlaceholder}
-                  placeholderTextColor={colors.dim}
-                  accessibilityLabel={`${strings.entry.dateRowLabel} ${strings.entry.datePlaceholder}`}
-                  accessibilityValue={{ text: dateText }}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  maxLength={10}
-                  returnKeyType="done"
-                  style={[styles.dateInput, { color: colors.ink }]}
-                />
-                <Pressable
-                  onPress={() => setDateText(formatDate(today))}
-                  accessibilityRole="button"
-                  accessibilityLabel={strings.entry.useToday}
-                  style={({ pressed }) => [styles.todayButton, pressed && { opacity: 0.6 }]}
-                >
-                  <Txt variant="optionLabel" tone="positive">{strings.entry.today}</Txt>
-                </Pressable>
-              </View>
+        <View style={styles.dateSection}>
+          <View style={styles.dateRow}>
+            <Txt variant="optionLabel" tone="dim">
+              {strings.entry.dateRowLabel}
+            </Txt>
+            <View style={styles.dateControls}>
+              <TextInput
+                value={dateText}
+                onChangeText={setDateText}
+                placeholder={strings.entry.datePlaceholder}
+                placeholderTextColor={colors.dim}
+                accessibilityLabel={`${strings.entry.dateRowLabel} ${strings.entry.datePlaceholder}`}
+                accessibilityValue={{ text: dateText }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                maxLength={10}
+                returnKeyType="done"
+                style={[styles.dateInput, { color: colors.ink }]}
+              />
+              <Pressable
+                onPress={() => setDateText(formatDate(today))}
+                accessibilityRole="button"
+                accessibilityLabel={strings.entry.useToday}
+                style={({ pressed }) => [styles.todayButton, pressed && { opacity: 0.6 }]}
+              >
+                <Txt variant="optionLabel" tone="positive">
+                  {strings.entry.today}
+                </Txt>
+              </Pressable>
             </View>
-            {!enteredDate && (
-              <Txt variant="secondary" tone="negative" style={styles.dateWarning}>
-                {strings.entry.invalidDate}
-              </Txt>
-            )}
           </View>
-        )}
+          {!enteredDate && (
+            <Txt variant="secondary" tone="negative" style={styles.dateWarning}>
+              {strings.entry.invalidDate}
+            </Txt>
+          )}
+        </View>
         <CycleRow
-          first
           label={strings.entry.noteRowLabel}
           value={note}
           active={note !== '—'}

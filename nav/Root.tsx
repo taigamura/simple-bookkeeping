@@ -348,32 +348,29 @@ function Shell({
       setSheet('repeats');
       return;
     }
-    if (editing) setSelectedDay(editing.day);
-    else {
-      let landing = { y: draft.y, m: draft.m, day: draft.day };
-      if (draft.repeat && draft.repeat !== 'never') {
-        const newRules = next.recurrenceRules.filter(
-          (rule) => !state.recurrenceRules.some((old) => old.id === rule.id),
-        );
-        const created = [-1, 0, 1]
-          .flatMap((offset) =>
-            entriesForMonth(next, shiftMonth({ y: draft.y, m: draft.m }, offset)),
-          )
-          .find((entry) => {
-            if (!entry.occurrence) return false;
-            const rule = newRules.find((candidate) => candidate.id === entry.occurrence!.ruleId);
-            return (
-              rule !== undefined &&
-              entry.occurrence.scheduled.y === rule.start.y &&
-              entry.occurrence.scheduled.m === rule.start.m &&
-              entry.occurrence.scheduled.day === rule.start.day
-            );
-          });
-        if (created) landing = { y: created.y, m: created.m, day: created.day };
-      }
-      setCursor({ y: landing.y, m: landing.m });
-      setSelectedDay(landing.day);
+    let landing = { y: draft.y, m: draft.m, day: draft.day };
+    if (draft.repeat && draft.repeat !== 'never') {
+      const newRules = next.recurrenceRules.filter(
+        (rule) => !state.recurrenceRules.some((old) => old.id === rule.id),
+      );
+      const created = [-1, 0, 1]
+        .flatMap((offset) =>
+          entriesForMonth(next, shiftMonth({ y: draft.y, m: draft.m }, offset)),
+        )
+        .find((entry) => {
+          if (!entry.occurrence) return false;
+          const rule = newRules.find((candidate) => candidate.id === entry.occurrence!.ruleId);
+          return (
+            rule !== undefined &&
+            entry.occurrence.scheduled.y === rule.start.y &&
+            entry.occurrence.scheduled.m === rule.start.m &&
+            entry.occurrence.scheduled.day === rule.start.day
+          );
+        });
+      if (created) landing = { y: created.y, m: created.m, day: created.day };
     }
+    setCursor({ y: landing.y, m: landing.m });
+    setSelectedDay(landing.day);
     setTab('calendar');
     closeSheet();
   };
