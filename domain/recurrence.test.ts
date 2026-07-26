@@ -250,7 +250,7 @@ describe('persistent recurrence', () => {
     expect(entriesForMonth(edited, { y: 2027, m: 3 })[0].day).toBe(15);
   });
 
-  it('rejects moving a recurring occurrence before its history cutoff', () => {
+  it('moves a recurring occurrence backward without rewriting prior history', () => {
     const original = saveLedgerItem(
       { entries: [], recurrenceRules: [] },
       draft({ y: 2027, m: 0, day: 31, repeat: 'monthly' }),
@@ -265,7 +265,14 @@ describe('persistent recurrence', () => {
       february,
     );
 
-    expect(edited).toBe(original);
+    expect(entriesForMonth(edited, { y: 2027, m: 0 })).toEqual([
+      expect.objectContaining({ day: 15, repeat: 'never' }),
+      expect.objectContaining({ day: 31, repeat: 'monthly' }),
+    ]);
+    expect(entriesForMonth(edited, { y: 2027, m: 1 })).toEqual([]);
+    expect(entriesForMonth(edited, { y: 2027, m: 2 })).toEqual([
+      expect.objectContaining({ day: 15, repeat: 'monthly' }),
+    ]);
   });
 
   it('preserves a bounded segment cutoff when editing its future occurrences', () => {

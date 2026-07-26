@@ -5,11 +5,12 @@
  * cross month/year boundaries without changing the cadence anchor.
  */
 import { clampDay, daysInMonth, shiftMonth } from './calendar';
-import { makeEntry, type EntryDraft } from './entries';
+import { makeEntry, uid, type EntryDraft } from './entries';
 import type {
   Ledger,
   RecurrenceDate,
   RecurrenceRule,
+  Repeat,
   Transaction,
   WeekendShift,
   YM,
@@ -31,6 +32,46 @@ function compareDate(a: RecurrenceDate, b: RecurrenceDate): number {
 function nextDay(date: RecurrenceDate): RecurrenceDate {
   const value = new Date(date.y, date.m, date.day + 1);
   return { y: value.getFullYear(), m: value.getMonth(), day: value.getDate() };
+}
+
+function nextScheduledAfter(
+  cutoff: RecurrenceDate,
+  repeat: Exclude<Repeat, 'never'>,
+  anchor: RecurrenceDate,
+): RecurrenceDate {
+  if (repeat === 'daily') return nextDay(cutoff);
+
+  if (repeat === 'monthly') {
+    let period = { y: cutoff.y, m: cutoff.m };
+    let candidate = {
+      ...period,
+      day: clampDay(anchor.day, period.y, period.m),
+    };
+    if (compareDate(candidate, cutoff) <= 0) {
+      period = shiftMonth(period, 1);
+      candidate = {
+        ...period,
+        day: clampDay(anchor.day, period.y, period.m),
+      };
+    }
+    return candidate;
+  }
+
+  let year = cutoff.y;
+  let candidate = {
+    y: year,
+    m: anchor.m,
+    day: clampDay(anchor.day, year, anchor.m),
+  };
+  if (compareDate(candidate, cutoff) <= 0) {
+    year += 1;
+    candidate = {
+      y: year,
+      m: anchor.m,
+      day: clampDay(anchor.day, year, anchor.m),
+    };
+  }
+  return candidate;
 }
 
 /** Active repeat segments paired with the next occurrence visible on the calendar. */
@@ -169,7 +210,7 @@ export function saveLedgerItem(
     );
     if (!source) return ledger;
     const nextStart = { y: draft.y, m: draft.m, day: draft.day };
-    if (compareDate(nextStart, editing.occurrence.scheduled) < 0) return ledger;
+    const movesBackward = compareDate(nextStart, editing.occurrence.scheduled) < 0;
     const cutoff = dateKey(editing.occurrence.scheduled);
     const recurrenceRules = ledger.recurrenceRules.map((rule) =>
       rule.id === source.id ? { ...rule, endsBefore: cutoff } : rule,
@@ -190,15 +231,29 @@ export function saveLedgerItem(
     }
     const sameCadence = draft.repeat === source.repeat;
     const dateChanged = compareDate(nextStart, editing.occurrence.scheduled) !== 0;
+    const ruleStart = movesBackward
+      ? nextScheduledAfter(editing.occurrence.scheduled, draft.repeat, nextStart)
+      : nextStart;
+    const ruleId = movesBackward ? uid() : normalized.id;
     return {
-      entries: ledger.entries,
+      entries: movesBackward
+        ? [
+            ...ledger.entries,
+            {
+              ...normalized,
+              timestamp: editing.timestamp,
+              ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
+              repeat: 'never',
+            },
+          ]
+        : ledger.entries,
       recurrenceRules: [
         ...recurrenceRules,
         {
-          id: normalized.id,
+          id: ruleId,
           timestamp: editing.timestamp,
           ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
-          start: nextStart,
+          start: ruleStart,
           anchorDay: sameCadence && !dateChanged ? source.anchorDay : nextStart.day,
           type: normalized.type,
           amount: normalized.amount,
@@ -206,7 +261,7 @@ export function saveLedgerItem(
           note: normalized.note,
           repeat: draft.repeat,
           weekendShift,
-          exceptions: sameCadence
+          exceptions: sameCadence && !dateChanged
             ? source.exceptions.filter((exception) => exception >= cutoff)
             : [],
           endsBefore: source.endsBefore,
