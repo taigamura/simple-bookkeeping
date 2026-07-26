@@ -66,6 +66,7 @@ export interface Strings {
     today: string;
     useToday: string;
     invalidDate: string;
+    dateBeforeOccurrence: string;
     noteRowLabel: string;
     repeatRowLabel: string;
     weekendRowLabel: string;
@@ -217,6 +218,7 @@ export const en: Strings = {
     today: 'Today',
     useToday: 'Use today',
     invalidDate: 'Enter a valid date.',
+    dateBeforeOccurrence: 'Date cannot be before this occurrence.',
     noteRowLabel: 'Note',
     repeatRowLabel: '↻ Repeat',
     weekendRowLabel: 'If on weekend',
@@ -380,6 +382,7 @@ export const ja: Strings = {
     today: '今日',
     useToday: '今日にする',
     invalidDate: '有効な日付を入力してください。',
+    dateBeforeOccurrence: 'この予定より前の日付には変更できません。',
     noteRowLabel: 'メモ',
     repeatRowLabel: '↻ 繰り返し',
     weekendRowLabel: '週末の場合',

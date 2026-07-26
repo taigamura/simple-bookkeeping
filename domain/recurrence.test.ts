@@ -224,6 +224,50 @@ describe('persistent recurrence', () => {
     expect(entriesForMonth(edited, { y: 2026, m: 1 }).map((entry) => entry.day).slice(0, 2)).toEqual([2, 3]);
   });
 
+  it('anchors an unchanged cadence to a newly edited date', () => {
+    const original = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: 2027, m: 0, day: 31, repeat: 'monthly' }),
+      'off',
+    );
+    const february = entriesForMonth(original, { y: 2027, m: 1 })[0];
+
+    const edited = saveLedgerItem(
+      original,
+      draft({ y: 2027, m: 2, day: 15, repeat: 'monthly' }),
+      'off',
+      february,
+    );
+
+    expect(edited.recurrenceRules.at(-1)).toMatchObject({
+      start: { y: 2027, m: 2, day: 15 },
+      anchorDay: 15,
+    });
+    expect(entriesForMonth(edited, { y: 2027, m: 1 })).toEqual([]);
+    expect(entriesForMonth(edited, { y: 2027, m: 2 })).toEqual([
+      expect.objectContaining({ day: 15, repeat: 'monthly' }),
+    ]);
+    expect(entriesForMonth(edited, { y: 2027, m: 3 })[0].day).toBe(15);
+  });
+
+  it('rejects moving a recurring occurrence before its history cutoff', () => {
+    const original = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: 2027, m: 0, day: 31, repeat: 'monthly' }),
+      'off',
+    );
+    const february = entriesForMonth(original, { y: 2027, m: 1 })[0];
+
+    const edited = saveLedgerItem(
+      original,
+      draft({ y: 2027, m: 0, day: 15, repeat: 'monthly' }),
+      'off',
+      february,
+    );
+
+    expect(edited).toBe(original);
+  });
+
   it('preserves a bounded segment cutoff when editing its future occurrences', () => {
     const original = saveLedgerItem(
       { entries: [], recurrenceRules: [] },

@@ -168,6 +168,8 @@ export function saveLedgerItem(
       (rule) => rule.id === editing.occurrence!.ruleId,
     );
     if (!source) return ledger;
+    const nextStart = { y: draft.y, m: draft.m, day: draft.day };
+    if (compareDate(nextStart, editing.occurrence.scheduled) < 0) return ledger;
     const cutoff = dateKey(editing.occurrence.scheduled);
     const recurrenceRules = ledger.recurrenceRules.map((rule) =>
       rule.id === source.id ? { ...rule, endsBefore: cutoff } : rule,
@@ -187,7 +189,7 @@ export function saveLedgerItem(
       };
     }
     const sameCadence = draft.repeat === source.repeat;
-    const nextStart = { y: draft.y, m: draft.m, day: draft.day };
+    const dateChanged = compareDate(nextStart, editing.occurrence.scheduled) !== 0;
     return {
       entries: ledger.entries,
       recurrenceRules: [
@@ -197,7 +199,7 @@ export function saveLedgerItem(
           timestamp: editing.timestamp,
           ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
           start: nextStart,
-          anchorDay: sameCadence ? source.anchorDay : nextStart.day,
+          anchorDay: sameCadence && !dateChanged ? source.anchorDay : nextStart.day,
           type: normalized.type,
           amount: normalized.amount,
           category: normalized.category,

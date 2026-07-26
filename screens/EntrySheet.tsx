@@ -140,10 +140,22 @@ export function EntrySheet({
 
   const value = amountValue(amountStr);
   const enteredDate = parseDate(dateText);
+  const recurrenceCutoff = editing?.occurrence?.scheduled;
+  const dateBeforeOccurrence =
+    enteredDate != null &&
+    recurrenceCutoff != null &&
+    (enteredDate.y - recurrenceCutoff.y ||
+      enteredDate.m - recurrenceCutoff.m ||
+      enteredDate.day - recurrenceCutoff.day) < 0;
+  const dateError = !enteredDate
+    ? strings.entry.invalidDate
+    : dateBeforeOccurrence
+      ? strings.entry.dateBeforeOccurrence
+      : null;
   const categoryIsCurrent = catsFor(txType).includes(category);
   const canSave =
     value > 0 &&
-    enteredDate !== null &&
+    dateError === null &&
     (!repeatManagement || categoryIsCurrent);
   const heroText = yen(value, symbol);
   const showWeekend = repeat === 'monthly' || repeat === 'yearly';
@@ -241,9 +253,9 @@ export function EntrySheet({
               </Pressable>
             </View>
           </View>
-          {!enteredDate && (
+          {dateError && (
             <Txt variant="secondary" tone="negative" style={styles.dateWarning}>
-              {strings.entry.invalidDate}
+              {dateError}
             </Txt>
           )}
         </View>

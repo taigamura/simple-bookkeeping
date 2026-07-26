@@ -109,6 +109,26 @@ describe('EntrySheet (edit mode, #43)', () => {
     );
   });
 
+  it('does not move a recurring edit before the selected occurrence', () => {
+    renderSheet({
+      editing: editingEntry({
+        repeat: 'monthly',
+        occurrence: {
+          ruleId: 'r1',
+          scheduled: { y: 2026, m: 6, day: 2 },
+          weekendShift: 'off',
+        },
+      }),
+    });
+
+    fireEvent.changeText(screen.getByLabelText('Date YYYY-MM-DD'), '2026-07-01');
+
+    expect(screen.getByText('Date cannot be before this occurrence.')).toBeTruthy();
+    expect(
+      screen.getByLabelText('Save this and future').props.accessibilityState.disabled,
+    ).toBe(true);
+  });
+
   it('prefills the selected category chip', () => {
     renderSheet({ editing: editingEntry() });
     const chip = screen.getByRole('radio', { name: 'Rent' });
