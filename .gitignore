@@ -48,3 +48,6 @@ target/
 
 # Expo generated cache/state
 .expo/
+
+# WSL NTFS alternate-data-stream artifacts
+*:Zone.Identifier

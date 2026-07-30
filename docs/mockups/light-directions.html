@@ -1,0 +1,465 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Kaji · light direction studies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#DEDEDA;font-family:"Poppins","Noto Sans JP",-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;color:#16161A;padding:44px 0 90px}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+
+  /* ---------- page chrome ---------- */
+  .page-head{max-width:1180px;margin:0 auto 40px;padding:0 40px}
+  .page-head h1{font-size:34px;font-weight:600;letter-spacing:-.03em}
+  .page-head p{margin-top:10px;font-size:14px;line-height:1.65;color:#55555C;max-width:720px}
+  .page-head .refs{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}
+  .page-head .refs span{border:1px solid #16161A;border-radius:999px;padding:5px 14px;font-size:11.5px;font-weight:500}
+
+  .dir{max-width:1180px;margin:0 auto 26px;padding:34px 40px 38px;background:#fff;border-radius:26px}
+  .dir-head{display:flex;gap:26px;align-items:flex-start;margin-bottom:26px}
+  .dir-num{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600;letter-spacing:.14em;
+    color:#9A9AA2;padding-top:7px;width:34px;flex-shrink:0}
+  .dir-title{flex:1}
+  .dir-title h2{font-size:25px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:baseline;gap:11px}
+  .dir-title h2 em{font-style:normal;font-family:"Noto Serif JP",serif;font-size:19px;color:#9A9AA2}
+  .dir-title .thesis{margin-top:8px;font-size:13.5px;line-height:1.6;color:#55555C;max-width:640px}
+  .dial{margin-top:15px;width:280px}
+  .dial .track{height:3px;background:#EDEDEA;border-radius:2px;position:relative}
+  .dial .track i{position:absolute;top:-3.5px;width:10px;height:10px;border-radius:5px;background:#16161A;transform:translateX(-50%)}
+  .dial .ends{display:flex;justify-content:space-between;margin-top:7px;
+    font-family:"JetBrains Mono",monospace;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:#9A9AA2}
+  .dir-aside{width:250px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;align-items:flex-end}
+  .icon-row{display:flex;gap:10px;align-items:center}
+  .icon-tile{width:74px;height:74px;border-radius:17px;display:grid;place-items:center;flex-shrink:0}
+  .icon-cap{font-family:"JetBrains Mono",monospace;font-size:8.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:#9A9AA2;text-align:right;line-height:1.7}
+  .swatches{display:flex;gap:6px}
+  .sw{width:34px}
+  .sw i{display:block;height:34px;border-radius:9px;border:1px solid rgba(0,0,0,.07)}
+  .sw span{display:block;margin-top:5px;font-family:"JetBrains Mono",monospace;font-size:7px;color:#9A9AA2;text-align:center}
+
+  .shots{display:flex;gap:26px;overflow-x:auto;padding-bottom:10px}
+  .shot{flex-shrink:0}
+  .shot .cap{margin-top:11px;font-family:"JetBrains Mono",monospace;font-size:9px;
+    letter-spacing:.13em;text-transform:uppercase;color:#9A9AA2}
+
+  .notes{margin-top:26px;padding-top:20px;border-top:1px solid #EDEDEA;display:flex;gap:44px;flex-wrap:wrap}
+  .notes div{flex:1;min-width:210px}
+  .notes h4{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.14em;
+    text-transform:uppercase;color:#9A9AA2;margin-bottom:9px}
+  .notes ul{list-style:none;font-size:12.5px;line-height:1.75;color:#44444C}
+  .notes li:before{content:"— ";color:#B4B4BA}
+
+  /* ---------- phone shell ---------- */
+  .phone{width:340px;height:700px;border-radius:36px;overflow:hidden;position:relative;
+    display:flex;flex-direction:column;background:var(--bg);
+    box-shadow:0 1px 2px rgba(0,0,0,.07),0 22px 50px -18px rgba(20,22,30,.30)}
+  .status{height:36px;display:flex;justify-content:space-between;align-items:center;padding:0 24px 0 26px;
+    font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600;color:var(--ink);flex-shrink:0}
+  .status .pills{display:flex;gap:4px}
+  .status .pills i{width:12px;height:7px;border-radius:2px;background:var(--dim)}
+
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:10px var(--padx) 0;flex-shrink:0}
+  .hdr h1{color:var(--ink);font-size:23px;font-weight:600;letter-spacing:-.025em}
+  .hdr .sub{color:var(--muted);font-size:11.5px;font-weight:500;margin-top:3px}
+  .navbtn{width:32px;height:32px;border-radius:var(--btnr);display:grid;place-items:center;
+    font-size:14px;color:var(--muted);background:var(--chipbg);border:var(--chipbd)}
+  .navgrp{display:flex;gap:7px;align-items:center}
+
+  .body{flex:1;overflow:hidden;padding:0 var(--padx);display:flex;flex-direction:column;gap:var(--gap)}
+  .body.pt{padding-top:18px}
+
+  .card{background:var(--card);border-radius:var(--cardr);padding:18px;
+    border:var(--cardbd);box-shadow:var(--cardsh);display:flex;flex-direction:column;gap:11px}
+  .eyebrow{color:var(--dim);font-family:var(--labelfam);font-size:var(--labelsize);
+    font-weight:600;letter-spacing:var(--labells);text-transform:var(--labeltt)}
+  .net{font-family:"JetBrains Mono",monospace;font-size:38px;font-weight:700;letter-spacing:-.03em;color:var(--pos)}
+  .split{height:var(--barh);border-radius:var(--barr);overflow:hidden;display:flex;background:var(--track)}
+  .split .in{width:73%;background:var(--pos)}
+  .split .out{flex:1;background:var(--neg)}
+  .legend{display:flex;gap:20px}
+  .legend .item{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11.5px;font-weight:500}
+  .legend .dot{width:7px;height:7px;border-radius:var(--dotr)}
+  .legend .amt{font-family:"JetBrains Mono",monospace;font-size:12.5px;font-weight:600}
+
+  .cats{display:flex;flex-direction:column;gap:13px}
+  .cat .row{display:flex;justify-content:space-between;margin-bottom:7px}
+  .cat .lbl{color:var(--ink);font-size:13.5px;font-weight:500}
+  .cat .amt{color:var(--ink);font-family:"JetBrains Mono",monospace;font-size:12.5px;font-weight:600}
+  .cat .track{height:var(--barh);border-radius:var(--barr);background:var(--track);overflow:hidden}
+  .cat .fill{height:100%;background:var(--pos);border-radius:var(--barr)}
+
+  /* calendar */
+  .strip{display:flex;justify-content:space-between;padding:14px 4px;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+  .strip .c{display:flex;flex-direction:column;gap:5px}
+  .strip .k{color:var(--dim);font-family:var(--labelfam);font-size:var(--labelsize);
+    font-weight:600;letter-spacing:var(--labells);text-transform:var(--labeltt)}
+  .strip .v{font-family:"JetBrains Mono",monospace;font-size:13.5px;font-weight:600;color:var(--ink)}
+  .dows{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;padding-top:4px}
+  .dows span{color:var(--dim);font-family:"JetBrains Mono",monospace;font-size:8.5px;
+    letter-spacing:.1em;text-align:center;text-transform:uppercase}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .cell{aspect-ratio:1/.95;border-radius:var(--cellr);background:var(--cellbg);border:var(--cellbd);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
+  .cell .n{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600;color:var(--ink)}
+  .cell .t{font-family:"JetBrains Mono",monospace;font-size:7.5px;font-weight:600;color:var(--neg)}
+  .cell .t.p{color:var(--pos)}
+  .cell.mute{opacity:.28}
+  .cell.sel{background:var(--pos)}
+  .cell.sel .n{color:var(--onpos)} .cell.sel .t{color:var(--onpos);opacity:.7}
+  .cell.today{border:1.5px solid var(--pos)}
+  .daylist{display:flex;flex-direction:column;gap:2px;padding-top:2px}
+  .drow{display:flex;justify-content:space-between;align-items:center;padding:11px 2px;border-bottom:1px solid var(--hair)}
+  .drow .l{display:flex;align-items:center;gap:11px}
+  .drow .ic{width:29px;height:29px;border-radius:var(--tiler);background:var(--chipbg);border:var(--chipbd);
+    display:grid;place-items:center;font-size:12px}
+  .drow .nm{font-size:13px;font-weight:500;color:var(--ink)}
+  .drow .a{font-family:"JetBrains Mono",monospace;font-size:12.5px;font-weight:600;color:var(--ink)}
+
+  /* tab bar */
+  .tabbar{height:74px;display:flex;align-items:center;justify-content:space-around;padding:0 34px;
+    border-top:1px solid var(--hair);flex-shrink:0;background:var(--bg)}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--dim);
+    font-size:9px;font-weight:600;letter-spacing:.03em}
+  .tab.on{color:var(--ink)}
+  .tab .ic{font-size:17px}
+  .fab{width:52px;height:52px;border-radius:var(--fabr);background:var(--pos);color:var(--onpos);
+    display:grid;place-items:center;font-size:23px;font-weight:600;margin-top:-22px;box-shadow:var(--fabsh)}
+
+  /* entry sheet */
+  .dim-under{position:absolute;inset:0;background:rgba(20,22,30,.28)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);
+    border-radius:var(--sheetr) var(--sheetr) 0 0;padding:12px 18px 20px;
+    display:flex;flex-direction:column;gap:10px;box-shadow:0 -12px 40px rgba(20,22,30,.13)}
+  .grab{width:38px;height:4px;border-radius:2px;background:var(--track);margin:0 auto 3px}
+  .seg{display:flex;background:var(--track);border-radius:var(--segr);padding:3px;gap:3px}
+  .seg div{flex:1;text-align:center;padding:8px;border-radius:calc(var(--segr) - 3px);
+    font-size:12px;font-weight:600;color:var(--muted)}
+  .seg div.on{background:var(--card);color:var(--ink);box-shadow:var(--segsh)}
+  .amount{text-align:center;padding:2px 0 2px}
+  .amount .v{font-family:"JetBrains Mono",monospace;font-size:44px;font-weight:600;letter-spacing:-.04em;color:var(--ink)}
+  .amount .u{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--dim);margin-top:3px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{padding:7px 13px;border-radius:var(--chipr);font-size:11.5px;font-weight:500;
+    color:var(--muted);background:var(--chipbg);border:var(--chipbd)}
+  .chip.on{background:var(--pos);color:var(--onpos);border-color:transparent}
+  .rows{background:var(--card2);border-radius:var(--cardr);overflow:hidden}
+  .orow{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--hair)}
+  .orow:last-child{border-bottom:0}
+  .orow .k{font-size:12px;font-weight:500;color:var(--muted)}
+  .orow .v{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600;color:var(--ink)}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .key{height:40px;border-radius:var(--keyr);background:var(--chipbg);border:var(--chipbd);
+    display:grid;place-items:center;font-family:"JetBrains Mono",monospace;font-size:17px;font-weight:500;color:var(--ink)}
+  .cta{height:46px;border-radius:var(--ctar);background:var(--pos);color:var(--onpos);
+    display:grid;place-items:center;font-size:14px;font-weight:600;box-shadow:var(--fabsh)}
+
+  /* per-direction overrides */
+  .dotted-rule{height:1px;background:repeating-linear-gradient(90deg,var(--dim) 0 3px,transparent 3px 7px);opacity:.5}
+  .rule-head{display:flex;align-items:center;gap:10px}
+  .rule-head .ln{flex:1;height:1px;background:var(--hair)}
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>Kaji — five light directions</h1>
+  <p>Each direction merges the same two references at a different ratio: <b>@nemuiasaa</b>'s calm off-white
+  canvas, floating white cards, generous whitespace and one-mark app icons — and <b>mokumono</b>'s electric blue,
+  uppercase monospace and technical rules. Kaji already ships JetBrains Mono for every number and micro-label,
+  so the mokumono half is mostly free; the real decision is how much of the interface goes quiet.</p>
+  <div class="refs"><span>Off-white canvas</span><span>Blue replaces green</span><span>Light-first</span><span>One-mark icon</span><span>Mono numerals kept</span></div>
+</div>
+
+<div id="out"></div>
+
+<script>
+/* ------------------------------------------------------------------ */
+/* content model — same fake month across every direction              */
+/* ------------------------------------------------------------------ */
+const DAYS = (()=>{                       // July 2026 starts Wed
+  const a=[]; for(let i=0;i<3;i++) a.push({n:28+i,mute:1});
+  const spend={2:'-2,480',5:'-8,100',9:'-1,290',12:'-4,600',14:'-980',17:'-12,830',
+               21:'-3,480',24:'-6,020',28:'-1,140'};
+  const earn={25:'+120,000'};
+  for(let d=1;d<=31;d++) a.push({n:d,t:spend[d]||earn[d]||'',p:!!earn[d],sel:d===21,today:d===21});
+  while(a.length%7) a.push({n:a.length%7,mute:1});
+  return a;
+})();
+const KEYS=['1','2','3','4','5','6','7','8','9','.','0','⌫'];
+
+const cell = d => `<div class="cell${d.mute?' mute':''}${d.sel?' sel':''}${d.today&&!d.sel?' today':''}">
+  <span class="n">${d.n}</span>${d.t?`<span class="t${d.p?' p':''}">${d.t}</span>`:''}</div>`;
+
+/* ------------------------------------------------------------------ */
+/* screens                                                             */
+/* ------------------------------------------------------------------ */
+function summary(c){
+  const lbl = c.lowerLabels ? (s)=>s.toLowerCase() : (s)=>s;
+  return `<div class="phone">
+    ${status()}
+    <div class="hdr"><div><h1>${c.d===4?'summary':'Summary'}</h1><div class="sub">2026 / 07</div></div>
+      <div class="navbtn">⚙</div></div>
+    <div class="body pt">
+      ${c.heroBlock ? `
+      <div class="card" style="background:${c.heroBlock};gap:14px;box-shadow:none;border:0">
+        <div class="eyebrow" style="color:rgba(255,255,255,.6)">${lbl('NET THIS MONTH')}</div>
+        <div class="net" style="color:#fff">+¥76,070</div>
+        <div class="split" style="background:rgba(255,255,255,.18)">
+          <div class="in" style="background:#fff"></div><div class="out" style="background:rgba(255,255,255,.35)"></div></div>
+        <div class="legend">
+          <div class="item" style="color:rgba(255,255,255,.7)">in <span class="amt" style="color:#fff">¥120,000</span></div>
+          <div class="item" style="color:rgba(255,255,255,.7)">out <span class="amt" style="color:#fff">¥43,930</span></div>
+        </div>
+      </div>` : `
+      <div class="${c.flat?'':'card'}" style="${c.flat?'display:flex;flex-direction:column;gap:11px;padding:4px 0 16px':''}">
+        ${c.ruleHead?`<div class="rule-head"><span class="eyebrow">${lbl('NET THIS MONTH')}</span><span class="ln"></span></div>`
+                    :`<div class="eyebrow">${lbl('NET THIS MONTH')}</div>`}
+        <div class="net">+¥76,070</div>
+        <div class="split"><div class="in"></div><div class="out"></div></div>
+        <div class="legend">
+          <div class="item"><span class="dot" style="background:var(--pos)"></span>${lbl('In')} <span class="amt" style="color:var(--pos)">¥120,000</span></div>
+          <div class="item"><span class="dot" style="background:var(--neg)"></span>${lbl('Out')} <span class="amt" style="color:var(--neg)">¥43,930</span></div>
+        </div>
+      </div>`}
+      ${c.dotted?'<div class="dotted-rule"></div>':''}
+      <div class="${c.flat?'':'card'}" style="${c.flat?'padding:4px 0':''}">
+        ${c.ruleHead?`<div class="rule-head" style="margin-bottom:14px"><span class="eyebrow">${lbl('BY CATEGORY')}</span><span class="ln"></span></div>`
+                    :`<div class="eyebrow">${lbl('BY CATEGORY')}</div>`}
+        <div class="cats">
+          ${[['Groceries','¥12,830',86],['Food','¥10,600',71],['Transport','¥6,240',41],['Home','¥4,600',30]]
+            .map(([n,a,w])=>`<div class="cat"><div class="row"><span class="lbl">${n}</span><span class="amt">${a}</span></div>
+              <div class="track"><div class="fill" style="width:${w}%"></div></div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+    ${tabbar('summary')}
+  </div>`;
+}
+
+function calendar(c){
+  const lbl = c.lowerLabels ? (s)=>s.toLowerCase() : (s)=>s;
+  return `<div class="phone">
+    ${status()}
+    <div class="hdr"><div><h1>${c.d===4?'2026 / 07':'July'} ${c.d===4?'':'<span style="color:var(--dim);font-weight:400">2026</span>'}</h1>
+      <div class="sub">21 entries this month</div></div>
+      <div class="navgrp"><div class="navbtn">‹</div><div class="navbtn">›</div><div class="navbtn">⚙</div></div></div>
+    <div class="body pt" style="gap:12px">
+      <div class="strip">
+        <div class="c"><span class="k">${lbl('IN')}</span><span class="v" style="color:var(--pos)">¥120,000</span></div>
+        <div class="c"><span class="k">${lbl('OUT')}</span><span class="v" style="color:var(--neg)">¥43,930</span></div>
+        <div class="c" style="align-items:flex-end"><span class="k">${lbl('NET')}</span><span class="v" style="color:var(--pos)">+¥76,070</span></div>
+      </div>
+      <div>
+        <div class="dows">${['M','T','W','T','F','S','S'].map(d=>`<span>${d}</span>`).join('')}</div>
+        <div class="grid" style="margin-top:6px">${DAYS.map(cell).join('')}</div>
+      </div>
+      <div class="daylist">
+        <div class="eyebrow" style="padding:6px 2px 2px">${lbl('TUE 21 JUL')}</div>
+        ${[['🍜','Lunch','-¥1,180'],['🚃','Commute','-¥620'],['🛒','Groceries','-¥1,680']]
+          .map(([i,n,a])=>`<div class="drow"><div class="l"><span class="ic">${i}</span><span class="nm">${n}</span></div>
+            <span class="a">${a}</span></div>`).join('')}
+      </div>
+    </div>
+    ${tabbar('calendar')}
+  </div>`;
+}
+
+function entry(c){
+  const lbl = c.lowerLabels ? (s)=>s.toLowerCase() : (s)=>s;
+  return `<div class="phone">
+    ${status()}
+    <div class="hdr"><div><h1>July <span style="color:var(--dim);font-weight:400">2026</span></h1>
+      <div class="sub">21 entries this month</div></div><div class="navbtn">⚙</div></div>
+    <div class="body pt" style="gap:12px">
+      <div class="dows">${['M','T','W','T','F','S','S'].map(d=>`<span>${d}</span>`).join('')}</div>
+      <div class="grid">${DAYS.slice(0,21).map(cell).join('')}</div>
+    </div>
+    <div class="dim-under"></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="seg"><div class="on">${lbl('Expense')}</div><div>${lbl('Income')}</div></div>
+      <div class="amount"><div class="v">¥3,480</div><div class="u">${lbl('TAP TO EDIT')}</div></div>
+      <div class="chips">${['🍜 Food','🛒 Groceries','🚃 Transport','🏠 Home','＋']
+        .map((t,i)=>`<div class="chip${i===1?' on':''}">${t}</div>`).join('')}</div>
+      <div class="rows">
+        <div class="orow"><span class="k">${lbl('Date')}</span><span class="v">2026-07-21</span></div>
+        <div class="orow"><span class="k">${lbl('Repeat')}</span><span class="v" style="color:var(--dim)">${lbl('NONE')}</span></div>
+      </div>
+      <div class="keypad">${KEYS.map(k=>`<div class="key">${k}</div>`).join('')}</div>
+      <div class="cta">${lbl('Save entry')}</div>
+    </div>
+  </div>`;
+}
+
+const status = ()=>`<div class="status"><span>9:41</span><span class="pills"><i></i><i></i><i></i></span></div>`;
+const tabbar = (on)=>`<div class="tabbar">
+  <div class="tab${on==='summary'?' on':''}"><span class="ic">◎</span>Summary</div>
+  <div class="fab">＋</div>
+  <div class="tab${on==='calendar'?' on':''}"><span class="ic">▦</span>Calendar</div></div>`;
+
+/* ------------------------------------------------------------------ */
+/* the five directions                                                 */
+/* ------------------------------------------------------------------ */
+const BLUE = '#2B33E8';
+
+const DIRECTIONS = [
+{
+  d:1, name:'Shirokane', jp:'白金', dial:14,
+  thesis:'Nemuiasaa almost undiluted. Warm off-white paper, pure-white cards with no borders and a whisper of shadow, everything in sans. Blue appears maybe four times per screen — a dot, a fill, the save button — and never anywhere else. The quietest option: Kaji stops looking like a finance tool and starts looking like a notebook.',
+  swatches:[['#F2F2F0','bg'],['#FFFFFF','card'],['#16161A','ink'],[BLUE,'blue'],['#8A8A92','muted']],
+  iconCap:'soft wobble mark<br>blue on white',
+  icon:`<div class="icon-tile" style="background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.09)">
+    <svg width="42" height="42" viewBox="0 0 42 42"><path d="M21 4c9 0 17 7.6 17 17s-8 17-17 17S4 30.4 4 21 12 4 21 4z"
+      fill="none" stroke="${BLUE}" stroke-width="3.4" stroke-linecap="round"
+      stroke-dasharray="9 4.5"/><circle cx="21" cy="21" r="4.4" fill="${BLUE}"/></svg></div>`,
+  lowerLabels:true,
+  vars:{'--bg':'#F2F2F0','--card':'#FFFFFF','--card2':'#F7F7F5','--ink':'#16161A','--muted':'#6E6E76',
+    '--dim':'#A2A2AA','--hair':'#E8E8E4','--track':'#EDEDE9','--pos':BLUE,'--neg':'#16161A','--onpos':'#FFFFFF',
+    '--cardr':'22px','--cardbd':'0','--cardsh':'0 1px 2px rgba(0,0,0,.04),0 10px 26px -14px rgba(0,0,0,.16)',
+    '--padx':'22px','--gap':'14px','--barh':'7px','--barr':'999px','--dotr':'999px',
+    '--chipbg':'#F2F2F0','--chipbd':'0','--chipr':'999px','--btnr':'999px','--tiler':'999px','--cellr':'13px','--cellbd':'0',
+    '--cellbg':'transparent','--fabr':'26px','--fabsh':'0 8px 20px -6px rgba(43,51,232,.45)',
+    '--sheetr':'28px','--segr':'13px','--segsh':'0 1px 3px rgba(0,0,0,.10)','--keyr':'14px','--ctar':'16px',
+    '--labelfam':'"Poppins",sans-serif','--labelsize':'11px','--labells':'0','--labeltt':'none'},
+  notes:{
+    Keeps:['Every numeral stays JetBrains Mono','Calendar cells lose their tiles — day numbers float on paper','Category bars become full-round'],
+    Costs:['Micro-labels drop uppercase mono, so the type system loses its signature','Least differentiated — closest to generic iOS-minimal'],
+  }
+},
+{
+  d:2, name:'Blueprint', jp:'図面', dial:88,
+  thesis:'Mokumono almost undiluted. Pure white, no cards at all — hairline rules and dotted leaders do the grouping. Every label is uppercase mono with wide tracking, every amount is mono, and electric blue is a structural colour rather than a decorative one. Reads like a technical drawing of your month. Sharp, opinionated, memorable.',
+  swatches:[['#FFFFFF','bg'],['#0A0A0C','ink'],['#2323F0','blue'],['#E4E4E2','rule'],['#9A9AA2','dim']],
+  iconCap:'bracket + rule<br>black on white',
+  icon:`<div class="icon-tile" style="background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.09);border-radius:17px">
+    <svg width="40" height="40" viewBox="0 0 40 40">
+      <path d="M25 6H9v28h16" fill="none" stroke="#0A0A0C" stroke-width="5" stroke-linejoin="miter"/>
+      <rect x="16" y="17.5" width="18" height="5" fill="#2323F0"/>
+    </svg></div>`,
+  flat:true, ruleHead:true, dotted:true,
+  vars:{'--bg':'#FFFFFF','--card':'#FFFFFF','--card2':'#FAFAFA','--ink':'#0A0A0C','--muted':'#5A5A62',
+    '--dim':'#9A9AA2','--hair':'#E4E4E2','--track':'#EDEDEB','--pos':'#2323F0','--neg':'#0A0A0C','--onpos':'#FFFFFF',
+    '--cardr':'6px','--cardbd':'1px solid #E4E4E2','--cardsh':'none',
+    '--padx':'20px','--gap':'16px','--barh':'6px','--barr':'0','--dotr':'0',
+    '--chipbg':'#FFFFFF','--chipbd':'1px solid #DEDEDC','--chipr':'4px','--btnr':'6px','--tiler':'4px','--cellr':'2px',
+    '--cellbd':'1px solid #EEEEEC','--cellbg':'#FFFFFF','--fabr':'8px','--fabsh':'none',
+    '--sheetr':'8px','--segr':'6px','--segsh':'none','--keyr':'4px','--ctar':'6px',
+    '--labelfam':'"JetBrains Mono",monospace','--labelsize':'9.5px','--labells':'.14em','--labeltt':'uppercase'},
+  notes:{
+    Keeps:['The whole existing mono micro-label system, amplified','Green → #2323F0 is the only palette edit'],
+    Costs:['Cards disappear — every screen needs a rules-and-spacing rewrite','Sharp corners fight iOS gesture affordances','Japanese copy at 9.5px uppercase mono needs a sans fallback'],
+  }
+},
+{
+  d:3, name:'Kaji Blue', jp:'家事青', dial:50, rec:true,
+  thesis:'The even merge, and the cheapest to ship. Nemuiasaa supplies the canvas — cool off-white, borderless white cards, big radii, real whitespace. Mokumono supplies the ink — uppercase mono micro-labels and electric blue as the primary/positive colour, with expense rendered in plain black instead of red so the screen only ever carries one hue. Structurally this is today\'s app with the lights turned on.',
+  swatches:[['#F1F2F4','bg'],['#FFFFFF','card'],['#14161B','ink'],[BLUE,'blue'],['#7A828C','muted']],
+  iconCap:'blue plus in a<br>soft-square field',
+  icon:`<div class="icon-tile" style="background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.09)">
+    <svg width="44" height="44" viewBox="0 0 44 44">
+      <rect x="5" y="5" width="34" height="34" rx="13" fill="#EDEEF6"/>
+      <path d="M22 13.5v17M13.5 22h17" stroke="${BLUE}" stroke-width="4.6" stroke-linecap="round"/>
+    </svg></div>`,
+  vars:{'--bg':'#F1F2F4','--card':'#FFFFFF','--card2':'#F5F6F8','--ink':'#14161B','--muted':'#666E7A',
+    '--dim':'#9AA2AE','--hair':'#E6E8EC','--track':'#EAECF0','--pos':BLUE,'--neg':'#14161B','--onpos':'#FFFFFF',
+    '--cardr':'20px','--cardbd':'0','--cardsh':'0 1px 2px rgba(20,22,30,.05),0 10px 28px -16px rgba(20,22,30,.22)',
+    '--padx':'20px','--gap':'13px','--barh':'8px','--barr':'6px','--dotr':'999px',
+    '--chipbg':'#F1F2F4','--chipbd':'0','--chipr':'999px','--btnr':'999px','--tiler':'10px','--cellr':'11px','--cellbd':'0',
+    '--cellbg':'#FFFFFF','--fabr':'26px','--fabsh':'0 8px 22px -6px rgba(43,51,232,.40)',
+    '--sheetr':'26px','--segr':'12px','--segsh':'0 1px 3px rgba(20,22,30,.10)','--keyr':'15px','--ctar':'16px',
+    '--labelfam':'"JetBrains Mono",monospace','--labelsize':'10px','--labells':'.14em','--labeltt':'uppercase'},
+  notes:{
+    Keeps:['Every metric in theme/tokens.ts — radii, type scale, tracking — survives unchanged','Only palettes.light + accents.positive move'],
+    Costs:['Expense in black means over-budget needs a second signal (weight or a small red pip)','Least surprising of the five — evolution, not a restatement'],
+  }
+},
+{
+  d:4, name:'Yohaku', jp:'余白', dial:30,
+  thesis:'Modelled on hibi rather than ondot: warm paper, no cards, no fills, no shadows. Rules are hairlines, the calendar is dots rather than tiles, and the only saturated element on screen is a single small blue square — the way hibi spends its one red. Numbers shrink and the page breathes. This is the direction that makes Kaji feel Japanese-editorial rather than app-y.',
+  swatches:[['#FAFAF7','bg'],['#1A1A18','ink'],[BLUE,'blue'],['#E7E7E1','rule'],['#A8A8A0','dim']],
+  iconCap:'grey wobble frame<br>one blue square',
+  icon:`<div class="icon-tile" style="background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.09)">
+    <svg width="44" height="44" viewBox="0 0 44 44">
+      <path d="M11 8h22a3 3 0 0 1 3 3v22a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3z"
+        fill="none" stroke="#DEDEDA" stroke-width="6" stroke-linejoin="round" stroke-dasharray="5.5 3"/>
+      <rect x="18" y="18" width="8" height="8" fill="${BLUE}"/>
+    </svg></div>`,
+  flat:true, lowerLabels:true,
+  vars:{'--bg':'#FAFAF7','--card':'#FAFAF7','--card2':'#F3F3EE','--ink':'#1A1A18','--muted':'#6A6A62',
+    '--dim':'#A8A8A0','--hair':'#E7E7E1','--track':'#EDEDE7','--pos':BLUE,'--neg':'#1A1A18','--onpos':'#FFFFFF',
+    '--cardr':'4px','--cardbd':'0','--cardsh':'none',
+    '--padx':'26px','--gap':'20px','--barh':'3px','--barr':'0','--dotr':'0',
+    '--chipbg':'transparent','--chipbd':'1px solid #DEDED6','--chipr':'2px','--btnr':'999px','--tiler':'2px','--cellr':'0',
+    '--cellbd':'0','--cellbg':'transparent','--fabr':'26px','--fabsh':'none',
+    '--sheetr':'4px','--segr':'2px','--segsh':'none','--keyr':'2px','--ctar':'4px',
+    '--labelfam':'"Noto Serif JP",serif','--labelsize':'10px','--labells':'.12em','--labeltt':'none'},
+  notes:{
+    Keeps:['Mono numerals become the only geometric element, so they read louder at smaller sizes'],
+    Costs:['Hairline-only affordances are the hardest to keep accessible (contrast + hit targets)','Category bars at 3px stop being scannable at a glance','Serif micro-labels are a new font family to load'],
+  }
+},
+{
+  d:5, name:'Kippu', jp:'切符', dial:62,
+  thesis:'Built on ondot: a light shell wrapped around one saturated blue block that owns the headline number, with pills as the entire interaction language — segments, categories, filters, nav all become the same rounded token. The most product-brandable of the five, and the one whose screenshots survive being shrunk to App Store thumbnails.',
+  swatches:[['#F2F2F0','bg'],['#FFFFFF','card'],['#1E2499','deep'],[BLUE,'blue'],['#16161A','ink']],
+  iconCap:'blue pill stack<br>ticket mark',
+  icon:`<div class="icon-tile" style="background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.09)">
+    <svg width="42" height="42" viewBox="0 0 42 42">
+      <rect x="6" y="9" width="30" height="9" rx="4.5" fill="${BLUE}"/>
+      <rect x="6" y="23" width="18" height="9" rx="4.5" fill="#1E2499"/>
+      <circle cx="31.5" cy="27.5" r="4.5" fill="${BLUE}"/>
+    </svg></div>`,
+  heroBlock:'#1E2499',
+  vars:{'--bg':'#F2F2F0','--card':'#FFFFFF','--card2':'#F5F5F3','--ink':'#16161A','--muted':'#65656E',
+    '--dim':'#9C9CA4','--hair':'#E7E7E3','--track':'#EBEBE7','--pos':BLUE,'--neg':'#16161A','--onpos':'#FFFFFF',
+    '--cardr':'20px','--cardbd':'0','--cardsh':'0 1px 2px rgba(0,0,0,.04),0 10px 26px -15px rgba(0,0,0,.20)',
+    '--padx':'20px','--gap':'13px','--barh':'8px','--barr':'999px','--dotr':'999px',
+    '--chipbg':'transparent','--chipbd':'1.2px solid #16161A','--chipr':'999px','--btnr':'999px','--tiler':'999px',
+    '--cellr':'999px','--cellbd':'0','--cellbg':'#FFFFFF','--fabr':'26px','--fabsh':'0 8px 20px -6px rgba(43,51,232,.42)',
+    '--sheetr':'26px','--segr':'999px','--segsh':'0 1px 3px rgba(0,0,0,.10)','--keyr':'999px','--ctar':'999px',
+    '--labelfam':'"JetBrains Mono",monospace','--labelsize':'10px','--labells':'.14em','--labeltt':'uppercase'},
+  notes:{
+    Keeps:['Uppercase mono micro-labels','Green→blue is a single accent swap'],
+    Costs:['Round calendar cells lose the day-total line — needs a dot-under-number treatment instead','Outlined pills everywhere raises visual noise; needs a strict cap on how many appear at once','The deep-blue hero block is a new surface token'],
+  }
+},
+];
+
+/* ------------------------------------------------------------------ */
+document.getElementById('out').innerHTML = DIRECTIONS.map(c=>{
+  const style = Object.entries(c.vars).map(([k,v])=>`${k}:${v}`).join(';');
+  return `<section class="dir">
+    <div class="dir-head">
+      <div class="dir-num">0${c.d}</div>
+      <div class="dir-title">
+        <h2>${c.name} <em>${c.jp}</em>${c.rec?`<span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;color:#fff;background:${BLUE};padding:4px 9px;border-radius:999px">RECOMMENDED</span>`:''}</h2>
+        <div class="thesis">${c.thesis}</div>
+        <div class="dial"><div class="track"><i style="left:${c.dial}%"></i></div>
+          <div class="ends"><span>nemuiasaa</span><span>mokumono</span></div></div>
+      </div>
+      <div class="dir-aside">
+        <div class="icon-row"><div class="icon-cap">${c.iconCap}</div>${c.icon}</div>
+        <div class="swatches">${c.swatches.map(([hex,n])=>
+          `<div class="sw"><i style="background:${hex}"></i><span>${n}</span></div>`).join('')}</div>
+      </div>
+    </div>
+    <div class="shots" style="${style}">
+      <div class="shot">${summary(c)}<div class="cap">Summary</div></div>
+      <div class="shot">${calendar(c)}<div class="cap">Calendar</div></div>
+      <div class="shot">${entry(c)}<div class="cap">Entry sheet</div></div>
+    </div>
+    <div class="notes">
+      ${Object.entries(c.notes).map(([h,items])=>
+        `<div><h4>${h}</h4><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`).join('')}
+    </div>
+  </section>`;
+}).join('');
+</script>
+</body>
+</html>
