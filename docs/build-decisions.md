@@ -56,24 +56,30 @@ below, the amendment describes the current product.
 | 6 | **Icons: `@expo/vector-icons`** | Map each design glyph to its intent (Feather/Ionicons/MaterialCommunity): ＋→plus, ⚙→settings, ‹›→chevrons, ✕→x, ↑↓→arrows, ↻→repeat, ⌫→delete, tabs→calendar + bar-chart, theme→moon/sun. Not literal Unicode (Android tofu risk). |
 | 7 | **No ads or Premium in V1** | V1 has no advertising, sponsored placement, purchase, subscription, Premium, or remove-ads surface. Earlier prototype ad/Premium concepts are not product behavior. |
 | 8 | **First launch: empty (A+)** | Start with **no transactions**; seed only default categories. Use the designed empty states ("No entries this day. Tap ＋ to add one."). No demo-ledger loading feature is exposed. |
-| 9 | **Theme: dark default, manual only** | Default dark; two-button Appearance control (Dark / Light); OS appearance ignored (no `useColorScheme`). Choice persists. |
+| 9 | ~~**Theme: dark default, manual only**~~ — **superseded, see [ADR-0001](adr/0001-follow-os-appearance.md)** | ~~Default dark; two-button Appearance control (Dark / Light); OS appearance ignored (no `useColorScheme`).~~ Now: three-option Appearance control (System / Light / Dark) defaulting to **System**, which follows the OS via `useColorScheme`. Choice still persists. |
 | 10 | **Web = phone-width container** | On web only, center the app in a `maxWidth: 402` full-height rounded container with subtle shadow on a neutral backdrop. Native = full-screen with `SafeAreaView`. **No** faux status bar / dynamic island / home indicator anywhere. |
 | 11 | **Currency: symbol-only** | ¥ JPY / $ USD / € EUR / £ GBP swap the symbol + reformat only; **no** FX conversion, no per-entry currency, **integer amounts, no cents**, `en-US` grouping (comma thousands). Keypad is integer-only, leading zeros stripped, 9-digit cap. |
 | 12 | **Fast entry interactions** | The entry keypad is a compact four-column calculator with `00`, `+`, `−`, `×`, `÷`, clear, equals, and delete. Saving promotes the chosen category to the front of its type list. Today keeps a green calendar outline independently of selection, and day-list rows reveal Delete when swiped left. |
 
-## Design tokens (preserve verbatim)
+## Design tokens
 
-### Colors — dark (default)
+> **Superseded by the Kippu direction (see [ADR-0002](adr/0002-kippu-visual-direction.md)).**
+> `theme/tokens.ts` is the source of truth for colors, radii and shadows. The
+> green-era values recorded below are kept as history — they describe the
+> original concept, not what ships. The type scale and the two-family rule are
+> unchanged and still authoritative.
+
+### Colors — dark (original concept, superseded)
 `--bg #0E1116` · `--card #171B22` · `--card2 #1A1F28` · `--card3 #242B35` ·
 `--ink #EAEEF3` · `--muted #9AA4B2` · `--dim #6B7480` ·
 `--hair rgba(255,255,255,.06)` · `--line rgba(255,255,255,.10)` · `--border rgba(255,255,255,.08)`
 
-### Colors — light
+### Colors — light (original concept, superseded)
 `--bg #EEF1F5` · `--card #FFFFFF` · `--card2 #F4F6F8` · `--card3 #E4E9EE` ·
 `--ink #141820` · `--muted #5A6472` · `--dim #98A2AE` ·
 `--hair rgba(20,24,31,.07)` · `--line rgba(20,24,31,.12)` · `--border rgba(20,24,31,.08)`
 
-### Accents (shared across themes)
+### Accents (original concept, superseded — accents are now per-mode)
 `positive #2BD48A` (income, primary CTAs, selection) · `negative #F0766C` (expense, delete) ·
 on-green text/icons use **`#0B0E12`** (near-black), never white.
 
@@ -90,7 +96,7 @@ on-green text/icons use **`#0B0E12`** (near-black), never white.
 Two families only: **system sans** (`-apple-system, system-ui`) for UI copy; **JetBrains Mono**
 for every number and uppercase micro-label (the signature).
 
-### Layout & shape metrics
+### Layout & shape metrics (radii superseded; see `metrics` in `theme/tokens.ts`)
 Design frame 402×874 · screen h-padding 20–22 · status offset padding-top 52 (→ SafeArea on
 native) · card radius 16–20 · bottom-sheet radius 26 (top only) · pills/chips/avatars 999 ·
 keypad key radius 15 · icon tile radius 9–11 · calendar day cell radius 11 / ~46px tall ·
