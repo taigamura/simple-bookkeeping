@@ -6,10 +6,11 @@
  * commits, so all four columns move in the same render).
  */
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import type { Budgets, Transaction } from '../domain';
-import { ThemeProvider } from '../theme';
+import type { Budgets, CalendarView, Transaction } from '../domain';
+import { ThemeProvider, palettes } from '../theme';
 import { CalendarScreen } from './CalendarScreen';
 
 const tx = (over: Partial<Transaction>): Transaction => ({
@@ -31,6 +32,8 @@ const renderCalendar = (
   budgets: Budgets,
   budgetMode: 'category' | 'total' = 'category',
   totalBudget: number = 0,
+  view: CalendarView = 'numbers',
+  onToggleView: () => void = () => {},
 ) =>
   render(
     <ThemeProvider>
@@ -43,6 +46,8 @@ const renderCalendar = (
         m={6}
         day={1}
         symbol="¥"
+        view={view}
+        onToggleView={onToggleView}
         onSelectDay={() => {}}
         onEditEntry={() => {}}
         onPrevMonth={() => {}}
@@ -97,6 +102,8 @@ describe('CalendarScreen strip BUDGET column (#50)', () => {
           m={7}
           day={1}
           symbol="¥"
+          view="numbers"
+          onToggleView={() => {}}
           onSelectDay={() => {}}
           onEditEntry={() => {}}
           onPrevMonth={() => {}}
@@ -126,6 +133,8 @@ describe('CalendarScreen entry actions', () => {
           m={6}
           day={1}
           symbol="¥"
+          view="numbers"
+          onToggleView={() => {}}
           onSelectDay={() => {}}
           onEditEntry={() => {}}
           onDeleteEntry={onDeleteEntry}
@@ -140,5 +149,68 @@ describe('CalendarScreen entry actions', () => {
     fireEvent.press(screen.getByLabelText('Delete Food'));
 
     expect(onDeleteEntry).toHaveBeenCalledWith(item);
+  });
+});
+
+/**
+ * Header (Kippu design §2): the month leads at full weight with the year set
+ * back in `dim`, a live entry count sits under them, and the view toggle names
+ * the variant it switches *to*.
+ */
+describe('CalendarScreen header', () => {
+  it('splits the title so the month and year are separately styled', () => {
+    renderCalendar([], {});
+    // Reads as one phrase, but the year is its own node so it can recede.
+    expect(screen.getByText('July 2026')).toBeTruthy();
+
+    const year = screen.getByText('2026');
+    const style = StyleSheet.flatten(year.props.style);
+    expect(style.color).toBe(palettes.light.faint);
+    expect(style.fontWeight).toBe('400');
+  });
+
+  it('sets the entry count a step darker than the year it sits under', () => {
+    renderCalendar([], {});
+    const year = StyleSheet.flatten(screen.getByText('2026').props.style);
+    const count = StyleSheet.flatten(screen.getByText('0 entries this month').props.style);
+
+    expect(year.color).toBe(palettes.light.faint);
+    expect(count.color).toBe(palettes.light.dim);
+    expect(count.color).not.toBe(year.color);
+  });
+
+  it('counts the displayed month, not the whole ledger', () => {
+    renderCalendar([tx({ id: 'a' }), tx({ id: 'b' }), tx({ id: 'c', m: 7 })], {});
+    expect(screen.getByText('2 entries this month')).toBeTruthy();
+  });
+
+  it('uses the singular for a month with one entry, and counts an empty month', () => {
+    renderCalendar([tx({ id: 'a' })], {});
+    expect(screen.getByText('1 entry this month')).toBeTruthy();
+    screen.unmount();
+
+    renderCalendar([], {});
+    expect(screen.getByText('0 entries this month')).toBeTruthy();
+  });
+
+  it('offers the number view while showing dots, and the dot view while showing numbers', () => {
+    renderCalendar([], {}, 'category', 0, 'dots');
+    expect(screen.getByLabelText('Show numbers')).toBeTruthy();
+    expect(screen.queryByLabelText('Show dots')).toBeNull();
+    screen.unmount();
+
+    renderCalendar([], {}, 'category', 0, 'numbers');
+    expect(screen.getByLabelText('Show dots')).toBeTruthy();
+  });
+
+  it('reports a toggle press without changing the view itself', () => {
+    const onToggleView = jest.fn();
+    renderCalendar([], {}, 'category', 0, 'dots', onToggleView);
+
+    fireEvent.press(screen.getByLabelText('Show numbers'));
+
+    expect(onToggleView).toHaveBeenCalledTimes(1);
+    // Still the caller's view — the parent owns the state.
+    expect(screen.getByLabelText('Show numbers')).toBeTruthy();
   });
 });

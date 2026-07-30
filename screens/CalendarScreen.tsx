@@ -1,9 +1,14 @@
 /**
  * CalendarScreen — the Calendar home (slice #4). Full month-at-a-glance:
- * header (month+year title, ‹ › nav, ⚙), an In/Out/Net strip bounded by
- * hairlines (plus a BUDGET remaining column once any budget is set, #50), the
- * 7-column month grid, then the selected day's label + net and its entries
- * (or the empty state from the core slice).
+ * header (month+year title over an entry count, ‹ › nav, the dot/number view
+ * toggle, ⚙), an In/Out/Net strip bounded by hairlines (plus a BUDGET remaining
+ * column once any budget is set, #50), the 7-column month grid, then the
+ * selected day's label + net and its entries (or the empty state from the core
+ * slice).
+ *
+ * The title follows the design's two-tone treatment: the month in ink at full
+ * weight, the year set back in `dim` at regular weight, so the pair reads as one
+ * phrase with the changing part leading.
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -22,6 +27,7 @@ import {
   signed,
   yen,
   type Budgets,
+  type CalendarView,
   type RecurrenceDate,
   type Transaction,
   type YM,
@@ -44,6 +50,9 @@ interface CalendarScreenProps {
   day: number;
   today?: RecurrenceDate;
   symbol: string;
+  /** Day-cell variant; the header's toggle flips it through `onToggleView`. */
+  view: CalendarView;
+  onToggleView: () => void;
   onSelectDay: (day: number) => void;
   /** Tap a day-list row to edit that entry (#43). */
   onEditEntry: (entry: Transaction) => void;
@@ -70,6 +79,8 @@ export function CalendarScreen({
   day,
   today,
   symbol,
+  view,
+  onToggleView,
   onSelectDay,
   onEditEntry,
   onDeleteEntry,
@@ -89,9 +100,18 @@ export function CalendarScreen({
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <Txt variant="screenTitle">
-          {MONTH_NAMES[m]} {y}
-        </Txt>
+        <View style={styles.titleBlock}>
+          <Txt variant="screenTitle">
+            {MONTH_NAMES[m]}{' '}
+            {/* `faint` is legible only at this size — see Colors.faint. */}
+            <Txt variant="screenTitleYear" tone="faint">
+              {y}
+            </Txt>
+          </Txt>
+          <Txt variant="screenSubtitle" tone="dim" style={styles.subtitle}>
+            {strings.calendar.entriesThisMonth(month.length)}
+          </Txt>
+        </View>
         <View style={styles.headerActions}>
           <IconButton
             name="chevron-left"
@@ -102,6 +122,15 @@ export function CalendarScreen({
             name="chevron-right"
             accessibilityLabel={strings.calendar.nextMonth}
             onPress={onNextMonth}
+          />
+          {/* Labelled by the view it switches *to*, so the icon and the label
+              agree about what a tap does. */}
+          <IconButton
+            name={view === 'dots' ? 'hash' : 'circle'}
+            accessibilityLabel={
+              view === 'dots' ? strings.calendar.showNumbers : strings.calendar.showDots
+            }
+            onPress={onToggleView}
           />
           <IconButton name="settings" accessibilityLabel={strings.nav.settings} onPress={onSettings} />
         </View>
@@ -135,6 +164,7 @@ export function CalendarScreen({
         m={m}
         selectedDay={day}
         today={today}
+        view={view}
         onSelectDay={onSelectDay}
         onMonthChange={onMonthChange}
       />
@@ -200,12 +230,16 @@ function StripCol({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, paddingHorizontal: metrics.screenPadX, paddingTop: 12 },
+  // Top-aligned, not centred: the title is now two lines and the buttons should
+  // sit level with the month, not with the middle of the block (design §2).
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 14,
   },
+  titleBlock: { flexShrink: 1 },
+  subtitle: { marginTop: 4 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   strip: {
     flexDirection: 'row',

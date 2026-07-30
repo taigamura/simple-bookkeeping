@@ -20,6 +20,8 @@ export type Tone =
   | 'ink'
   | 'muted'
   | 'dim'
+  /** Large text only (24px+) — see `Colors.faint`. */
+  | 'faint'
   | 'positive'
   | 'negative'
   | 'onPositive'

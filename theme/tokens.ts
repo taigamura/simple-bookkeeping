@@ -51,6 +51,13 @@ export interface Colors {
   ink: string;
   muted: string;
   dim: string;
+  /**
+   * The lightest readable text tone — the design's receding gray, kept for
+   * *large* type only (the year in a screen title). It clears WCAG AA at the
+   * 3:1 large-text threshold but not the 4.5:1 body threshold, so never put it
+   * on anything under 24px; `dim` is the floor for small text.
+   */
+  faint: string;
   hair: string;
   line: string;
   border: string;
@@ -82,6 +89,9 @@ export const palettes: Record<ThemeMode, Colors> = {
     // the 10px micro-labels it is used on. Darkened to the lightest value that
     // still clears AA.
     dim: '#6E6E77',
+    // 3.1:1 on the ground — the design's #9C9CA4 intent brought up to the
+    // large-text minimum, and clearly lighter than `dim` beside it.
+    faint: '#88888F',
     hair: '#E7E7E3',
     line: 'rgba(22,22,26,.12)',
     border: 'rgba(22,22,26,.08)',
@@ -101,6 +111,8 @@ export const palettes: Record<ThemeMode, Colors> = {
     ink: '#F0F0F4',
     muted: '#9A9AA6',
     dim: '#82828E',
+    /** 3.6:1 on the dark ground — same large-text-only rule as light. */
+    faint: '#6A6A76',
     hair: 'rgba(255,255,255,.07)',
     line: 'rgba(255,255,255,.12)',
     border: 'rgba(255,255,255,.09)',
@@ -147,8 +159,23 @@ export const type = {
   /** Screen title (sans). */
   screenTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: -0.48, // -.02em @ 24
+    fontWeight: '600',
+    letterSpacing: -0.6, // -.025em @ 24
+  },
+  /**
+   * The trailing, de-emphasised half of a screen title — the year in
+   * "July 2026". Same size and tracking as `screenTitle`, dropped to regular
+   * weight; pair it with the `dim` tone so the month leads and the year recedes.
+   */
+  screenTitleYear: {
+    fontSize: 24,
+    fontWeight: '400',
+    letterSpacing: -0.6,
+  },
+  /** One quiet line under a screen title, e.g. "21 entries this month". */
+  screenSubtitle: {
+    fontSize: 11.5,
+    fontWeight: '500',
   },
   /** List item / category label (sans). */
   listItem: {
@@ -182,10 +209,19 @@ export const type = {
     fontFamily: mono.semibold,
     fontSize: 13,
   },
-  /** Calendar per-day total (mono, tiny). */
+  /** Calendar per-day total (mono, tiny) — the design's 7.5px, so a month of
+   *  totals reads as texture under the day numbers rather than competing with
+   *  them. Semibold keeps it legible at that size. */
   calendarDayTotal: {
     fontFamily: mono.semibold,
-    fontSize: 8.5,
+    fontSize: 7.5,
+  },
+  /** Day-list row timestamp (mono, regular) — metadata, so lighter and smaller
+   *  than the note it sits beside. */
+  timestamp: {
+    fontFamily: mono.regular,
+    fontSize: 10.5,
+    letterSpacing: 0.1,
   },
 } satisfies Record<string, TextStyle>;
 
@@ -221,6 +257,9 @@ export const metrics = {
   iconTileRadius: 9,
   dayCellRadius: 8,
   dayCellHeight: 46,
+  /** Day-cell activity dot, and the larger one a heavy spending day earns. */
+  dayDot: 4,
+  dayDotLarge: 6,
   segRadius: 12,
   segItemRadius: 9,
   /** Progress tracks and the split bar stay fully round. */

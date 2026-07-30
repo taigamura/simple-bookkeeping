@@ -34,6 +34,7 @@ import {
   clampDay,
   monthEntries,
   shiftMonth,
+  type CalendarView,
   type RecurrenceDate,
   type Transaction,
   type YM,
@@ -47,6 +48,8 @@ interface MonthPagerProps {
   m: number;
   selectedDay: number;
   today?: RecurrenceDate;
+  /** Day-cell variant, passed straight through to every month's grid. */
+  view?: CalendarView;
   onSelectDay: (day: number) => void;
   /** Commit the absolute month the pager settled on. */
   onMonthChange: (ym: YM) => void;
@@ -78,6 +81,7 @@ export function MonthPager({
   m,
   selectedDay,
   today,
+  view,
   onSelectDay,
   onMonthChange,
 }: MonthPagerProps) {
@@ -158,6 +162,7 @@ export function MonthPager({
           monthEntries={monthEntries(entries, { y, m })}
           selectedDay={selectedDay}
           today={today}
+          view={view}
           onSelectDay={onSelectDay}
         />
       </View>
@@ -187,6 +192,7 @@ export function MonthPager({
               // only the committed month's grid takes day taps.
               selectedDay={clampDay(selectedDay, item.y, item.m)}
               today={today}
+              view={view}
               onSelectDay={sameYM(item, { y, m }) ? onSelectDay : () => {}}
             />
           </View>

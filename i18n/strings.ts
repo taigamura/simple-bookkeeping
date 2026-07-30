@@ -49,6 +49,11 @@ export interface Strings {
     net: string;
     /** Strip label for the month's remaining budget (#50). */
     budget: string;
+    /** Sub-title under the month, counting the month's entries. */
+    entriesThisMonth: (n: number) => string;
+    /** Header toggle, labelled by the view it switches *to*. */
+    showDots: string;
+    showNumbers: string;
     dayAccessibilityLabel: (day: number) => string;
     dayNetAccessibilityValue: (value: string) => string;
     emptyDay: string;
@@ -201,6 +206,9 @@ export const en: Strings = {
     out: 'Out',
     net: 'Net',
     budget: 'Budget',
+    entriesThisMonth: (n) => `${n} ${n === 1 ? 'entry' : 'entries'} this month`,
+    showDots: 'Show dots',
+    showNumbers: 'Show numbers',
     dayAccessibilityLabel: (day) => `Day ${day}`,
     dayNetAccessibilityValue: (value) => `Net ${value}`,
     emptyDay: 'No entries this day. Tap ＋ to add one.',
@@ -361,6 +369,9 @@ export const ja: Strings = {
     out: '支出',
     net: '収支',
     budget: '予算',
+    entriesThisMonth: (n) => `今月 ${n} 件`,
+    showDots: 'ドット表示',
+    showNumbers: '金額表示',
     dayAccessibilityLabel: (day) => `${day}日`,
     dayNetAccessibilityValue: (value) => `収支 ${value}`,
     emptyDay: 'この日の記録はありません。＋をタップして追加しましょう。',

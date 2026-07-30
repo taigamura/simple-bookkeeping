@@ -1,5 +1,5 @@
 /**
- * ListRow — one entry in the day list. A 2-letter `code` tile, the category as
+ * ListRow — one entry in the day list. A category emoji tile, the category as
  * the row title with the note and creation time beneath it, and the signed
  * amount: income in the accent blue, expense in plain ink so a day of spending
  * stays calm. Rows share one rounded card in the parent; a hairline divider sits
@@ -11,14 +11,15 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import {
-  code,
+  emojiFor,
   signed,
   signedAmount,
+  stamp,
   DEFAULT_CURRENCY,
   type Transaction,
 } from '../domain';
 import { strings } from '../i18n';
-import { useTheme, metrics, mono, Txt } from '../theme';
+import { useTheme, metrics, Txt } from '../theme';
 
 interface ListRowProps {
   entry: Transaction;
@@ -41,10 +42,9 @@ export function ListRow({
   const { colors } = useTheme();
   const swipeInProgress = useRef(false);
   const value = signedAmount(entry);
-  const timestamp = new Intl.DateTimeFormat(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(entry.timestamp));
+  // Entries carried over from before timestamps existed only know their day, so
+  // their reconstructed time is marked approximate.
+  const timestamp = stamp(entry.timestamp);
   const timestampLabel = entry.timestampInferred ? `~${timestamp}` : timestamp;
 
   const rowStyle = [
@@ -55,8 +55,9 @@ export function ListRow({
   const content = (
     <>
       <View style={[styles.tile, { backgroundColor: colors.card2 }]}>
-        <Txt variant="microLabel" tone="muted">
-          {code(entry.category)}
+        {/* Decorative: the category name is already the row title right beside it. */}
+        <Txt style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
+          {emojiFor(entry.category)}
         </Txt>
       </View>
 
@@ -64,29 +65,28 @@ export function ListRow({
         <Txt variant="listItem" numberOfLines={1}>
           {entry.category}
         </Txt>
-        <View style={styles.meta}>
-          <Txt variant="secondary" tone="muted" numberOfLines={1} style={styles.note}>
-            {entry.note}
-          </Txt>
-          <Txt
-            variant="secondary"
-            tone="dim"
-            numberOfLines={1}
-            style={styles.timestamp}
-          >
-            {timestampLabel}
-          </Txt>
-        </View>
+        <Txt variant="secondary" tone="muted" numberOfLines={1}>
+          {entry.note}
+        </Txt>
       </View>
 
-      <Txt
-        variant="inlineAmount"
-        tone={entry.type === 'income' ? 'positive' : 'ink'}
-        numberOfLines={1}
-        style={styles.amount}
-      >
-        {signed(value, symbol)}
-      </Txt>
+      {/* Amount over timestamp in one right-aligned column. The full
+          `YYYY/MM/DD HH:MM` is too wide to share a line with the note — beside
+          it, the note was truncating to two or three characters — so the two
+          stacked figures balance the category/note pair on the left instead. */}
+      <View style={styles.trailing}>
+        <Txt
+          variant="inlineAmount"
+          tone={entry.type === 'income' ? 'positive' : 'ink'}
+          numberOfLines={1}
+          style={styles.column}
+        >
+          {signed(value, symbol)}
+        </Txt>
+        <Txt variant="timestamp" tone="dim" numberOfLines={1} style={styles.column}>
+          {timestampLabel}
+        </Txt>
+      </View>
     </>
   );
 
@@ -160,15 +160,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /** Sized so the tile reads as an icon, not as text in a box. */
+  emoji: { fontSize: 17, lineHeight: 22 },
   body: { flex: 1, gap: 2 },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  note: { flex: 1 },
-  timestamp: {
-    width: 72,
-    fontFamily: mono.regular,
-    textAlign: 'right',
-  },
-  amount: {
+  trailing: { alignItems: 'flex-end', gap: 2 },
+  /** One invariant width for both stacked figures, so amounts and timestamps
+   *  each line up down the list. Sized for the longest timestamp
+   *  (`~YYYY/MM/DD HH:MM` at the mono advance width). */
+  column: {
     width: 112,
     textAlign: 'right',
   },

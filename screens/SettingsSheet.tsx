@@ -28,7 +28,7 @@ import {
 import {
   CURRENCIES,
   addCategory,
-  code,
+  emojiFor,
   moveCategory,
   removeCategory,
   type Currency,
@@ -288,8 +288,13 @@ function Categories({
             ]}
           >
             <View style={[styles.codeTile, { backgroundColor: colors.card3 }]}>
-              <Txt variant="microLabel" tone="muted">
-                {code(cat)}
+              {/* Decorative: the category name is the label right beside it. */}
+              <Txt
+                style={styles.emoji}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              >
+                {emojiFor(cat)}
               </Txt>
             </View>
             <Txt variant="listItem" tone="ink" style={styles.catLabel} numberOfLines={1}>
@@ -573,6 +578,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /** Sized so the tile reads as an icon, not as text in a box. */
+  emoji: { fontSize: 16, lineHeight: 21 },
   catLabel: { flex: 1 },
   addRow: { flexDirection: 'row', gap: 8, marginTop: 2 },
   input: {

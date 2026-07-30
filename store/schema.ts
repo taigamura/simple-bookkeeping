@@ -14,9 +14,11 @@ import {
   DEFAULT_INC_CATS,
   DEFAULT_CURRENCY,
   daysInMonth,
+  isCalendarView,
 } from '../domain';
 import type {
   Budgets,
+  CalendarView,
   Currency,
   RecurrenceDate,
   RecurrenceRule,
@@ -50,6 +52,9 @@ export interface AppState {
   /** Total monthly budget amount in total mode (#66); 0 = no total budget.
    *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
   totalBudget: number;
+  /** Day-cell variant for the month grid; the calendar header toggles it.
+   *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
+  calendarView: CalendarView;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -62,6 +67,7 @@ export const DEFAULT_STATE: AppState = {
   budgets: {},
   budgetMode: 'category',
   totalBudget: 0,
+  calendarView: 'dots',
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */
@@ -79,6 +85,7 @@ const additiveStateKeys: StateKey[] = [
   'budgets',
   'budgetMode',
   'totalBudget',
+  'calendarView',
 ];
 const txTypes: TxType[] = ['income', 'expense'];
 const repeats: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
@@ -257,6 +264,8 @@ function validateField(key: StateKey, value: unknown): boolean {
       return value === 'category' || value === 'total';
     case 'totalBudget':
       return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+    case 'calendarView':
+      return isCalendarView(value);
   }
 }
 

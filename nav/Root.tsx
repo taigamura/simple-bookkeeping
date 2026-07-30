@@ -433,6 +433,10 @@ function Shell({
             day={selectedDay}
             today={todayDate}
             symbol={symbol}
+            view={state.calendarView}
+            onToggleView={() =>
+              update({ calendarView: state.calendarView === 'dots' ? 'numbers' : 'dots' })
+            }
             onSelectDay={setSelectedDay}
             onEditEntry={openEdit}
             onDeleteEntry={handleDelete}
