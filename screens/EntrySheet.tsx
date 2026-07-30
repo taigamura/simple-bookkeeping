@@ -32,8 +32,7 @@ import { CategoryChips, Keypad, SegmentedToggle } from '../ui';
 import {
   useTheme,
   metrics,
-  accents,
-  shadows,
+  glowFor,
   heroAmountSize,
   mono,
   Txt,
@@ -178,7 +177,7 @@ export function EntrySheet({
     >
       <View style={styles.topRow}>
         <View style={styles.toggleWrap}>
-          {/* Active segment defaults to green + near-black (design §6). */}
+          {/* Active segment defaults to the theme accent + on-accent text. */}
           <SegmentedToggle options={TYPE_OPTIONS} value={txType} onChange={changeType} />
         </View>
         <IconButton name="x" accessibilityLabel={strings.nav.close} onPress={onClose} />
@@ -303,9 +302,9 @@ export function EntrySheet({
         accessibilityState={{ disabled: !canSave }}
         style={[
           styles.cta,
-          // Disabled = card2 fill + dim text; enabled = green + glow (design §8).
-          { backgroundColor: canSave ? accents.positive : colors.card2 },
-          canSave && shadows.ctaGlow,
+          // Disabled = card2 fill + dim text; enabled = accent + glow.
+          { backgroundColor: canSave ? colors.positive : colors.card2 },
+          canSave && glowFor(colors.positive),
         ]}
       >
         <Txt variant="listItem" tone={canSave ? 'onPositive' : 'dim'}>
@@ -382,7 +381,7 @@ const styles = StyleSheet.create({
   toggleWrap: { flex: 1 },
   amountBlock: { alignItems: 'center', gap: 6, paddingVertical: 2 },
   rowsCard: {
-    borderRadius: 14,
+    borderRadius: metrics.heroRadius,
     paddingHorizontal: 14,
   },
   row: {

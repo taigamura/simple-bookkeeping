@@ -1,7 +1,8 @@
 /**
- * SummaryScreen — a month's cash-flow at a glance (slice #5). Net card (large
- * mono net + in/out SplitBar + legend) over the ranked spending-by-category
- * bars (expenses, highest-first, scaled to the max). Reads the same store
+ * SummaryScreen — a month's cash-flow at a glance (slice #5). The net figure
+ * lives on the saturated `deep` hero block (large mono net + in/out SplitBar +
+ * legend), over the ranked spending-by-category bars (expenses, highest-first,
+ * scaled to the max). Reads the same store
  * aggregation as Calendar. With any budget set (#51) the net card gains a
  * budget-left line (same Σ budgets − expenses formula as the Calendar strip)
  * and budgeted category bars show spent / budget, red when over.
@@ -24,7 +25,7 @@ import {
 } from '../domain';
 import { strings } from '../i18n';
 import { CategoryBar, SplitBar } from '../ui';
-import { useTheme, metrics, Txt, type Tone } from '../theme';
+import { useTheme, metrics, Txt } from '../theme';
 import { IconButton } from '../nav/IconButton';
 
 interface SummaryScreenProps {
@@ -77,34 +78,38 @@ export function SummaryScreen({
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <Txt variant="microLabel" tone="dim">
+        {/* The `deep` hero block — Kippu's one saturated surface, and the only
+            place the headline number lives. Everything inside reads on-deep. */}
+        <View style={[styles.card, { backgroundColor: colors.deep }]}>
+          <Txt variant="microLabel" tone="onDeepMuted">
             {strings.summary.netThisMonth}
           </Txt>
-          <Txt variant="summaryNet" tone="positive" style={styles.net}>
+          <Txt variant="summaryNet" tone="onDeep" style={styles.net}>
             {signed(total, symbol)}
           </Txt>
 
           <SplitBar
             incomeFraction={split.incomeFraction}
             expenseFraction={split.expenseFraction}
+            onDeep
           />
 
           <View style={styles.legend}>
-            <Legend label={strings.calendar.in} value={yen(split.income, symbol)} tone="positive" />
-            <Legend label={strings.calendar.out} value={yen(split.expense, symbol)} tone="negative" />
+            <Legend label={strings.calendar.in} value={yen(split.income, symbol)} income />
+            <Legend label={strings.calendar.out} value={yen(split.expense, symbol)} />
           </View>
 
           {/* Budget-left line (#51/#66): only exists once any budget is active
               in the current mode, so the card stays unchanged until opted in.
-              Same formula and overspend formatting (signed, red, unclamped) as
-              the Calendar strip's BUDGET column. */}
+              Overspend still reads as a true negative; on the hero it is called
+              out by full-strength white rather than red, which would not hold
+              up against the deep fill. */}
           {budgetActive && (
-            <View style={[styles.budgetRow, { borderTopColor: colors.line }]}>
-              <Txt variant="secondary" tone="muted">
+            <View style={[styles.budgetRow, { borderTopColor: HERO_RULE }]}>
+              <Txt variant="secondary" tone="onDeepMuted">
                 {strings.summary.budgetLeft}
               </Txt>
-              <Txt variant="inlineAmount" tone={remaining < 0 ? 'negative' : 'ink'}>
+              <Txt variant="inlineAmount" tone={remaining < 0 ? 'onDeep' : 'onDeepMuted'}>
                 {remaining < 0 ? signed(remaining, symbol) : yen(remaining, symbol)}
               </Txt>
             </View>
@@ -136,16 +141,27 @@ export function SummaryScreen({
   );
 }
 
-function Legend({ label, value, tone }: { label: string; value: string; tone: Tone }) {
+/** Hairline on the hero block — the palette's `line` is tuned for the ground. */
+const HERO_RULE = 'rgba(255,255,255,.22)';
+
+/**
+ * One in/out key on the hero block. Income takes the solid white swatch that
+ * matches its SplitBar segment; expense takes the translucent one.
+ */
+function Legend({ label, value, income = false }: { label: string; value: string; income?: boolean }) {
   const { colors } = useTheme();
-  const dotColor = tone === 'positive' ? colors.positive : colors.negative;
   return (
     <View style={styles.legendItem}>
-      <View style={[styles.dot, { backgroundColor: dotColor }]} />
-      <Txt variant="secondary" tone="muted">
+      <View
+        style={[
+          styles.dot,
+          { backgroundColor: income ? colors.onDeep : 'rgba(255,255,255,.42)' },
+        ]}
+      />
+      <Txt variant="secondary" tone="onDeepMuted">
         {label}
       </Txt>
-      <Txt variant="inlineAmount" tone={tone}>
+      <Txt variant="inlineAmount" tone={income ? 'onDeep' : 'onDeepMuted'}>
         {value}
       </Txt>
     </View>
@@ -164,9 +180,9 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   body: { paddingBottom: 8 },
   card: {
-    borderRadius: metrics.cardRadius,
-    padding: 18,
-    gap: 12,
+    borderRadius: metrics.heroRadius,
+    padding: 20,
+    gap: 14,
     marginBottom: 24,
   },
   net: { marginTop: -2 },

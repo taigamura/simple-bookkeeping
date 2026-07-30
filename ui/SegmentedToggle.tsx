@@ -1,14 +1,14 @@
 /**
- * SegmentedToggle — a pill-shaped 2+ option switch (Expense/Income in the Entry
- * sheet, Dark/Light in Settings). Generic over the option value; the active
- * segment fills with `activeColor` (green by default) and its label flips to
+ * SegmentedToggle — a rounded 2+ option switch (Expense/Income in the Entry
+ * sheet). Generic over the option value; the active segment fills with
+ * `activeColor` (the theme accent by default) and its label flips to
  * `activeTone`.
  */
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { strings } from '../i18n';
-import { useTheme, metrics, accents, Txt, type Tone } from '../theme';
+import { useTheme, metrics, Txt, type Tone } from '../theme';
 
 export interface SegmentOption<T extends string> {
   value: T;
@@ -19,9 +19,9 @@ interface SegmentedToggleProps<T extends string> {
   options: SegmentOption<T>[];
   value: T;
   onChange: (value: T) => void;
-  /** Fill color of the active segment. Defaults to the positive green. */
+  /** Fill color of the active segment. Defaults to the theme accent. */
   activeColor?: string;
-  /** Text tone of the active label. Defaults to near-black on-green. */
+  /** Text tone of the active label. Defaults to the on-accent tone. */
   activeTone?: Tone;
 }
 
@@ -29,10 +29,11 @@ export function SegmentedToggle<T extends string>({
   options,
   value,
   onChange,
-  activeColor = accents.positive,
+  activeColor,
   activeTone = 'onPositive',
 }: SegmentedToggleProps<T>) {
   const { colors } = useTheme();
+  const fill = activeColor ?? colors.positive;
   return (
     <View style={[styles.track, { backgroundColor: colors.card2 }]}>
       {options.map((opt) => {
@@ -45,7 +46,7 @@ export function SegmentedToggle<T extends string>({
             accessibilityState={{ selected: active }}
             accessibilityLabel={opt.label}
             accessibilityValue={{ text: active ? strings.a11y.selected : strings.a11y.notSelected }}
-            style={[styles.item, active && { backgroundColor: activeColor }]}
+            style={[styles.item, active && { backgroundColor: fill }]}
           >
             <Txt variant="listItem" tone={active ? activeTone : 'muted'} style={styles.label}>
               {opt.label}
@@ -60,14 +61,14 @@ export function SegmentedToggle<T extends string>({
 const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
-    borderRadius: metrics.pill,
+    borderRadius: metrics.segRadius,
     padding: 4,
     gap: 4,
   },
   item: {
     flex: 1,
     height: 40,
-    borderRadius: metrics.pill,
+    borderRadius: metrics.segItemRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },

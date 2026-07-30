@@ -56,7 +56,9 @@ interface CalendarScreenProps {
   onSettings: () => void;
 }
 
-const netTone = (n: number): Tone => (n > 0 ? 'positive' : n < 0 ? 'negative' : 'muted');
+// Income is the only tinted figure; a negative net is plain ink rather than
+// red, which is reserved for over-budget and destructive actions.
+const netTone = (n: number): Tone => (n > 0 ? 'positive' : n < 0 ? 'ink' : 'muted');
 
 export function CalendarScreen({
   entries,
@@ -107,7 +109,7 @@ export function CalendarScreen({
 
       <View style={[styles.strip, { borderColor: colors.line }]}>
         <StripCol label={strings.calendar.in} value={yen(income(month), symbol)} tone="positive" />
-        <StripCol label={strings.calendar.out} value={yen(expense(month), symbol)} tone="negative" />
+        <StripCol label={strings.calendar.out} value={yen(expense(month), symbol)} tone="ink" />
         <StripCol
           label={strings.calendar.net}
           value={signed(monthNet(month), symbol)}

@@ -25,13 +25,15 @@ import type {
   TxType,
   WeekendShift,
 } from '../domain';
-import type { ThemeMode } from '../theme/tokens';
+import { isThemePreference, type ThemePreference } from '../theme/tokens';
 
 /** Bump when the shape changes incompatibly; `load()` falls back to defaults. */
 export const SCHEMA_VERSION = 1;
 
 export interface AppState {
-  theme: ThemeMode;
+  /** Appearance preference; `system` follows the OS. Blobs written before the
+   *  system option shipped hold 'dark'/'light' and still validate. */
+  theme: ThemePreference;
   entries: Transaction[];
   /** Infinite recurrence definitions; concrete occurrences are projected on demand. */
   recurrenceRules: RecurrenceRule[];
@@ -51,7 +53,7 @@ export interface AppState {
 }
 
 export const DEFAULT_STATE: AppState = {
-  theme: 'dark',
+  theme: 'system',
   entries: [],
   recurrenceRules: [],
   expCats: DEFAULT_EXP_CATS,
@@ -239,7 +241,7 @@ function normalizeTransaction(value: unknown): Transaction | null {
 function validateField(key: StateKey, value: unknown): boolean {
   switch (key) {
     case 'theme':
-      return value === 'dark' || value === 'light';
+      return isThemePreference(value);
     case 'entries':
       return Array.isArray(value) && value.every((item) => normalizeTransaction(item) !== null);
     case 'recurrenceRules':

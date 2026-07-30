@@ -1,8 +1,8 @@
 /**
- * IconButton — the round 34×34 nav button used across the shell (⚙ settings,
- * ‹ › month nav, ✕ close). Icons come from `@expo/vector-icons` by intent, not
- * literal Unicode (decision 6 — avoids Android tofu). Surface + icon color read
- * from the active theme so it works in both modes.
+ * IconButton — the 34×34 soft-cornered nav button used across the shell
+ * (⚙ settings, ‹ › month nav, ✕ close). Icons come from `@expo/vector-icons` by
+ * intent, not literal Unicode (decision 6 — avoids Android tofu). Surface + icon
+ * color read from the active theme so it works in both modes.
  */
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
@@ -14,7 +14,7 @@ export interface IconButtonProps {
   /** Feather glyph name (mapped from the design's intent, e.g. 'settings'). */
   name: React.ComponentProps<typeof Feather>['name'];
   onPress?: () => void;
-  /** Icon tone from the palette/accents. Defaults to muted. */
+  /** Icon tone from the palette. Defaults to muted. */
   tone?: Tone;
   /** Icon glyph size (px). The tap target stays 34×34. */
   size?: number;
@@ -39,7 +39,7 @@ export function IconButton({
       hitSlop={6}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: colors.card3, opacity: pressed ? 0.7 : 1 },
+        { backgroundColor: colors.card2, opacity: pressed ? 0.7 : 1 },
         style,
       ]}
     >
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   button: {
     width: metrics.navButton,
     height: metrics.navButton,
-    borderRadius: metrics.navButton / 2,
+    borderRadius: metrics.navButtonRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },

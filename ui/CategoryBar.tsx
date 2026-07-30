@@ -1,16 +1,16 @@
 /**
  * CategoryBar — one ranked spending row on Summary: category label + amount on
- * top, a track bar below whose green fill is scaled to the largest category
- * (`fraction`). Track = `--card`, fill = `positive` per the design (§5); the
- * amount reads muted since these are all expenses. A budgeted category (#51)
- * shows "spent / budget" instead, and both fill and amount flip to the
- * negative accent once spending exceeds the budget.
+ * top, a track bar below whose accent fill is scaled to the largest category
+ * (`fraction`). The amount reads muted since these are all expenses. A budgeted
+ * category (#51) shows "spent / budget" instead, and both fill and amount flip
+ * to the negative accent once spending exceeds the budget — one of the few
+ * places red still appears, because there it means something is wrong.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { yen, DEFAULT_CURRENCY } from '../domain';
-import { useTheme, metrics, accents, Txt } from '../theme';
+import { useTheme, metrics, Txt } from '../theme';
 
 interface CategoryBarProps {
   category: string;
@@ -43,12 +43,12 @@ export function CategoryBar({
             : yen(total, symbol)}
         </Txt>
       </View>
-      <View style={[styles.track, { backgroundColor: colors.card }]}>
+      <View style={[styles.track, { backgroundColor: colors.card3 }]}>
         <View
           style={[
             styles.fill,
             {
-              backgroundColor: overBudget ? accents.negative : accents.positive,
+              backgroundColor: overBudget ? colors.negative : colors.positive,
               width: `${Math.max(0, Math.min(1, fraction)) * 100}%`,
             },
           ]}

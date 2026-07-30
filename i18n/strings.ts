@@ -88,6 +88,7 @@ export interface Strings {
   };
   settings: {
     appearance: string;
+    system: string;
     dark: string;
     light: string;
     currency: string;
@@ -242,6 +243,7 @@ export const en: Strings = {
   },
   settings: {
     appearance: 'Appearance',
+    system: 'System',
     dark: 'Dark',
     light: 'Light',
     currency: 'Currency',
@@ -401,6 +403,7 @@ export const ja: Strings = {
   },
   settings: {
     appearance: '外観',
+    system: 'システム',
     dark: 'ダーク',
     light: 'ライト',
     currency: '通貨',

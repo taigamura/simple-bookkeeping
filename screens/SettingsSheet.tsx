@@ -36,7 +36,7 @@ import {
 } from '../domain';
 import { strings } from '../i18n';
 import { IconButton } from '../nav/IconButton';
-import { useTheme, accents, metrics, Txt, type ThemeMode } from '../theme';
+import { useTheme, metrics, Txt, type ThemePreference } from '../theme';
 
 /** Minimal shape shared by RN's `ScrollView` and gorhom's `BottomSheetScrollView`. */
 interface ScrollContainerProps {
@@ -126,12 +126,17 @@ export function SettingsSheet({
   );
 }
 
-/** Manual Dark/Light switch (decision 9 — no OS-appearance theming). */
+/**
+ * System/Light/Dark switch. `System` follows the OS appearance; the other two
+ * pin it. Selection reflects the stored *preference*, not the resolved mode —
+ * so `System` stays highlighted whichever way the OS is currently leaning.
+ */
 function Appearance() {
-  const { mode, setMode } = useTheme();
-  const MODES: { value: ThemeMode; label: string }[] = [
-    { value: 'dark', label: strings.settings.dark },
+  const { preference, setPreference } = useTheme();
+  const MODES: { value: ThemePreference; label: string }[] = [
+    { value: 'system', label: strings.settings.system },
     { value: 'light', label: strings.settings.light },
+    { value: 'dark', label: strings.settings.dark },
   ];
   return (
     <Section label={strings.settings.appearance}>
@@ -140,8 +145,8 @@ function Appearance() {
           <OptBox
             key={m.value}
             label={m.label}
-            active={mode === m.value}
-            onPress={() => setMode(m.value)}
+            active={preference === m.value}
+            onPress={() => setPreference(m.value)}
           />
         ))}
       </View>
@@ -175,9 +180,8 @@ function CurrencyGrid({
   );
 }
 
-/** Selection tile shared by Appearance & Currency: green-tint + inset green ring
- *  and green text when active, else card2 with a muted label (design §9). */
-const OPT_TINT = 'rgba(43,212,138,.15)';
+/** Selection tile shared by Appearance & Currency: accent-tinted fill + accent
+ *  ring and accent text when active, else card2 with a muted label. */
 
 function OptBox({
   label,
@@ -204,7 +208,7 @@ function OptBox({
       style={[
         styles.optBox,
         active
-          ? { backgroundColor: OPT_TINT, borderColor: accents.positive }
+          ? { backgroundColor: colors.card2, borderColor: colors.positive }
           : { backgroundColor: colors.card2, borderColor: 'transparent' },
       ]}
     >
@@ -262,7 +266,7 @@ function Categories({
                 accessibilityValue={{ text: active ? strings.a11y.selected : strings.a11y.notSelected }}
                 style={[
                   styles.miniPill,
-                  { backgroundColor: active ? accents.positive : colors.card2 },
+                  { backgroundColor: active ? colors.positive : colors.card2 },
                 ]}
               >
                 <Txt variant="microLabel" tone={active ? 'onPositive' : 'muted'}>
@@ -338,7 +342,7 @@ function Categories({
           style={[
             styles.addBtn,
             {
-              backgroundColor: accents.positive,
+              backgroundColor: colors.positive,
               opacity: draft.trim().length === 0 ? 0.4 : 1,
             },
           ]}

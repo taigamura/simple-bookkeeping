@@ -9,7 +9,9 @@ import { StyleSheet } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 
 import type { Budgets, Transaction } from '../domain';
-import { ThemeProvider, accents } from '../theme';
+import { ThemeProvider, palettes } from '../theme';
+
+const light = palettes.light;
 import { SummaryScreen } from './SummaryScreen';
 
 const tx = (over: Partial<Transaction>): Transaction => ({
@@ -87,12 +89,12 @@ describe('SummaryScreen category bar budget annotation (#51)', () => {
   it('renders the amount red when the category is over budget', () => {
     renderSummary([tx({ amount: 45000 })], { Food: 30000 });
     const amount = StyleSheet.flatten(screen.getByText('¥45,000 / ¥30,000').props.style);
-    expect(amount.color).toBe(accents.negative);
+    expect(amount.color).toBe(light.negative);
   });
 
   it('keeps the amount un-red while within budget', () => {
     renderSummary(entries, { Food: 30000 });
     const amount = StyleSheet.flatten(screen.getByText('¥12,000 / ¥30,000').props.style);
-    expect(amount.color).not.toBe(accents.negative);
+    expect(amount.color).not.toBe(light.negative);
   });
 });

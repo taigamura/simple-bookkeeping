@@ -1,9 +1,10 @@
 /**
  * ListRow — one entry in the day list. A 2-letter `code` tile, the category as
  * the row title with the note and creation time beneath it, and the signed
- * amount tinted by direction (income green, expense red). Rows share one
- * rounded card in the parent; a hairline divider sits above every row except the
- * first (`first` prop), so there is no rule above the first or below the last.
+ * amount: income in the accent blue, expense in plain ink so a day of spending
+ * stays calm. Rows share one rounded card in the parent; a hairline divider sits
+ * above every row except the first (`first` prop), so there is no rule above the
+ * first or below the last.
  */
 import React, { useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -17,7 +18,7 @@ import {
   type Transaction,
 } from '../domain';
 import { strings } from '../i18n';
-import { useTheme, metrics, mono, accents, Txt } from '../theme';
+import { useTheme, metrics, mono, Txt } from '../theme';
 
 interface ListRowProps {
   entry: Transaction;
@@ -53,7 +54,7 @@ export function ListRow({
 
   const content = (
     <>
-      <View style={[styles.tile, { backgroundColor: colors.card3 }]}>
+      <View style={[styles.tile, { backgroundColor: colors.card2 }]}>
         <Txt variant="microLabel" tone="muted">
           {code(entry.category)}
         </Txt>
@@ -80,7 +81,7 @@ export function ListRow({
 
       <Txt
         variant="inlineAmount"
-        tone={entry.type === 'income' ? 'positive' : 'negative'}
+        tone={entry.type === 'income' ? 'positive' : 'ink'}
         numberOfLines={1}
         style={styles.amount}
       >
@@ -132,9 +133,9 @@ export function ListRow({
           }}
           accessibilityRole="button"
           accessibilityLabel={strings.entry.deleteFromList(entry.category)}
-          style={styles.deleteAction}
+          style={[styles.deleteAction, { backgroundColor: colors.negative }]}
         >
-          <Txt variant="listItem" style={{ color: accents.onPositive }}>
+          <Txt variant="listItem" tone="onNegative">
             {strings.common.delete}
           </Txt>
         </Pressable>
@@ -175,6 +176,5 @@ const styles = StyleSheet.create({
     width: 88,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: accents.negative,
   },
 });

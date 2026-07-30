@@ -1,6 +1,6 @@
 /**
  * TabBar — the custom bottom bar (decision 3). Two tabs (Calendar · Summary)
- * flanking a raised center green ＋ FAB that opens the Entry sheet. No
+ * flanking a raised center accent ＋ FAB that opens the Entry sheet. No
  * react-navigation: it just reflects/sets the root's `tab` and fires `onAdd`.
  * Tabs use Feather calendar + bar-chart; the FAB uses plus (decision 6).
  */
@@ -10,7 +10,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { strings } from '../i18n';
-import { useTheme, metrics, accents, shadows, Txt } from '../theme';
+import { useTheme, metrics, glowFor, Txt } from '../theme';
 import type { Tab } from './types';
 
 interface TabBarProps {
@@ -56,11 +56,11 @@ export function TabBar({ tab, onSelect, onAdd }: TabBarProps) {
         accessibilityLabel={strings.nav.addEntry}
         style={({ pressed }) => [
           styles.fab,
-          shadows.fabGlow,
-          { backgroundColor: accents.positive, opacity: pressed ? 0.85 : 1 },
+          glowFor(colors.positive),
+          { backgroundColor: colors.positive, opacity: pressed ? 0.85 : 1 },
         ]}
       >
-        <Feather name="plus" size={26} color={accents.onPositive} />
+        <Feather name="plus" size={26} color={colors.onPositive} />
       </Pressable>
 
       <TabButton def={TABS[1]} active={tab === 'summary'} onPress={onSelect} />
@@ -110,9 +110,9 @@ const styles = StyleSheet.create({
   },
   tabLabel: { marginTop: 1 },
   fab: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: metrics.fabSize,
+    height: metrics.fabSize,
+    borderRadius: metrics.fabRadius,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: -16,

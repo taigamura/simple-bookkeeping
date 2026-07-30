@@ -1,20 +1,16 @@
 /**
  * DayCell — one day in the month grid. Shows the day number (mono) and, when
- * non-zero, that day's signed net in the tiny mono style, tinted green/red.
- * Non-selected cells are transparent — only the selected day is a solid green
- * tile with a near-black number, and its total renders in translucent near-black
- * (the shared selection accent, decision colors). Empty days read as just the
- * number.
+ * non-zero, that day's signed net in the tiny mono style: income in the accent
+ * blue, expense in plain ink so a month of spending reads as one calm surface
+ * rather than a wall of red. Non-selected cells sit on the card fill; the
+ * selected day is a solid accent tile. Empty days read as just the number.
  */
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { signed } from '../domain';
 import { strings } from '../i18n';
-import { metrics, accents, Txt } from '../theme';
-
-/** Selected-day total: translucent near-black over the green tile (design §1). */
-const SELECTED_TOTAL = 'rgba(11,14,18,.7)';
+import { useTheme, metrics, Txt } from '../theme';
 
 interface DayCellProps {
   day: number;
@@ -27,8 +23,10 @@ interface DayCellProps {
 }
 
 export function DayCell({ day, net, selected, today = false, onPress }: DayCellProps) {
+  const { colors } = useTheme();
   const hasNet = net !== 0;
-  const netTone = net > 0 ? 'positive' : 'negative';
+  // Income is the only tinted total; expense stays ink (see file header).
+  const netTone = net > 0 ? 'positive' : 'ink';
   const netText = signed(net, '');
 
   return (
@@ -42,8 +40,8 @@ export function DayCell({ day, net, selected, today = false, onPress }: DayCellP
       }
       style={[
         styles.cell,
-        { backgroundColor: selected ? accents.positive : 'transparent' },
-        today && styles.today,
+        { backgroundColor: selected ? colors.positive : colors.card },
+        today && !selected && { borderWidth: 1.5, borderColor: colors.positive },
       ]}
     >
       <Txt variant="calendarDay" tone={selected ? 'onPositive' : 'ink'}>
@@ -53,7 +51,7 @@ export function DayCell({ day, net, selected, today = false, onPress }: DayCellP
         <Txt
           variant="calendarDayTotal"
           tone={selected ? 'onPositive' : netTone}
-          style={selected ? { color: SELECTED_TOTAL } : undefined}
+          style={selected ? styles.selectedTotal : undefined}
           numberOfLines={1}
         >
           {/* compact signed net, no currency symbol, to fit the cell */}
@@ -73,8 +71,6 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingHorizontal: 2,
   },
-  today: {
-    borderWidth: 1.5,
-    borderColor: accents.positive,
-  },
+  /** Slightly recessive against the accent tile so the day number leads. */
+  selectedTotal: { opacity: 0.75 },
 });

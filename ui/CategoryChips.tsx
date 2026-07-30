@@ -1,13 +1,13 @@
 /**
- * CategoryChips — the horizontally-scrolling pill row in the Entry sheet. The
- * selected chip fills green with near-black text (the shared selection accent);
- * the rest are muted pills. Presentational: parent owns the selection.
+ * CategoryChips — the horizontally-scrolling chip row in the Entry sheet. The
+ * selected chip fills with the accent; the rest are soft card2 fills with muted
+ * labels. Presentational: parent owns the selection.
  */
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { strings } from '../i18n';
-import { useTheme, metrics, accents, Txt } from '../theme';
+import { useTheme, metrics, Txt } from '../theme';
 
 interface CategoryChipsProps {
   categories: string[];
@@ -34,7 +34,7 @@ export function CategoryChips({ categories, selected, onSelect }: CategoryChipsP
             accessibilityValue={{ text: active ? strings.a11y.selected : strings.a11y.notSelected }}
             style={[
               styles.chip,
-              { backgroundColor: active ? accents.positive : colors.card2 },
+              { backgroundColor: active ? colors.positive : colors.card2 },
             ]}
           >
             <Txt variant="listItem" tone={active ? 'onPositive' : 'muted'}>
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 16,
     height: 38,
-    borderRadius: metrics.pill,
+    borderRadius: metrics.chipRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },

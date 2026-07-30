@@ -1,15 +1,17 @@
 /**
  * DayCell render test (slice #4 acceptance criterion): the cell shows its day
  * number and signed net, hides the amount when the net is zero, and renders as a
- * solid green cell when selected. Selection color is asserted from the flattened
- * Pressable style.
+ * solid accent cell when selected. Colors are asserted from the flattened
+ * Pressable style against the light palette, which is what ThemeProvider
+ * resolves to under jest.
  */
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 
-import { accents } from '../theme';
-import { ThemeProvider } from '../theme';
+import { ThemeProvider, palettes } from '../theme';
+
+const light = palettes.light;
 import { DayCell } from './DayCell';
 
 const renderCell = (props: Partial<React.ComponentProps<typeof DayCell>> = {}) =>
@@ -53,28 +55,43 @@ describe('DayCell', () => {
     expect(screen.queryByText('0')).toBeNull(); // only the day number "6" shows
   });
 
-  it('renders a solid green cell when selected', () => {
+  it('renders a solid accent cell when selected', () => {
     renderCell({ day: 7, selected: true });
-    expect(cellBg(7)).toBe(accents.positive);
+    expect(cellBg(7)).toBe(light.positive);
   });
 
-  it('is transparent when unselected (design §1)', () => {
+  it('sits on the card fill when unselected', () => {
     renderCell({ day: 8, selected: false });
-    expect(cellBg(8)).toBe('transparent');
+    expect(cellBg(8)).toBe(light.card);
   });
 
-  it('keeps today visible with a green outline when another day is selected', () => {
+  it('keeps today visible with an accent outline when another day is selected', () => {
     renderCell({ day: 8, selected: false, today: true });
     const flat = StyleSheet.flatten(screen.getByLabelText('Day 8').props.style);
-    expect(flat.borderColor).toBe(accents.positive);
+    expect(flat.borderColor).toBe(light.positive);
     expect(flat.borderWidth).toBeGreaterThan(0);
-    expect(flat.backgroundColor).toBe('transparent');
+    expect(flat.backgroundColor).toBe(light.card);
   });
 
-  it('renders the selected-day total in translucent near-black (design §1)', () => {
+  it('drops the outline once today is itself the selected day', () => {
+    renderCell({ day: 9, selected: true, today: true });
+    const flat = StyleSheet.flatten(screen.getByLabelText('Day 9').props.style);
+    expect(flat.backgroundColor).toBe(light.positive);
+    expect(flat.borderWidth).toBeUndefined();
+  });
+
+  it('renders the selected-day total in the recessive on-accent tone', () => {
     renderCell({ day: 10, net: 1200, selected: true });
     const total = StyleSheet.flatten(screen.getByText('+1,200').props.style);
-    expect(total.color).toBe('rgba(11,14,18,.7)');
+    expect(total.color).toBe(light.onPositive);
+    expect(total.opacity).toBe(0.75);
+  });
+
+  it('renders an expense total in ink rather than red', () => {
+    renderCell({ day: 11, net: -850 });
+    const total = StyleSheet.flatten(screen.getByText('−850').props.style);
+    expect(total.color).toBe(light.ink);
+    expect(total.color).not.toBe(light.negative);
   });
 
   it('reports the tapped day', () => {

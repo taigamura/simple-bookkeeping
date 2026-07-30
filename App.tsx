@@ -65,8 +65,8 @@ export default function App() {
     // it fills, letting the web phone-frame still size the app below it.
     <GestureHandlerRootView style={styles.root}>
       <ThemeProvider
-        initialMode={state.theme}
-        onModeChange={(mode) => update({ theme: mode })}
+        initialPreference={state.theme}
+        onPreferenceChange={(theme) => update({ theme })}
       >
         <StatusBar style="auto" />
         <Root
