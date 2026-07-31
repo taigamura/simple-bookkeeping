@@ -81,6 +81,9 @@ export interface Strings {
     addIncome: string;
     save: string;
     saveThisAndFuture: string;
+    saveOnlyThis: string;
+    saveRecurringTitle: string;
+    saveRecurringMessage: string;
     editEntry: (name: string) => string;
     deleteFromList: (name: string) => string;
     deleteEntry: string;
@@ -96,6 +99,10 @@ export interface Strings {
     system: string;
     dark: string;
     light: string;
+    /** Motion section: whether the app animates. `system` reuses `system` above. */
+    motion: string;
+    motionFull: string;
+    motionReduced: string;
     currency: string;
     categories: string;
     addCategory: string;
@@ -239,6 +246,9 @@ export const en: Strings = {
     addIncome: 'Add income',
     save: 'Save',
     saveThisAndFuture: 'Save this and future',
+    saveOnlyThis: 'Save only this',
+    saveRecurringTitle: 'Save repeating entry?',
+    saveRecurringMessage: 'Choose whether to save only this occurrence or this and all future repeats.',
     editEntry: (name) => `Edit ${name}`,
     deleteFromList: (name) => `Delete ${name}`,
     deleteEntry: 'Delete entry',
@@ -254,6 +264,9 @@ export const en: Strings = {
     system: 'System',
     dark: 'Dark',
     light: 'Light',
+    motion: 'Motion',
+    motionFull: 'Full',
+    motionReduced: 'Reduced',
     currency: 'Currency',
     categories: 'Categories',
     addCategory: 'Add category',
@@ -402,6 +415,9 @@ export const ja: Strings = {
     addIncome: '収入を追加',
     save: '保存',
     saveThisAndFuture: 'これ以降を保存',
+    saveOnlyThis: 'この回だけ保存',
+    saveRecurringTitle: '繰り返しの記録を保存しますか？',
+    saveRecurringMessage: 'この回だけ、またはこの回以降のすべてに保存できます。',
     editEntry: (name) => `${name}を編集`,
     deleteFromList: (name) => `${name}を削除`,
     deleteEntry: '記録を削除',
@@ -417,6 +433,9 @@ export const ja: Strings = {
     system: 'システム',
     dark: 'ダーク',
     light: 'ライト',
+    motion: 'アニメーション',
+    motionFull: '標準',
+    motionReduced: '控えめ',
     currency: '通貨',
     categories: 'カテゴリ',
     addCategory: 'カテゴリを追加',

@@ -80,12 +80,38 @@ const SHEET_HANDLE_HEIGHT = 40;
 const SHEET_CONTENT_TOP_PADDING = 4;
 const SHEET_CONTENT_BOTTOM_PADDING = 28;
 
+/**
+ * Everything the sheet itself consumes between the top of its container and the
+ * bottom of its content box: the dimmed strip left above the sheet, the drag
+ * handle, and the content view's own padding.
+ *
+ * Exported so fixed-form content (the Entry sheet) can work out how much room
+ * it will actually be given and size itself to fit, rather than each side
+ * keeping its own copy of these numbers and drifting apart. Pure arithmetic on
+ * the constants above — no behaviour here changes.
+ */
+export const SHEET_CHROME =
+  SHEET_TOP_STRIP +
+  SHEET_HANDLE_HEIGHT +
+  SHEET_CONTENT_TOP_PADDING +
+  SHEET_CONTENT_BOTTOM_PADDING;
+
+/**
+ * How long the open/close slide takes (ms) — see the "Snappy open/close"
+ * comment below for why it's short. Exported so a caller that needs to
+ * sequence something with the sheet's own animation (e.g. Root's save-landing
+ * pulse, which should land once the sheet has actually cleared the screen
+ * rather than racing its dismiss) can read the real number instead of
+ * hardcoding a second copy that would drift out of step with this one.
+ */
+export const SHEET_ANIMATION_DURATION = 200;
+
 // The web AppShell (nav/AppShell.tsx) centers the app in a phone frame inset by
 // 24px backdrop padding + a 1px border on every side; the sheet's gorhom
 // container is that frame, not the whole window. Native has no such frame — the
 // container is the window minus the top safe-area inset (the TabBar owns the
 // bottom edge). Keep this in sync with AppShell's `webBackdrop` padding.
-const WEB_FRAME_INSET = 2 * (24 + 1);
+export const WEB_FRAME_INSET = 2 * (24 + 1);
 
 // accessibilityLabel we pin on gorhom's full-screen sheet-content container so
 // the web CSS below can target it (gorhom's default label is "Bottom Sheet").
@@ -226,7 +252,9 @@ export function BottomSheet({
   // not pass through on react-native-web) sits over the FAB/gear and eats an
   // immediate reopen/swap tap — the last piece of the "sheets never reopen" bug
   // (#63). The phase machine then re-presents once that tap lands.
-  const animationConfigs = useBottomSheetTimingConfigs({ duration: 200 });
+  const animationConfigs = useBottomSheetTimingConfigs({
+    duration: SHEET_ANIMATION_DURATION,
+  });
 
   // Always-current mirror of `visible` for the async onDismiss handler, which
   // fires from a stale render closure and so cannot read `visible` directly.

@@ -27,6 +27,7 @@ import type {
   TxType,
   WeekendShift,
 } from '../domain';
+import { isMotionPreference, type MotionPreference } from '../theme/motion';
 import { isThemePreference, type ThemePreference } from '../theme/tokens';
 
 /** Bump when the shape changes incompatibly; `load()` falls back to defaults. */
@@ -55,6 +56,9 @@ export interface AppState {
   /** Day-cell variant for the month grid; the calendar header toggles it.
    *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
   calendarView: CalendarView;
+  /** Motion preference; `system` follows the OS reduce-motion setting.
+   *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
+  motion: MotionPreference;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -68,6 +72,7 @@ export const DEFAULT_STATE: AppState = {
   budgetMode: 'category',
   totalBudget: 0,
   calendarView: 'dots',
+  motion: 'system',
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */
@@ -86,6 +91,7 @@ const additiveStateKeys: StateKey[] = [
   'budgetMode',
   'totalBudget',
   'calendarView',
+  'motion',
 ];
 const txTypes: TxType[] = ['income', 'expense'];
 const repeats: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
@@ -266,6 +272,8 @@ function validateField(key: StateKey, value: unknown): boolean {
       return typeof value === 'number' && Number.isFinite(value) && value >= 0;
     case 'calendarView':
       return isCalendarView(value);
+    case 'motion':
+      return isMotionPreference(value);
   }
 }
 

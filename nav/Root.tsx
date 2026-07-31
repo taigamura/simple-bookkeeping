@@ -10,8 +10,16 @@
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Platform, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  Platform,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import {
   activeRecurrences,
@@ -44,9 +52,9 @@ import { RepeatsSheet } from '../screens/RepeatsSheet';
 import { SettingsSheet } from '../screens/SettingsSheet';
 import { SummaryScreen } from '../screens/SummaryScreen';
 import type { AppState, UseStore } from '../store';
-import { metrics } from '../theme';
+import { easings, metrics, useMotion, withAppTiming } from '../theme';
 import { AppShell } from './AppShell';
-import { BottomSheet } from './BottomSheet';
+import { BottomSheet, SHEET_ANIMATION_DURATION } from './BottomSheet';
 import { TabBar } from './TabBar';
 import type { Sheet, Tab } from './types';
 
@@ -121,6 +129,90 @@ function chooseRecurringDelete(onOne: () => void, onFuture: () => void) {
   ]);
 }
 
+/**
+ * Same shape as `chooseRecurringDelete` — asked only when saving edits to a
+ * still-repeating occurrence, where "just this one" and "this and future" are
+ * both coherent readings of what the user typed (see `handleSubmit`'s call
+ * site for the exact trigger condition). Not destructive, so unlike delete's
+ * red buttons these use the default style.
+ */
+function chooseRecurringSave(onOne: () => void, onFuture: () => void) {
+  const { entry } = strings;
+  if (Platform.OS === 'web') {
+    if (window.confirm(`${entry.saveRecurringTitle}\n${entry.saveThisAndFuture}?`)) {
+      onFuture();
+    } else if (window.confirm(`${entry.saveRecurringTitle}\n${entry.saveOnlyThis}?`)) {
+      onOne();
+    }
+    return;
+  }
+  Alert.alert(entry.saveRecurringTitle, entry.saveRecurringMessage, [
+    { text: strings.common.cancel, style: 'cancel' },
+    { text: entry.saveOnlyThis, style: 'default', onPress: onOne },
+    { text: entry.saveThisAndFuture, style: 'default', onPress: onFuture },
+  ]);
+}
+
+// How far the incoming tab body travels (px) and how long that takes (ms).
+// Originally this used reanimated's built-in `FadeInLeft`/`FadeInRight`
+// (`.duration(durations.base)`), which on web renders as a fixed 25px CSS
+// keyframe — not adjustable independent of duration. Measured directly
+// (sampling computed transform/opacity every animation frame, not just
+// screenshots): it peaked at only ~17% of the screen changing and was fully
+// settled by ~160ms, which reads as a flicker rather than a slide on a
+// mostly-static frame (tab bar and background never move). This is a
+// hand-rolled replacement — the same useSharedValue/useAnimatedStyle pattern
+// CalendarScreen's title block already proves out — so the distance is a
+// number we control. 36px rather than the title's 12px: this swaps the whole
+// screen, a bigger event than a label changing, and needs more travel to
+// register against that much more static chrome around it. The duration is a
+// touch longer than `durations.base` for the same reason.
+const TAB_TRAVEL = 36;
+const TAB_TRANSITION_DURATION = 280;
+
+/**
+ * Wraps the active tab's screen and slides it in from the direction the user
+ * moved along the bar. Mounted fresh per tab (the parent keys it on `tab`), so
+ * the entrance is a plain mount-effect rather than reanimated's `entering`
+ * animation-builder machinery — nothing here needs to interrupt or reverse.
+ */
+function TabTransition({
+  forward,
+  style,
+  children,
+}: {
+  forward: boolean;
+  style: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+}) {
+  const { enabled } = useMotion();
+  const translateX = useSharedValue(enabled ? (forward ? TAB_TRAVEL : -TAB_TRAVEL) : 0);
+  const opacity = useSharedValue(enabled ? 0 : 1);
+
+  useEffect(() => {
+    if (!enabled) return;
+    translateX.value = withAppTiming(0, {
+      duration: TAB_TRANSITION_DURATION,
+      easing: easings.standard,
+    });
+    opacity.value = withAppTiming(1, {
+      duration: TAB_TRANSITION_DURATION,
+      easing: easings.standard,
+    });
+    // Runs once, on this mount — the parent already remounts this component
+    // per tab switch (`key={tab}`), so there is no second "which tab" input to
+    // react to here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  return <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>;
+}
+
 export function Root(props: RootProps) {
   return (
     <AppShell>
@@ -139,6 +231,30 @@ function Shell({
 }: RootProps) {
   const [tab, setTab] = useState<Tab>('calendar');
   const [sheet, setSheet] = useState<Sheet>(null);
+  const { enabled: motionEnabled } = useMotion();
+  // Which day just received a saved entry, and a bump counter so two saves onto
+  // the *same* day still each play the landing pulse. The Calendar screen
+  // forwards this to the matching day cell; nothing else reads it.
+  const [savedPulse, setSavedPulse] = useState<{ day: number; nonce: number }>({
+    day: 0,
+    nonce: 0,
+  });
+  // Fires the pulse after the sheet's own dismiss animation clears the screen
+  // (see `handleSubmit`) rather than the instant a save happens. Dropped on
+  // unmount so a save right before navigating away can't set state on a torn
+  // down tree.
+  const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (pulseTimer.current !== null) clearTimeout(pulseTimer.current);
+    },
+    [],
+  );
+  // Tab order, so a switch can animate in the direction the user travelled
+  // along the bar rather than always arriving from the same side.
+  const previousTab = useRef<Tab>(tab);
+  const forward = tab === 'summary' && previousTab.current === 'calendar';
+  previousTab.current = tab;
   // Which entry the Entry sheet is editing (#43); null = create mode.
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [entryContentHeight, setEntryContentHeight] = useState(0);
@@ -326,46 +442,107 @@ function Shell({
   const goMonth = (delta: number) => setMonth(shiftMonth(cursor, delta));
 
   // handleSubmit(): persist a one-time entry or recurrence rule. Editing a
-  // projected occurrence splits its rule so past history remains unchanged.
+  // projected occurrence splits its rule so past history remains unchanged —
+  // `commit` does the actual persistence once a scope is settled; the check
+  // below decides whether that scope needs asking for at all.
   const handleSubmit = (draft: EntryDraft, weekendShift: WeekendShift) => {
-    const next = saveLedgerItem(ledger, draft, weekendShift, editing ?? undefined);
-    if (next === ledger) return;
-    entrySaved();
-    update({
-      ...next,
-      ...(draft.type === 'expense'
-        ? { expCats: promoteCategory(state.expCats, draft.category) }
-        : { incCats: promoteCategory(state.incCats, draft.category) }),
-    });
-    if (sheet === 'repeat-entry') {
-      setSheet('repeats');
+    const commit = (scope: 'one' | 'future') => {
+      const next = saveLedgerItem(ledger, draft, weekendShift, editing ?? undefined, scope);
+      if (next === ledger) return;
+      entrySaved();
+      update({
+        ...next,
+        ...(draft.type === 'expense'
+          ? { expCats: promoteCategory(state.expCats, draft.category) }
+          : { incCats: promoteCategory(state.incCats, draft.category) }),
+      });
+      if (sheet === 'repeat-entry') {
+        setSheet('repeats');
+        return;
+      }
+      let landing = { y: draft.y, m: draft.m, day: draft.day };
+      // A `scope: 'one'` save doesn't necessarily land on `draft`'s own date:
+      // the domain layer redirects an untouched date field from the rule's
+      // raw scheduled anchor to the occurrence's weekend-shifted *displayed*
+      // date instead (see `saveLedgerItem`'s "dateFieldUntouched" comment) —
+      // otherwise a Saturday-anchored occurrence edited without touching the
+      // date would silently save under the Saturday, while the user found
+      // and opened it on the Monday it actually displays on. Reading the
+      // landing date back off the entry that was actually inserted, rather
+      // than recomputing that redirect a second time here, is what keeps the
+      // two from being able to drift out of sync with each other.
+      if (scope === 'one') {
+        const created = next.entries.find(
+          (candidate) => !ledger.entries.some((old) => old.id === candidate.id),
+        );
+        if (created) landing = { y: created.y, m: created.m, day: created.day };
+      } else if (draft.repeat && draft.repeat !== 'never') {
+        const newRules = next.recurrenceRules.filter(
+          (rule) => !state.recurrenceRules.some((old) => old.id === rule.id),
+        );
+        const created = [-1, 0, 1]
+          .flatMap((offset) =>
+            entriesForMonth(next, shiftMonth({ y: draft.y, m: draft.m }, offset)),
+          )
+          .find((entry) => {
+            if (!entry.occurrence) return false;
+            const rule = newRules.find((candidate) => candidate.id === entry.occurrence!.ruleId);
+            return (
+              rule !== undefined &&
+              entry.occurrence.scheduled.y === rule.start.y &&
+              entry.occurrence.scheduled.m === rule.start.m &&
+              entry.occurrence.scheduled.day === rule.start.day
+            );
+          });
+        if (created) landing = { y: created.y, m: created.m, day: created.day };
+      }
+      setCursor({ y: landing.y, m: landing.m });
+      setSelectedDay(landing.day);
+      setTab('calendar');
+      closeSheet();
+
+      // Mark the destination so the Calendar plays a landing pulse on that cell.
+      // This is the second half of the save gesture: the Entry sheet's bloom says
+      // "saved", and this says *where*. Fired for edits too — an edited entry can
+      // move to a different day, and the pulse is how the user finds it again.
+      //
+      // Deliberately deferred to land once the sheet has actually cleared the
+      // screen, not the instant the save happens: firing immediately (as this
+      // used to) raced the sheet's own `SHEET_ANIMATION_DURATION` dismiss, so the
+      // pulse played out on the day cell while the closing sheet was still
+      // covering it — verified directly by sampling the cell's computed style on
+      // every animation frame, which showed the pulse essentially finished before
+      // the sheet had slid away. Motion-off skips the wait: `DayCell` no-ops the
+      // pulse either way, so there is nothing to time against.
+      const fireLandingPulse = () =>
+        setSavedPulse((prev) => ({ day: landing.day, nonce: prev.nonce + 1 }));
+      if (motionEnabled) {
+        if (pulseTimer.current !== null) clearTimeout(pulseTimer.current);
+        pulseTimer.current = setTimeout(() => {
+          pulseTimer.current = null;
+          fireLandingPulse();
+        }, SHEET_ANIMATION_DURATION);
+      } else {
+        fireLandingPulse();
+      }
+    };
+
+    // Editing a specific occurrence of a still-repeating series is ambiguous
+    // — should the new values apply just here, or from here on? Ask, the same
+    // way `handleDelete` asks via `chooseRecurringDelete`. Not asked when:
+    // repeat-entry management (Settings → Repeats edits the series itself —
+    // "just this once" doesn't fit there, matching how that same screen's
+    // delete is a plain "Stop repeat" with no scope choice either); or the
+    // edit sets Repeat to Never, since ending a series has no "just this
+    // occurrence" reading — it can only mean "and future".
+    if (sheet !== 'repeat-entry' && editing?.occurrence && draft.repeat && draft.repeat !== 'never') {
+      chooseRecurringSave(
+        () => commit('one'),
+        () => commit('future'),
+      );
       return;
     }
-    let landing = { y: draft.y, m: draft.m, day: draft.day };
-    if (draft.repeat && draft.repeat !== 'never') {
-      const newRules = next.recurrenceRules.filter(
-        (rule) => !state.recurrenceRules.some((old) => old.id === rule.id),
-      );
-      const created = [-1, 0, 1]
-        .flatMap((offset) =>
-          entriesForMonth(next, shiftMonth({ y: draft.y, m: draft.m }, offset)),
-        )
-        .find((entry) => {
-          if (!entry.occurrence) return false;
-          const rule = newRules.find((candidate) => candidate.id === entry.occurrence!.ruleId);
-          return (
-            rule !== undefined &&
-            entry.occurrence.scheduled.y === rule.start.y &&
-            entry.occurrence.scheduled.m === rule.start.m &&
-            entry.occurrence.scheduled.day === rule.start.day
-          );
-        });
-      if (created) landing = { y: created.y, m: created.m, day: created.day };
-    }
-    setCursor({ y: landing.y, m: landing.m });
-    setSelectedDay(landing.day);
-    setTab('calendar');
-    closeSheet();
+    commit('future');
   };
 
   // handleDelete(): one-time entries use the existing destructive confirm;
@@ -421,7 +598,16 @@ function Shell({
 
   return (
     <View style={styles.flex}>
-      <View style={styles.body}>
+      {/* Keyed on `tab` so switching tabs remounts the body and replays the
+          entrance. Only the active screen is ever mounted — a true cross-fade
+          would hold both the month grid and the Summary aggregation live for
+          the length of the transition, which is real work on a low-end phone
+          for a quarter-second of overlap nobody asked for. The incoming screen
+          drifts in from the side of the bar the user moved toward, so the
+          direction of travel is legible even though the outgoing screen is
+          simply gone. See `TabTransition` for why this is hand-rolled rather
+          than reanimated's `entering` presets. */}
+      <TabTransition key={tab} forward={forward} style={styles.body}>
         {tab === 'calendar' ? (
           <CalendarScreen
             entries={visibleEntries}
@@ -444,6 +630,8 @@ function Shell({
             onNextMonth={() => goMonth(1)}
             onMonthChange={setMonth}
             onSettings={openSettings}
+            pulseDay={savedPulse.day}
+            pulseNonce={savedPulse.nonce}
           />
         ) : (
           <SummaryScreen
@@ -457,7 +645,7 @@ function Shell({
             onSettings={openSettings}
           />
         )}
-      </View>
+      </TabTransition>
 
       <TabBar tab={tab} onSelect={setTab} onAdd={openEntry} />
 
@@ -487,6 +675,7 @@ function Shell({
             onDelete={handleDelete}
             onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
             onContentHeightChange={setEntryContentHeight}
+            ScrollContainer={BottomSheetScrollView}
           />
         )}
         {sheet === 'settings' && (

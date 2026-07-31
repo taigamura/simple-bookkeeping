@@ -3,12 +3,21 @@
  * (⚙ settings, ‹ › month nav, ✕ close). Icons come from `@expo/vector-icons` by
  * intent, not literal Unicode (decision 6 — avoids Android tofu). Surface + icon
  * color read from the active theme so it works in both modes.
+ *
+ * Built on `PressScale` (`control` — it is one of the small square targets
+ * that scale factor exists for) rather than a bare `Pressable`, for the same
+ * reason as the keypad: this is the button behind month-nav chevrons, which
+ * get tapped repeatedly in a row, and a scale-in reads as "received" faster
+ * than the opacity dip alone did. The opacity dip stays on top of the scale —
+ * it was already carrying the disabled-adjacent "acknowledged" cue and there
+ * is no reason to replace a working signal, only to add a physical one.
  */
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme, metrics, type Tone } from '../theme';
+import { PressScale } from '../ui';
 
 export interface IconButtonProps {
   /** Feather glyph name (mapped from the design's intent, e.g. 'settings'). */
@@ -32,7 +41,8 @@ export function IconButton({
 }: IconButtonProps) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <PressScale
+      scale="control"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
@@ -44,7 +54,7 @@ export function IconButton({
       ]}
     >
       <Feather name={name} size={size} color={colors[tone]} />
-    </Pressable>
+    </PressScale>
   );
 }
 

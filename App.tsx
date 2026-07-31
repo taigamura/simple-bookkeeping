@@ -6,7 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Root } from './nav';
 import { useStore } from './store';
-import { ThemeProvider } from './theme';
+import { MotionProvider, ThemeProvider } from './theme';
 import { useAppFonts } from './theme/useAppFonts';
 import { SummaryGrowthPrototype } from './screens/SummaryGrowthPrototype';
 
@@ -68,15 +68,22 @@ export default function App() {
         initialPreference={state.theme}
         onPreferenceChange={(theme) => update({ theme })}
       >
-        <StatusBar style="auto" />
-        <Root
-          state={state}
-          update={update}
-          showCorruptNotice={showCorruptNotice}
-          hasCorruptStash={hasCorruptStash}
-          readCorruptStash={readCorruptStash}
-          persistenceNotice={persistenceNotice}
-        />
+        {/* Inside ThemeProvider so a motion-aware component can read both from
+            one render pass; the two are otherwise independent. */}
+        <MotionProvider
+          initialPreference={state.motion}
+          onPreferenceChange={(motion) => update({ motion })}
+        >
+          <StatusBar style="auto" />
+          <Root
+            state={state}
+            update={update}
+            showCorruptNotice={showCorruptNotice}
+            hasCorruptStash={hasCorruptStash}
+            readCorruptStash={readCorruptStash}
+            persistenceNotice={persistenceNotice}
+          />
+        </MotionProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

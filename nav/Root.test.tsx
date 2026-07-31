@@ -641,7 +641,10 @@ describe('Root sheet state management (#60)', () => {
 
     fireEvent.press(screen.getByLabelText(strings.entry.editEntry('Food')));
     expect(screen.getByLabelText('↻ Repeat: Every month')).toBeTruthy();
-    expect(screen.getByLabelText(strings.entry.saveThisAndFuture)).toBeTruthy();
+    // A projected occurrence's CTA reads plain "Save" now — the this-vs-future
+    // choice moved to a follow-up prompt on press (see "offers both save
+    // scopes..." below), the same place delete's choice already lived.
+    expect(screen.getByLabelText(strings.entry.save)).toBeTruthy();
     fireEvent.press(screen.getByLabelText(strings.entry.deleteEntry));
 
     expect(alert).toHaveBeenCalledWith(
@@ -657,6 +660,159 @@ describe('Root sheet state management (#60)', () => {
     ]);
     await act(async () => buttons[1].onPress?.());
     expect(update.mock.calls[0][0].recurrenceRules[0].exceptions).toHaveLength(1);
+    alert.mockRestore();
+  });
+
+  it('offers both save scopes for a projected recurring occurrence, and applies "only this"', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const update = jest.fn();
+    const now = new Date();
+    const draft: EntryDraft = {
+      type: 'expense',
+      amountStr: '850',
+      category: 'Food',
+      note: 'Lunch',
+      y: now.getFullYear(),
+      m: now.getMonth(),
+      day: now.getDate(),
+      repeat: 'monthly',
+    };
+    const ledger = saveLedgerItem({ entries: [], recurrenceRules: [] }, draft, 'off');
+    render(
+      <ThemeProvider>
+        <Root
+          state={{ ...DEFAULT_STATE, ...ledger }}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText(strings.entry.editEntry('Food')));
+    // The CTA is a plain "Save" for an occurrence edit — the choice below is
+    // what actually decides scope, not the button label (see EntrySheet).
+    fireEvent.changeText(
+      screen.getByLabelText(`${strings.entry.noteRowLabel}`),
+      'Lunch out',
+    );
+    fireEvent.press(screen.getByLabelText(strings.entry.save));
+
+    expect(alert).toHaveBeenCalledWith(
+      strings.entry.saveRecurringTitle,
+      strings.entry.saveRecurringMessage,
+      expect.any(Array),
+    );
+    const buttons = alert.mock.calls[0][2]!;
+    expect(buttons.map((button) => button.text)).toEqual([
+      strings.common.cancel,
+      strings.entry.saveOnlyThis,
+      strings.entry.saveThisAndFuture,
+    ]);
+    // Nothing persisted yet — still waiting on the choice.
+    expect(update).not.toHaveBeenCalled();
+
+    await act(async () => buttons[1].onPress?.()); // "Save only this"
+
+    expect(update).toHaveBeenCalledTimes(1);
+    const saved = update.mock.calls[0][0];
+    // The rule is untouched apart from one exception; the edit landed as a
+    // standalone entry instead of rewriting the series.
+    expect(saved.recurrenceRules[0]).toMatchObject({
+      exceptions: [expect.any(String)],
+      note: 'Lunch',
+    });
+    expect(saved.entries).toEqual([
+      expect.objectContaining({ note: 'Lunch out', repeat: 'never' }),
+    ]);
+    alert.mockRestore();
+  });
+
+  it('applies "this and future" when chosen for a projected recurring occurrence', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const update = jest.fn();
+    const now = new Date();
+    const draft: EntryDraft = {
+      type: 'expense',
+      amountStr: '850',
+      category: 'Food',
+      note: 'Lunch',
+      y: now.getFullYear(),
+      m: now.getMonth(),
+      day: now.getDate(),
+      repeat: 'monthly',
+    };
+    const ledger = saveLedgerItem({ entries: [], recurrenceRules: [] }, draft, 'off');
+    render(
+      <ThemeProvider>
+        <Root
+          state={{ ...DEFAULT_STATE, ...ledger }}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText(strings.entry.editEntry('Food')));
+    fireEvent.changeText(
+      screen.getByLabelText(`${strings.entry.noteRowLabel}`),
+      'Lunch out',
+    );
+    fireEvent.press(screen.getByLabelText(strings.entry.save));
+
+    const buttons = alert.mock.calls[0][2]!;
+    await act(async () => buttons[2].onPress?.()); // "Save this and future"
+
+    expect(update).toHaveBeenCalledTimes(1);
+    const saved = update.mock.calls[0][0];
+    // The original rule is truncated and a new one carries the edit forward —
+    // no standalone one-time entry, unlike the "only this" case above.
+    expect(saved.entries).toEqual([]);
+    expect(saved.recurrenceRules).toHaveLength(2);
+    expect(saved.recurrenceRules[0]).toMatchObject({ endsBefore: expect.any(String) });
+    expect(saved.recurrenceRules[1]).toMatchObject({ note: 'Lunch out' });
+    alert.mockRestore();
+  });
+
+  it('does not ask for a save scope when repeat is turned off — ending a series is always future-scoped', () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const update = jest.fn();
+    const now = new Date();
+    const draft: EntryDraft = {
+      type: 'expense',
+      amountStr: '850',
+      category: 'Food',
+      note: 'Lunch',
+      y: now.getFullYear(),
+      m: now.getMonth(),
+      day: now.getDate(),
+      repeat: 'monthly',
+    };
+    const ledger = saveLedgerItem({ entries: [], recurrenceRules: [] }, draft, 'off');
+    render(
+      <ThemeProvider>
+        <Root
+          state={{ ...DEFAULT_STATE, ...ledger }}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText(strings.entry.editEntry('Food')));
+    // The cycle order is never → daily → monthly → yearly → never, so two
+    // presses from "monthly" land on "never" (via "yearly").
+    fireEvent.press(screen.getByLabelText('↻ Repeat: Every month'));
+    fireEvent.press(screen.getByLabelText('↻ Repeat: Every year'));
+    fireEvent.press(screen.getByLabelText(strings.entry.save));
+
+    expect(alert).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledTimes(1);
     alert.mockRestore();
   });
 });

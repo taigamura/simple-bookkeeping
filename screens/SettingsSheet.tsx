@@ -36,7 +36,15 @@ import {
 } from '../domain';
 import { strings } from '../i18n';
 import { IconButton } from '../nav/IconButton';
-import { useTheme, metrics, Txt, type ThemePreference } from '../theme';
+import {
+  useMotion,
+  useTheme,
+  metrics,
+  Txt,
+  type MotionPreference,
+  type ThemePreference,
+} from '../theme';
+import { PressScale } from '../ui';
 
 /** Minimal shape shared by RN's `ScrollView` and gorhom's `BottomSheetScrollView`. */
 interface ScrollContainerProps {
@@ -105,6 +113,7 @@ export function SettingsSheet({
         showsVerticalScrollIndicator={false}
       >
         <Appearance />
+        <Motion />
         <CurrencyGrid value={currency} onChange={onChangeCurrency} />
         <Categories
           expCats={expCats}
@@ -154,6 +163,39 @@ function Appearance() {
   );
 }
 
+/**
+ * System/Full/Reduced motion switch. Same shape as Appearance above, and for
+ * the same reason: `System` follows the OS reduce-motion accessibility setting,
+ * the other two pin it, and the selection shows the stored *preference* so
+ * `System` stays highlighted whichever way the OS is currently set.
+ *
+ * A three-way control rather than a toggle because "off" and "follow the OS"
+ * are genuinely different answers — a user with reduce-motion on system-wide
+ * may still want Kaji's motion, and a user with it off may not.
+ */
+function Motion() {
+  const { preference, setPreference } = useMotion();
+  const MODES: { value: MotionPreference; label: string }[] = [
+    { value: 'system', label: strings.settings.system },
+    { value: 'full', label: strings.settings.motionFull },
+    { value: 'reduced', label: strings.settings.motionReduced },
+  ];
+  return (
+    <Section label={strings.settings.motion}>
+      <View style={styles.optRow}>
+        {MODES.map((m) => (
+          <OptBox
+            key={m.value}
+            label={m.label}
+            active={preference === m.value}
+            onPress={() => setPreference(m.value)}
+          />
+        ))}
+      </View>
+    </Section>
+  );
+}
+
 /** Currency 4-grid — each tile swaps the symbol only (no FX). */
 function CurrencyGrid({
   value,
@@ -181,7 +223,14 @@ function CurrencyGrid({
 }
 
 /** Selection tile shared by Appearance & Currency: accent-tinted fill + accent
- *  ring and accent text when active, else card2 with a muted label. */
+ *  ring and accent text when active, else card2 with a muted label.
+ *
+ * `PressScale` (`surface` — these tiles sit several to a row, closer to the
+ * CTA/option-tile case than to a small square control) is the only motion
+ * added here: the border-color and text-tone flips between active/inactive
+ * stay instant, same as everywhere else in Settings, since this tile is read
+ * as a discrete choice (Light vs Dark, ¥ vs $) rather than a value sliding
+ * between two states. */
 
 function OptBox({
   label,
@@ -198,7 +247,8 @@ function OptBox({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <PressScale
+      scale="surface"
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ selected: active }}
@@ -215,7 +265,7 @@ function OptBox({
       <Txt variant="optionLabel" tone={active ? 'positive' : 'muted'} numberOfLines={1}>
         {label}
       </Txt>
-    </Pressable>
+    </PressScale>
   );
 }
 

@@ -44,13 +44,44 @@ const editingEntry = (over: Partial<Transaction> = {}): Transaction => ({
 });
 
 describe('EntrySheet', () => {
-  it('reports intrinsic layout height for its non-scrollable sheet host', () => {
+  // The form is now a scrollable body plus a pinned footer holding the CTA, so
+  // the height it asks the host for is the sum of the two — the sheet has to be
+  // tall enough to show the button, not just the fields above it.
+  const layout = (testID: string, height: number) =>
+    fireEvent(screen.getByTestId(testID), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 360, height } },
+    });
+
+  it('reports body + pinned footer as the height it needs from the sheet host', () => {
     const onContentHeightChange = jest.fn();
     renderSheet({ onContentHeightChange });
-    fireEvent(screen.getByTestId('entry-content'), 'layout', {
-      nativeEvent: { layout: { x: 0, y: 0, width: 360, height: 640 } },
-    });
-    expect(onContentHeightChange).toHaveBeenCalledWith(640);
+    layout('entry-content', 640);
+    layout('entry-footer', 70);
+    expect(onContentHeightChange).toHaveBeenLastCalledWith(710);
+  });
+
+  it('waits for both halves before reporting, so the host never sizes to a partial form', () => {
+    // A body-only measurement would ask for a sheet exactly too short to show
+    // the CTA — the original bug this structure exists to prevent.
+    const onContentHeightChange = jest.fn();
+    renderSheet({ onContentHeightChange });
+    layout('entry-content', 640);
+    expect(onContentHeightChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps the CTA outside the scrollable body so it cannot be scrolled away', () => {
+    renderSheet();
+    const footer = screen.getByTestId('entry-footer');
+    const cta = screen.getByLabelText('Add expense');
+    // Walk up from the CTA: it must reach the pinned footer, never the body.
+    let node: typeof cta | null = cta;
+    const ancestors: unknown[] = [];
+    while (node) {
+      ancestors.push(node);
+      node = node.parent;
+    }
+    expect(ancestors).toContain(footer);
+    expect(ancestors).not.toContain(screen.getByTestId('entry-content'));
   });
 
   it('shows a sentence-case CTA that is disabled until an amount is entered', () => {
@@ -169,6 +200,40 @@ describe('EntrySheet (edit mode, #43)', () => {
     renderSheet({ editing: editingEntry({ repeat: 'monthly' }) });
     expect(screen.getByLabelText('↻ Repeat: Every month')).toBeTruthy();
     expect(screen.getByLabelText('If on weekend: Move to Monday')).toBeTruthy();
+    expect(screen.getByLabelText('Save this and future')).toBeTruthy();
+  });
+
+  it('shows a plain Save for a projected occurrence — the scope choice is a follow-up, not the label', () => {
+    renderSheet({
+      editing: editingEntry({
+        repeat: 'monthly',
+        occurrence: {
+          ruleId: 'r1',
+          scheduled: { y: 2026, m: 6, day: 2 },
+          weekendShift: 'after',
+        },
+      }),
+    });
+    expect(screen.getByLabelText('Save')).toBeTruthy();
+    expect(screen.queryByLabelText('Save this and future')).toBeNull();
+  });
+
+  it('keeps "Save this and future" for an occurrence edit in repeat management', () => {
+    // Settings → Repeats edits the series itself; there is no "just this
+    // once" reading there, so it never gets the follow-up choice and the
+    // label should keep saying what it actually does.
+    renderSheet({
+      editing: editingEntry({
+        repeat: 'monthly',
+        occurrence: {
+          ruleId: 'r1',
+          scheduled: { y: 2026, m: 6, day: 2 },
+          weekendShift: 'after',
+        },
+      }),
+      repeatManagement: true,
+      onDelete: () => {},
+    });
     expect(screen.getByLabelText('Save this and future')).toBeTruthy();
   });
 

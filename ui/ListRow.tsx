@@ -5,10 +5,40 @@
  * stays calm. Rows share one rounded card in the parent; a hairline divider sits
  * above every row except the first (`first` prop), so there is no rule above the
  * first or below the last.
+ *
+ * ## Motion
+ *
+ * Rows enter and leave rather than appear and vanish: a new entry fades/slides
+ * in (`FadeInDown`), a deleted one fades/slides out (`FadeOut`), and every row
+ * carries `LinearTransition` so the rows above and below a deletion reflow to
+ * close the gap smoothly instead of jumping. All three are list-local motion
+ * (`durations.quick`, matching a chip fill or a segment slide, not a
+ * screen-scale crossfade), and all three are inert whenever `useMotion()`
+ * reports motion off — an `Animated.View` with no `entering`/`exiting`/`layout`
+ * behaves exactly like a plain `View`, so the disabled path does not need a
+ * separate render tree the way `DayCell`'s does.
+ *
+ * Every builder also carries `.reduceMotion(ReduceMotion.Never)`. Gating the
+ * whole prop on `useMotion().enabled` is necessary but not sufficient: each
+ * builder has its own default (`ReduceMotion.System`) that re-checks the
+ * OS-level flag independently, even after `enabled` has already resolved to
+ * `true` — including when it resolved to `true` *because* the user picked
+ * Kaji's "Full" preference specifically to override that flag. Without the
+ * explicit override here, that override does nothing. See
+ * `theme/motion.ts`'s `withAppTiming`/`withAppSpring` for the identical bug
+ * in every non-layout animation in this app.
+ *
+ * The tap-to-edit press now goes through `PressScale` (`surface`, matching
+ * other wide tap targets) instead of a bare `Pressable`, so a tap reads as
+ * physical contact rather than only the existing opacity dip. The opacity dip
+ * is kept alongside it deliberately: press-in on a bright row is a color
+ * response finger-speed can't be, and the two together read as "this pressed"
+ * rather than fighting each other.
  */
 import React, { useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
+import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import {
   emojiFor,
@@ -19,7 +49,8 @@ import {
   type Transaction,
 } from '../domain';
 import { strings } from '../i18n';
-import { useTheme, metrics, Txt } from '../theme';
+import { useTheme, metrics, durations, easings, useMotion, ReduceMotion, Txt } from '../theme';
+import { PressScale } from './PressScale';
 
 interface ListRowProps {
   entry: Transaction;
@@ -40,6 +71,7 @@ export function ListRow({
   onDelete,
 }: ListRowProps) {
   const { colors } = useTheme();
+  const { enabled } = useMotion();
   const swipeInProgress = useRef(false);
   const value = signedAmount(entry);
   // Entries carried over from before timestamps existed only know their day, so
@@ -91,7 +123,8 @@ export function ListRow({
   );
 
   const row = onPress ? (
-      <Pressable
+      <PressScale
+        scale="surface"
         onPress={() => {
           if (swipeInProgress.current) return;
           onPress();
@@ -101,14 +134,12 @@ export function ListRow({
         style={({ pressed }) => [...rowStyle, pressed && { opacity: 0.6 }]}
       >
         {content}
-      </Pressable>
+      </PressScale>
     ) : (
       <View style={rowStyle}>{content}</View>
     );
 
-  if (!onDelete) return row;
-
-  return (
+  const wrapped = onDelete ? (
     <Swipeable
       testID={`swipeable-${entry.id}`}
       overshootRight={false}
@@ -143,6 +174,32 @@ export function ListRow({
     >
       {row}
     </Swipeable>
+  ) : (
+    row
+  );
+
+  return (
+    <Animated.View
+      entering={
+        enabled
+          ? FadeInDown.duration(durations.quick)
+              .easing(easings.standard)
+              .reduceMotion(ReduceMotion.Never)
+          : undefined
+      }
+      exiting={
+        enabled
+          ? FadeOut.duration(durations.quick).easing(easings.exit).reduceMotion(ReduceMotion.Never)
+          : undefined
+      }
+      layout={
+        enabled
+          ? LinearTransition.duration(durations.quick).reduceMotion(ReduceMotion.Never)
+          : undefined
+      }
+    >
+      {wrapped}
+    </Animated.View>
   );
 }
 
