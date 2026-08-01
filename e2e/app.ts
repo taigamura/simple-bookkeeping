@@ -93,16 +93,36 @@ export async function tapBackdrop(page: Page, id: SheetId) {
  * calendar day must still register. If an invisible layer is eating taps, the
  * day never becomes selected and this fails.
  *
- * Selection is read off the tile's own background, not `aria-selected`:
+ * Selection is read off the accent fill layer, not `aria-selected`:
  * react-native-web does not emit `aria-selected` for `accessibilityRole=
  * "button"` (the DayCell role), so the attribute is always absent even for the
- * visibly-selected day. The selected day is the only cell painted a solid
- * accent tile; every other day is transparent, so "background stopped being
- * transparent" is the truthful signal that the tap landed and selection moved.
+ * visibly-selected day.
+ *
+ * The Kippu redesign (`ui/DayCell.tsx`) means the *cell's own* background is no
+ * longer the signal — every cell now sits on a solid `colors.card` fill, so the
+ * old "background stopped being transparent" heuristic reads every day as
+ * selected. Selection is instead a separate absolutely-positioned accent layer
+ * that covers the whole cell and cross-fades its opacity 0 → 1 on selection
+ * (the animated render path the exported build always takes). So the truthful
+ * signal is now: a cell-covering, non-transparent layer whose opacity has risen
+ * past halfway. The full-cover check is what keeps the small activity dot — also
+ * a non-transparent child, but a tiny one — from reading as a selection.
  */
 async function dayIsSelected(cell: Locator): Promise<boolean> {
-  const bg = await cell.evaluate((el) => getComputedStyle(el).backgroundColor);
-  return bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent';
+  return cell.evaluate((el) => {
+    const cellRect = el.getBoundingClientRect();
+    const cellArea = cellRect.width * cellRect.height;
+    if (cellArea === 0) return false;
+    for (const child of Array.from(el.querySelectorAll('*'))) {
+      const cs = getComputedStyle(child);
+      const bg = cs.backgroundColor;
+      if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') continue;
+      if (parseFloat(cs.opacity) < 0.5) continue;
+      const r = child.getBoundingClientRect();
+      if (r.width * r.height >= cellArea * 0.9) return true;
+    }
+    return false;
+  });
 }
 
 export async function expectCalendarTappable(page: Page, message?: string) {
