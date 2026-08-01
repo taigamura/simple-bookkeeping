@@ -111,7 +111,14 @@ test('Settings, Repeats, and Budgets render visible bodies after opening and dri
   await budgets.scrollIntoViewIfNeeded();
   await tapAt(page, await center(budgets));
   await expectSheetHeadingInViewport(page, 'budgets-sheet', 'Budgets');
-  expect((await sheet(page, 'budgets-sheet').boundingBox())!.height).toBeCloseTo(defaultHeight, 0);
+  // Budgets sizes to its own content (#80), so unlike Repeats it does not match
+  // the Settings detent — it opens shorter (never taller) and always as a real,
+  // on-screen sheet, not a collapsed sliver.
+  const budgetsHeight = (await sheet(page, 'budgets-sheet').boundingBox())!.height;
+  expect(budgetsHeight, 'budgets sheet renders a real body').toBeGreaterThan(150);
+  expect(budgetsHeight, 'budgets fits its content, never taller than the detent').toBeLessThanOrEqual(
+    defaultHeight + 1,
+  );
 });
 
 test('Settings can scroll through the final Data action', async ({ page }) => {
