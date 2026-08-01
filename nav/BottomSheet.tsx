@@ -273,16 +273,7 @@ export function BottomSheet({
         SHEET_CONTENT_BOTTOM_PADDING +
         insets.bottom
       : 0;
-  // When the body reports its intrinsic height, open exactly that tall (floored
-  // at MIN_CONTENT_HEIGHT, capped at max below) — the ratio is the fallback only
-  // for bodies that don't measure (Settings/Repeats). Using `max(ratio, measured)`
-  // floored every sheet at the ratio, which left a short measured body (the
-  // Budgets sheet, #80) opening at 80% with a large dead zone. Tall measured
-  // bodies (Entry) already exceeded the ratio, so their detent is unchanged.
-  const defaultSheetHeight =
-    measuredSheetHeight > 0
-      ? Math.max(MIN_CONTENT_HEIGHT, measuredSheetHeight)
-      : ratioSheetHeight;
+  const defaultSheetHeight = Math.max(ratioSheetHeight, measuredSheetHeight);
   const snapPoints = useMemo(
     () => [Math.min(defaultSheetHeight, maxSheetHeight), maxSheetHeight],
     [defaultSheetHeight, maxSheetHeight],

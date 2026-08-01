@@ -44,27 +44,6 @@ interface ScrollContainerProps {
   children: ReactNode;
 }
 
-// Intrinsic content height, *computed* rather than measured (#80). The host uses
-// it to open the sheet at its content height on the very first present, so there
-// is no measure-then-re-snap — a re-snap animates the whole body (and its header)
-// for ~200ms, which janks visibly and races a following Back tap / geometry
-// assertion, and gorhom offers no truly-instant re-snap. `ROW_HEIGHT` is
-// `styles.row.height`; `BUDGETS_CHROME` covers the header, the mode toggle, the
-// inter-card gaps and the scroll padding — calibrated against the rendered layout
-// (431px for the 6 default categories → 431 − 6×54 = 107). Off-by-a-row estimates
-// are absorbed by the sheet's MIN floor and the dead-zone tolerance.
-const ROW_HEIGHT = 54;
-const BUDGETS_CHROME = 107;
-
-/** Estimated intrinsic height of the Budgets body for the given row set (#80). */
-export function estimateBudgetsContentHeight(
-  catCount: number,
-  mode: 'category' | 'total',
-): number {
-  const rows = mode === 'category' ? Math.max(1, catCount) : 1;
-  return BUDGETS_CHROME + rows * ROW_HEIGHT;
-}
-
 interface BudgetsSheetProps {
   expCats: string[];
   budgets: Budgets;

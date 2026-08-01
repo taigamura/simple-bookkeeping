@@ -45,7 +45,7 @@ import { strings } from '../i18n';
 import { entrySaved } from '../platform/haptics';
 import { shareTextFile } from '../platform/shareFile';
 import { useToday } from '../platform/useToday';
-import { BudgetsSheet, estimateBudgetsContentHeight } from '../screens/BudgetsSheet';
+import { BudgetsSheet } from '../screens/BudgetsSheet';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
 import { RepeatsSheet } from '../screens/RepeatsSheet';
@@ -258,13 +258,6 @@ function Shell({
   // Which entry the Entry sheet is editing (#43); null = create mode.
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [entryContentHeight, setEntryContentHeight] = useState(0);
-  // Budgets' height is computed from its row set (#80), not measured — so the
-  // sheet opens at content height on the first present with no re-snap. Derived,
-  // not state: it just tracks the current categories/mode.
-  const budgetsContentHeight = estimateBudgetsContentHeight(
-    state.expCats.length,
-    state.budgetMode,
-  );
 
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
   // real current month, with the selected day defaulting to today.
@@ -664,13 +657,7 @@ function Shell({
         visible={sheet !== null}
         onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
         defaultHeightRatio={sheet === 'entry' || sheet === 'repeat-entry' ? 0.83 : 0.8}
-        contentHeight={
-          sheet === 'entry' || sheet === 'repeat-entry'
-            ? entryContentHeight
-            : sheet === 'budgets'
-              ? budgetsContentHeight
-              : 0
-        }
+        contentHeight={sheet === 'entry' || sheet === 'repeat-entry' ? entryContentHeight : 0}
         testID={sheet ? `${sheet}-sheet` : undefined}
       >
         {(sheet === 'entry' || sheet === 'repeat-entry') && (
