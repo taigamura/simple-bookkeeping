@@ -70,8 +70,24 @@ export async function expectSheetOpen(
       box.y + box.height,
       `${id} should rise into the viewport, not sit collapsed below it${message ? ` — ${message}` : ''}`,
     ).toBeLessThanOrEqual(viewport.height + 1);
+    // Every sheet bottom-anchors to the frame edge once settled. The Budgets
+    // sheet arrives by *swapping* from Settings and sizes to its own (shorter)
+    // content (#80), so that swap animates a height change; without waiting for
+    // the bottom edge to reach the frame, a following Back tap or geometry
+    // assertion lands mid-resize on a sheet whose header is still moving. This
+    // lower bound holds immediately for the tall Settings/Entry sheets and makes
+    // "open" mean "settled" for the ones that resize.
+    expect(
+      box.y + box.height,
+      `${id} should settle against the frame bottom${message ? ` — ${message}` : ''}`,
+    ).toBeGreaterThanOrEqual(viewport.height - SETTLE_BOTTOM_MARGIN);
   }).toPass({ timeout: OPEN_TIMEOUT });
 }
+
+// How far above the viewport bottom a settled sheet's bottom edge may sit — the
+// web phone-frame's bottom inset plus a little slack. Matches the geometry
+// tests' own bottom tolerance.
+const SETTLE_BOTTOM_MARGIN = 80;
 
 /** Wait for a sheet to be fully gone (gorhom unmounts children after dismiss). */
 export async function expectSheetGone(page: Page, id: SheetId) {
