@@ -139,6 +139,18 @@ const SHEET_SURFACE_LABEL = 'sheet-surface';
 // descendant that sets pointer-events:auto (the sheet body below, the handle's
 // Pressable) stays fully interactive, so the sheet still drags and its controls
 // still tap while the dimmed margin around it clicks through to the backdrop.
+//
+// The `${INERT_SHEET_CLASS}` rule closes the *other* half of #63: while a sheet
+// is dismissing, gorhom keeps the body mounted and slides it DOWN off screen,
+// and on web it stays pointer-events:auto the whole descent — so as it travels
+// over the ＋ FAB at the bottom it eats the very tap meant to reopen (or, in a
+// settings→entry swap, the ＋ tapped mid-dismiss). The component toggles this
+// class on <html> whenever the sheet is not fully open (see the `phase` effect),
+// and the rule forces the entire sheet subtree click-through for the descent —
+// !important so it beats the `${surface}>*{pointer-events:auto}` rule above. The
+// top-anchored ⚙ never needed this: the sheet only ever slides past the bottom,
+// which is exactly why entry→settings swaps never hit the bug.
+const INERT_SHEET_CLASS = 'kaji-sheet-inert';
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const STYLE_ID = 'kaji-sheet-boxnone';
   if (!document.getElementById(STYLE_ID)) {
@@ -148,7 +160,9 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
     el.textContent =
       `:has(> ${surface}){pointer-events:none!important}` +
       `${surface}{pointer-events:none!important}` +
-      `${surface}>*{pointer-events:auto}`;
+      `${surface}>*{pointer-events:auto}` +
+      `.${INERT_SHEET_CLASS} ${surface},` +
+      `.${INERT_SHEET_CLASS} ${surface} *{pointer-events:none!important}`;
     document.head.appendChild(el);
   }
 }
@@ -309,6 +323,18 @@ export function BottomSheet({
       setPhase('dismissing');
     }
   }, [visible, phase]);
+
+  // Mark the sheet subtree inert on web for the whole time it is not the open
+  // sheet — critically the 'dismissing' descent, when the departing body would
+  // otherwise slide over and eat the ＋ FAB tap that reopens it (#63). See the
+  // `INERT_SHEET_CLASS` CSS above. Native has real box-none, so it is skipped.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const root = document.documentElement;
+    if (phase === 'open') root.classList.remove(INERT_SHEET_CLASS);
+    else root.classList.add(INERT_SHEET_CLASS);
+    return () => root.classList.remove(INERT_SHEET_CLASS);
+  }, [phase]);
 
   // gorhom fires onDismiss only when the dismiss animation finishes — long after
   // nav changed, possibly after the user reopened. So this must never blindly
