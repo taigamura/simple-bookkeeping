@@ -117,20 +117,38 @@ export const WEB_FRAME_INSET = 2 * (24 + 1);
 // the web CSS below can target it (gorhom's default label is "Bottom Sheet").
 const SHEET_SURFACE_LABEL = 'sheet-surface';
 
-// react-native-web renders gorhom's `pointerEvents="box-none"` sheet container
-// as plain `pointer-events: auto`, so that full-screen container swallows every
-// tap outside the sheet body — during a dismiss animation it eats the immediate
-// reopen (＋) / swap (⚙) tap and the sheet looks wedged shut (#63; native is
-// fine, box-none works there). Restore true box-none on web: the container
-// passes taps through, only its sheet-body child captures. Injected once.
+// react-native-web renders gorhom's `pointerEvents="box-none"` sheet containers
+// as plain `pointer-events: auto`, so a full-screen container swallows every tap
+// outside the sheet body — the backdrop-dismiss tap, the immediate reopen (＋) /
+// swap (⚙) tap during a dismiss, and every post-dismiss calendar tap — leaving
+// the sheet wedged shut (#63; native is fine, box-none works there). Restore
+// true box-none on web: the containers pass taps through, only the sheet body
+// (and its own children: the CTA, the handle, list rows) captures. Injected once.
+//
+// Two containers need neutralizing, confirmed by walking the live gorhom DOM
+// (headless Firefox, sheet open):
+//
+//   [aria-label="Bottom Sheet"]'s parent  ← gorhom's outer BottomSheetContainer:
+//       position:absolute, full-frame, flex-direction:column-reverse. This is the
+//       one painted *over* the dimmed backdrop; it is the direct PARENT of our
+//       labeled surface, so it is unreachable by a descendant selector and was
+//       the piece the original one-selector fix missed. Reach it with :has().
+//   [aria-label="sheet-surface"]          ← the modal's own content wrapper.
+//
+// In both, pointer-events:none only voids the container's *own* empty area; any
+// descendant that sets pointer-events:auto (the sheet body below, the handle's
+// Pressable) stays fully interactive, so the sheet still drags and its controls
+// still tap while the dimmed margin around it clicks through to the backdrop.
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const STYLE_ID = 'kaji-sheet-boxnone';
   if (!document.getElementById(STYLE_ID)) {
     const el = document.createElement('style');
     el.id = STYLE_ID;
+    const surface = `[aria-label="${SHEET_SURFACE_LABEL}"]`;
     el.textContent =
-      `[aria-label="${SHEET_SURFACE_LABEL}"]{pointer-events:none!important}` +
-      `[aria-label="${SHEET_SURFACE_LABEL}"]>*{pointer-events:auto}`;
+      `:has(> ${surface}){pointer-events:none!important}` +
+      `${surface}{pointer-events:none!important}` +
+      `${surface}>*{pointer-events:auto}`;
     document.head.appendChild(el);
   }
 }
