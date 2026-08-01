@@ -15,15 +15,19 @@ import { StyleSheet, Text, type TextProps } from 'react-native';
 import { useTheme } from './ThemeProvider';
 import { type, type TypeVariant } from './tokens';
 
-/** Semantic text colors. `ink`/`muted`/`dim` come from the palette; the rest
- *  from shared accents. */
+/** Semantic text colors, all resolved from the active mode's palette. */
 export type Tone =
   | 'ink'
   | 'muted'
   | 'dim'
+  /** Large text only (24px+) — see `Colors.faint`. */
+  | 'faint'
   | 'positive'
   | 'negative'
-  | 'onPositive';
+  | 'onPositive'
+  | 'onNegative'
+  | 'onDeep'
+  | 'onDeepMuted';
 
 export interface TxtProps extends TextProps {
   variant?: TypeVariant;

@@ -28,7 +28,7 @@ import {
 import {
   AMOUNT_MAX_DIGITS,
   clearBudget,
-  code,
+  emojiFor,
   setBudget,
   type Budgets,
 } from '../domain';
@@ -196,8 +196,9 @@ function BudgetRow({
       ]}
     >
       <View style={[styles.codeTile, { backgroundColor: colors.card3 }]}>
-        <Txt variant="microLabel" tone="muted">
-          {code(category)}
+        {/* Decorative: the category name is the label right beside it. */}
+        <Txt style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
+          {emojiFor(category)}
         </Txt>
       </View>
       <Txt variant="listItem" tone="ink" style={styles.label} numberOfLines={1}>
@@ -311,6 +312,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /** Sized so the tile reads as an icon, not as text in a box. */
+  emoji: { fontSize: 16, lineHeight: 21 },
   label: { flex: 1 },
   totalLabel: { flex: 1 },
   input: {

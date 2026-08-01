@@ -1,75 +1,135 @@
 /**
  * Design tokens for Kaji — colors, type scale, and layout metrics.
  *
- * Ported verbatim from the "Kaji" design concept (see docs/build-decisions.md
- * "Design tokens"). Two families only: system sans for UI copy (fontFamily left
- * unset) and JetBrains Mono for every number + uppercase micro-label.
+ * Visual direction: "Kippu 切符" (see docs/mockups/README.md). @nemuiasaa's light
+ * shell — warm off-white ground, borderless white cards, generous whitespace —
+ * carrying mokumono's electric blue and uppercase-mono micro-labels. One
+ * saturated `deep` block owns the headline number on Summary.
+ *
+ * Two families only: system sans for UI copy (fontFamily left unset) and
+ * JetBrains Mono for every number + uppercase micro-label.
  *
  * Note: the design expresses tracking in `em`; React Native's `letterSpacing` is
  * absolute px, so each type variant below pre-converts `em * fontSize`.
  */
 import type { TextStyle } from 'react-native';
 
+/** The resolved appearance actually rendered. */
 export type ThemeMode = 'dark' | 'light';
 
-/** Theme-dependent color palette (surfaces + text + separators). */
-export interface Palette {
+/**
+ * What the user chose in Settings. `system` follows the OS appearance and is
+ * resolved to a `ThemeMode` by the provider; the other two pin it.
+ */
+export type ThemePreference = 'system' | ThemeMode;
+
+export const THEME_PREFERENCES: readonly ThemePreference[] = [
+  'system',
+  'light',
+  'dark',
+] as const;
+
+export const isThemePreference = (value: unknown): value is ThemePreference =>
+  value === 'system' || value === 'light' || value === 'dark';
+
+/**
+ * The full color set for one appearance. Accents live here rather than in a
+ * shared constant because the blue has to differ between modes: `#2B33E8` is
+ * the right weight on white but drops to 2.5:1 against a near-black ground, so
+ * dark runs a lifted `#6B72FF` and flips `onPositive` to near-black to keep
+ * text on the accent legible. Every pairing below clears WCAG AA (4.5:1).
+ */
+export interface Colors {
+  /** Screen ground. */
   bg: string;
+  /** Raised surface — cards, tab bar, sheets. */
   card: string;
+  /** Recessed fill — chips, keypad keys, nav buttons, grouped rows. */
   card2: string;
+  /** Deeper fill — pressed states, list-row code tiles. */
   card3: string;
   ink: string;
   muted: string;
   dim: string;
+  /**
+   * The lightest readable text tone — the design's receding gray, kept for
+   * *large* type only (the year in a screen title). It clears WCAG AA at the
+   * 3:1 large-text threshold but not the 4.5:1 body threshold, so never put it
+   * on anything under 24px; `dim` is the floor for small text.
+   */
+  faint: string;
   hair: string;
   line: string;
   border: string;
+  /** Income, primary CTAs, selection. The one hue the UI carries. */
+  positive: string;
+  /** Alarm only — over-budget, destructive actions. Never plain expenses. */
+  negative: string;
+  /** Text/icons on a `positive` surface. */
+  onPositive: string;
+  /** Text/icons on a `negative` surface. */
+  onNegative: string;
+  /** The saturated Summary hero block. */
+  deep: string;
+  /** Text on `deep`. */
+  onDeep: string;
+  /** Secondary text on `deep` (micro-labels, legend keys). */
+  onDeepMuted: string;
 }
 
-export const palettes: Record<ThemeMode, Palette> = {
-  dark: {
-    bg: '#0E1116',
-    card: '#171B22',
-    card2: '#1A1F28',
-    card3: '#242B35',
-    ink: '#EAEEF3',
-    muted: '#9AA4B2',
-    dim: '#6B7480',
-    hair: 'rgba(255,255,255,.06)',
-    line: 'rgba(255,255,255,.10)',
-    border: 'rgba(255,255,255,.08)',
-  },
+export const palettes: Record<ThemeMode, Colors> = {
   light: {
-    bg: '#EEF1F5',
+    bg: '#F2F2F0',
     card: '#FFFFFF',
-    card2: '#F4F6F8',
-    card3: '#E4E9EE',
-    ink: '#141820',
-    muted: '#5A6472',
-    dim: '#98A2AE',
-    hair: 'rgba(20,24,31,.07)',
-    line: 'rgba(20,24,31,.12)',
-    border: 'rgba(20,24,31,.08)',
+    card2: '#F5F5F3',
+    card3: '#EAEAE6',
+    ink: '#16161A',
+    muted: '#65656E',
+    // The design specifies #9C9CA4, which is 2.4:1 on the ground — too low for
+    // the 10px micro-labels it is used on. Darkened to the lightest value that
+    // still clears AA.
+    dim: '#6E6E77',
+    // 3.1:1 on the ground — the design's #9C9CA4 intent brought up to the
+    // large-text minimum, and clearly lighter than `dim` beside it.
+    faint: '#88888F',
+    hair: '#E7E7E3',
+    line: 'rgba(22,22,26,.12)',
+    border: 'rgba(22,22,26,.08)',
+    positive: '#2B33E8',
+    negative: '#C93B31',
+    onPositive: '#FFFFFF',
+    onNegative: '#FFFFFF',
+    deep: '#1E2499',
+    onDeep: '#FFFFFF',
+    onDeepMuted: 'rgba(255,255,255,.80)',
+  },
+  dark: {
+    bg: '#0F0F13',
+    card: '#17171D',
+    card2: '#1D1D25',
+    card3: '#262630',
+    ink: '#F0F0F4',
+    muted: '#9A9AA6',
+    dim: '#82828E',
+    /** 3.6:1 on the dark ground — same large-text-only rule as light. */
+    faint: '#6A6A76',
+    hair: 'rgba(255,255,255,.07)',
+    line: 'rgba(255,255,255,.12)',
+    border: 'rgba(255,255,255,.09)',
+    positive: '#6B72FF',
+    negative: '#FF6B60',
+    // Near-black rather than white: on the lifted blue it reads 5.0:1 where
+    // white would only manage 3.8:1.
+    onPositive: '#0F0F13',
+    onNegative: '#0F0F13',
+    // The light mode's accent becomes the dark mode's hero surface.
+    deep: '#2B33E8',
+    onDeep: '#FFFFFF',
+    onDeepMuted: 'rgba(255,255,255,.80)',
   },
 };
 
-/**
- * Accents are shared across themes. On-green text/icons use near-black
- * (`onPositive`), never white.
- */
-export const accents = {
-  positive: '#2BD48A', // income, primary CTAs, selection
-  negative: '#F0766C', // expense, delete
-  onPositive: '#0B0E12', // text/icon rendered on a positive-green surface
-} as const;
-
-/** Full color set for a given theme mode: palette + shared accents. */
-export type Colors = Palette & typeof accents;
-
-export const colorsFor = (mode: ThemeMode): Colors => ({
-  ...palettes[mode],
-  ...accents,
-});
+export const colorsFor = (mode: ThemeMode): Colors => palettes[mode];
 
 /** JetBrains Mono weight → RN fontFamily string (each weight is its own family). */
 export const mono = {
@@ -99,8 +159,23 @@ export const type = {
   /** Screen title (sans). */
   screenTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: -0.48, // -.02em @ 24
+    fontWeight: '600',
+    letterSpacing: -0.6, // -.025em @ 24
+  },
+  /**
+   * The trailing, de-emphasised half of a screen title — the year in
+   * "July 2026". Same size and tracking as `screenTitle`, dropped to regular
+   * weight; pair it with the `dim` tone so the month leads and the year recedes.
+   */
+  screenTitleYear: {
+    fontSize: 24,
+    fontWeight: '400',
+    letterSpacing: -0.6,
+  },
+  /** One quiet line under a screen title, e.g. "21 entries this month". */
+  screenSubtitle: {
+    fontSize: 11.5,
+    fontWeight: '500',
   },
   /** List item / category label (sans). */
   listItem: {
@@ -134,10 +209,19 @@ export const type = {
     fontFamily: mono.semibold,
     fontSize: 13,
   },
-  /** Calendar per-day total (mono, tiny). */
+  /** Calendar per-day total (mono, tiny) — the design's 7.5px, so a month of
+   *  totals reads as texture under the day numbers rather than competing with
+   *  them. Semibold keeps it legible at that size. */
   calendarDayTotal: {
     fontFamily: mono.semibold,
-    fontSize: 8.5,
+    fontSize: 7.5,
+  },
+  /** Day-list row timestamp (mono, regular) — metadata, so lighter and smaller
+   *  than the note it sits beside. */
+  timestamp: {
+    fontFamily: mono.regular,
+    fontSize: 10.5,
+    letterSpacing: 0.1,
   },
 } satisfies Record<string, TextStyle>;
 
@@ -154,52 +238,70 @@ export const heroAmountSize = (text: string): number => {
   return 46;
 };
 
-/** Layout & shape metrics (px). See build-decisions "Layout & shape metrics". */
+/**
+ * Layout & shape metrics (px).
+ *
+ * Kippu's shape language is soft-filled rounded rectangles, not outlined pills:
+ * only progress tracks stay fully round. Radii below come from the design doc.
+ */
 export const metrics = {
   screenPadX: 20,
   statusOffset: 52, // → SafeArea top inset on native
-  cardRadius: 18, // design range 16–20
+  cardRadius: 20,
+  /** The Summary hero block and the Entry sheet's grouped rows card. */
+  heroRadius: 20,
   sheetRadius: 26, // top corners only
   pill: 999,
-  keypadKeyRadius: 15,
-  iconTileRadius: 10, // range 9–11
-  dayCellRadius: 11,
+  chipRadius: 9,
+  keypadKeyRadius: 12,
+  iconTileRadius: 9,
+  dayCellRadius: 8,
   dayCellHeight: 46,
-  progressRadius: 6,
+  /** Day-cell activity dot, and the larger one a heavy spending day earns. */
+  dayDot: 4,
+  dayDotLarge: 6,
+  segRadius: 12,
+  segItemRadius: 9,
+  /** Progress tracks and the split bar stay fully round. */
+  progressRadius: 999,
   progressHeight: 8,
   tabBarHeight: 92,
   keypadCols: 3,
   keypadGap: 9,
   keypadKeySize: 52,
-  navButton: 34, // round nav buttons
+  navButton: 34,
+  navButtonRadius: 10,
+  fabSize: 54,
+  fabRadius: 16,
   ctaHeight: 54,
-  ctaRadius: 16,
+  ctaRadius: 14,
   /** Web only: center the app in a phone-width container (decision 10). */
   webMaxWidth: 402,
 } as const;
 
-/** Shadows are theme-independent in the design (tuned for dark). */
+/**
+ * Card lift. Retuned for a light ground — the previous values were a heavy
+ * black bloom sized for the near-black theme and read as dirt on off-white.
+ */
 export const shadows = {
   card: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  ctaGlow: {
-    shadowColor: accents.positive,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.26,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  /** Center ＋ FAB green glow (design: `0 8 22 rgba(43,212,138,.32)`). */
-  fabGlow: {
-    shadowColor: accents.positive,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.32,
-    shadowRadius: 22,
-    elevation: 10,
+    shadowColor: '#141820',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 3,
   },
 } as const;
+
+/**
+ * Accent glow for the CTA and the ＋ FAB. Takes the active accent so the blue
+ * tracks the theme rather than being frozen at the light value.
+ */
+export const glowFor = (color: string) =>
+  ({
+    shadowColor: color,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 8,
+  }) as const;

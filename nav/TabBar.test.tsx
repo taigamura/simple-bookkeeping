@@ -8,7 +8,9 @@ import { StyleSheet } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { ThemeProvider, accents, metrics } from '../theme';
+import { ThemeProvider, palettes, metrics } from '../theme';
+
+const light = palettes.light;
 import { TabBar } from './TabBar';
 
 // A device with a home-indicator bottom inset, so the bottom-edge anchoring
@@ -36,23 +38,23 @@ describe('TabBar', () => {
     expect(screen.getByLabelText('Add entry')).toBeTruthy();
   });
 
-  it('tints the active tab label green (design §12)', () => {
+  it('tints the active tab label with the accent (design §12)', () => {
     renderBar({ tab: 'calendar' });
     const active = StyleSheet.flatten(screen.getByText('Calendar').props.style);
-    expect(active.color).toBe(accents.positive);
+    expect(active.color).toBe(light.positive);
   });
 
-  it('leaves the inactive tab label dim, not green', () => {
+  it('leaves the inactive tab label dim, not accented', () => {
     renderBar({ tab: 'calendar' });
     const inactive = StyleSheet.flatten(screen.getByText('Summary').props.style);
-    expect(inactive.color).not.toBe(accents.positive);
+    expect(inactive.color).not.toBe(light.positive);
   });
 
-  it('gives the ＋ FAB a green glow (design §12)', () => {
+  it('gives the ＋ FAB an accent glow (design §12)', () => {
     renderBar();
     const fab = StyleSheet.flatten(screen.getByLabelText('Add entry').props.style);
-    expect(fab.shadowColor).toBe(accents.positive);
-    expect(fab.shadowOpacity).toBe(0.32);
+    expect(fab.shadowColor).toBe(light.positive);
+    expect(fab.shadowOpacity).toBe(0.3);
   });
 
   it('fires onAdd when the FAB is pressed', () => {

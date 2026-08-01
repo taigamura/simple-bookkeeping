@@ -34,6 +34,7 @@ import {
   clampDay,
   monthEntries,
   shiftMonth,
+  type CalendarView,
   type RecurrenceDate,
   type Transaction,
   type YM,
@@ -47,6 +48,12 @@ interface MonthPagerProps {
   m: number;
   selectedDay: number;
   today?: RecurrenceDate;
+  /** Day-cell variant, passed straight through to every month's grid. */
+  view?: CalendarView;
+  /** Landing-pulse target day and nonce (pure pass-through — see `DayCell`).
+   *  Applied only to the committed month's grid, same rule as `onSelectDay`. */
+  pulseDay?: number;
+  pulseNonce?: number;
   onSelectDay: (day: number) => void;
   /** Commit the absolute month the pager settled on. */
   onMonthChange: (ym: YM) => void;
@@ -78,6 +85,9 @@ export function MonthPager({
   m,
   selectedDay,
   today,
+  view,
+  pulseDay,
+  pulseNonce,
   onSelectDay,
   onMonthChange,
 }: MonthPagerProps) {
@@ -158,6 +168,9 @@ export function MonthPager({
           monthEntries={monthEntries(entries, { y, m })}
           selectedDay={selectedDay}
           today={today}
+          view={view}
+          pulseDay={pulseDay}
+          pulseNonce={pulseNonce}
           onSelectDay={onSelectDay}
         />
       </View>
@@ -187,6 +200,9 @@ export function MonthPager({
               // only the committed month's grid takes day taps.
               selectedDay={clampDay(selectedDay, item.y, item.m)}
               today={today}
+              view={view}
+              pulseDay={sameYM(item, { y, m }) ? pulseDay : undefined}
+              pulseNonce={sameYM(item, { y, m }) ? pulseNonce : undefined}
               onSelectDay={sameYM(item, { y, m }) ? onSelectDay : () => {}}
             />
           </View>

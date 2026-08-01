@@ -194,12 +194,33 @@ function ruleEntriesForMonth(rule: RecurrenceRule, month: YM): Transaction[] {
     );
 }
 
-/** Persist a one-time entry or an unbounded recurrence rule from one draft. */
+/**
+ * Persist a one-time entry or an unbounded recurrence rule from one draft.
+ *
+ * `scope` only matters when editing a projected occurrence (`editing.occurrence`
+ * set) and only changes which future occurrences pick up the new values:
+ *
+ * - `'future'` (default): this occurrence and every later one — truncates the
+ *   source rule at the edited occurrence's original date and starts a new rule
+ *   (or a one-time entry, if the draft turns off repeat) from there. This is
+ *   the only behavior this function had before `scope` existed.
+ * - `'one'`: only this occurrence. The source rule is left otherwise
+ *   untouched — future projections keep its existing cadence and values —
+ *   and gets an exception added for the original scheduled date, alongside a
+ *   standalone one-time replacement entry carrying the edited values. A
+ *   single occurrence has no cadence of its own, so `draft.repeat` is not
+ *   consulted for this scope; the replacement is always non-repeating.
+ *
+ * Ignored for every other edit (a plain entry, a legacy materialized repeat
+ * with no rule link, or a brand new item) — none of those have a rule to
+ * split "one" from "future" against.
+ */
 export function saveLedgerItem(
   ledger: Ledger,
   draft: EntryDraft,
   weekendShift: WeekendShift = 'off',
   editing?: Transaction,
+  scope: 'one' | 'future' = 'future',
 ): Ledger {
   const normalized = makeEntry(draft);
   if (!normalized) return ledger;
@@ -209,9 +230,44 @@ export function saveLedgerItem(
       (rule) => rule.id === editing.occurrence!.ruleId,
     );
     if (!source) return ledger;
+    const cutoff = dateKey(editing.occurrence.scheduled);
+
+    if (scope === 'one') {
+      const recurrenceRules = ledger.recurrenceRules.map((rule) =>
+        rule.id === source.id && !rule.exceptions.includes(cutoff)
+          ? { ...rule, exceptions: [...rule.exceptions, cutoff] }
+          : rule,
+      );
+      // The date field defaults to the rule's raw scheduled anchor, not the
+      // weekend-shifted date the occurrence actually *displays* on (see
+      // EntrySheet's date-field default) — a one-time replacement has no
+      // weekend-shift concept of its own to re-derive that display date from,
+      // so an untouched field would silently land it back on the unshifted
+      // day instead of the day the user found and opened it on. Land on the
+      // displayed date instead when the field wasn't touched; an explicit
+      // date edit is honored exactly as typed.
+      const dateFieldUntouched =
+        compareDate({ y: draft.y, m: draft.m, day: draft.day }, editing.occurrence.scheduled) === 0;
+      const landingDate = dateFieldUntouched
+        ? { y: editing.y, m: editing.m, day: editing.day }
+        : { y: draft.y, m: draft.m, day: draft.day };
+      return {
+        entries: [
+          ...ledger.entries,
+          {
+            ...normalized,
+            ...landingDate,
+            timestamp: editing.timestamp,
+            ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
+            repeat: 'never',
+          },
+        ],
+        recurrenceRules,
+      };
+    }
+
     const nextStart = { y: draft.y, m: draft.m, day: draft.day };
     const movesBackward = compareDate(nextStart, editing.occurrence.scheduled) < 0;
-    const cutoff = dateKey(editing.occurrence.scheduled);
     const recurrenceRules = ledger.recurrenceRules.map((rule) =>
       rule.id === source.id ? { ...rule, endsBefore: cutoff } : rule,
     );

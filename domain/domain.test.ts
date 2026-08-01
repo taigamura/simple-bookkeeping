@@ -2,7 +2,8 @@
  * Domain tests (slice #3 acceptance criteria): formatting, aggregation, and the
  * keypad integer rules — all pure, no RN.
  */
-import { yen, signed, code, MINUS } from './format';
+import { yen, signed, code, stamp, MINUS } from './format';
+import { emojiFor, FALLBACK_EMOJI } from './emoji';
 import {
   monthEntries,
   dayEntries,
@@ -57,6 +58,44 @@ describe('code', () => {
   it('is the first two chars uppercased', () => {
     expect(code('Food')).toBe('FO');
     expect(code('transport')).toBe('TR');
+  });
+});
+
+describe('stamp', () => {
+  // Built from local parts, so these hold in whatever zone the suite runs in.
+  const iso = (y: number, m: number, d: number, h: number, min: number) =>
+    new Date(y, m, d, h, min).toISOString();
+
+  it('is YYYY/MM/DD HH:MM in local time', () => {
+    expect(stamp(iso(2026, 6, 21, 14, 30))).toBe('2026/07/21 14:30');
+  });
+
+  it('zero-pads every field and keeps the clock 24-hour', () => {
+    expect(stamp(iso(2026, 0, 5, 9, 5))).toBe('2026/01/05 09:05');
+    expect(stamp(iso(2026, 0, 5, 0, 0))).toBe('2026/01/05 00:00');
+    expect(stamp(iso(2026, 0, 5, 23, 59))).toBe('2026/01/05 23:59');
+  });
+
+  it('renders an unparseable timestamp as empty rather than "Invalid Date"', () => {
+    expect(stamp('not a date')).toBe('');
+  });
+});
+
+describe('emojiFor', () => {
+  it('maps the seeded categories to their own glyph', () => {
+    expect(emojiFor('Food')).toBe('🍜');
+    expect(emojiFor('Transport')).toBe('🚃');
+    expect(emojiFor('Salary')).toBe('💴');
+  });
+
+  it('ignores case and surrounding whitespace', () => {
+    expect(emojiFor('  food ')).toBe(emojiFor('Food'));
+    expect(emojiFor('GROCERIES')).toBe('🛒');
+  });
+
+  it('falls back to the neutral tag for a category it does not know', () => {
+    expect(emojiFor('Quarterly dues')).toBe(FALLBACK_EMOJI);
+    expect(emojiFor('')).toBe(FALLBACK_EMOJI);
   });
 });
 

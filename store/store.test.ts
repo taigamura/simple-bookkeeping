@@ -175,6 +175,8 @@ describe('createStore', () => {
       budgets: _budgets,
       budgetMode: _budgetMode,
       totalBudget: _totalBudget,
+      calendarView: _calendarView,
+      motion: _motion,
       ...legacyState
     } = stateWith({ entries: [sampleEntry], theme: 'light' });
     const blob = JSON.stringify({ version: SCHEMA_VERSION, state: legacyState });
@@ -188,6 +190,52 @@ describe('createStore', () => {
     expect(loaded.budgets).toEqual({});
     expect(loaded.budgetMode).toBe('category');
     expect(loaded.totalBudget).toBe(0);
+    // Blobs written before the calendar view toggle shipped get the dot default.
+    expect(loaded.calendarView).toBe('dots');
+    // Likewise for motion: pre-ADR-0003 blobs follow the OS reduce-motion flag.
+    expect(loaded.motion).toBe('system');
+  });
+
+  it('round-trips a chosen motion preference', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: stateWith({ motion: 'reduced' }),
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    await expect(store.load()).resolves.toMatchObject({ motion: 'reduced' });
+  });
+
+  it('stashes an unrecognised motion preference before using defaults', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: { ...stateWith(), motion: 'subtle' },
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    await expect(store.load()).resolves.toEqual(DEFAULT_STATE);
+    expect(await store.readCorruptStash()).toBe(blob);
+  });
+
+  it('round-trips a chosen calendar view', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: stateWith({ calendarView: 'numbers' }),
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    await expect(store.load()).resolves.toMatchObject({ calendarView: 'numbers' });
+  });
+
+  it('stashes an unrecognised calendar view before using defaults', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: { ...stateWith(), calendarView: 'bars' },
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    await expect(store.load()).resolves.toEqual(DEFAULT_STATE);
+    expect(await store.readCorruptStash()).toBe(blob);
   });
 
   it('ignores a legacy premium field when loading older persisted state (#77)', async () => {

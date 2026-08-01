@@ -14,9 +14,11 @@ import {
   DEFAULT_INC_CATS,
   DEFAULT_CURRENCY,
   daysInMonth,
+  isCalendarView,
 } from '../domain';
 import type {
   Budgets,
+  CalendarView,
   Currency,
   RecurrenceDate,
   RecurrenceRule,
@@ -25,13 +27,16 @@ import type {
   TxType,
   WeekendShift,
 } from '../domain';
-import type { ThemeMode } from '../theme/tokens';
+import { isMotionPreference, type MotionPreference } from '../theme/motion';
+import { isThemePreference, type ThemePreference } from '../theme/tokens';
 
 /** Bump when the shape changes incompatibly; `load()` falls back to defaults. */
 export const SCHEMA_VERSION = 1;
 
 export interface AppState {
-  theme: ThemeMode;
+  /** Appearance preference; `system` follows the OS. Blobs written before the
+   *  system option shipped hold 'dark'/'light' and still validate. */
+  theme: ThemePreference;
   entries: Transaction[];
   /** Infinite recurrence definitions; concrete occurrences are projected on demand. */
   recurrenceRules: RecurrenceRule[];
@@ -48,10 +53,16 @@ export interface AppState {
   /** Total monthly budget amount in total mode (#66); 0 = no total budget.
    *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
   totalBudget: number;
+  /** Day-cell variant for the month grid; the calendar header toggles it.
+   *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
+  calendarView: CalendarView;
+  /** Motion preference; `system` follows the OS reduce-motion setting.
+   *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
+  motion: MotionPreference;
 }
 
 export const DEFAULT_STATE: AppState = {
-  theme: 'dark',
+  theme: 'system',
   entries: [],
   recurrenceRules: [],
   expCats: DEFAULT_EXP_CATS,
@@ -60,6 +71,8 @@ export const DEFAULT_STATE: AppState = {
   budgets: {},
   budgetMode: 'category',
   totalBudget: 0,
+  calendarView: 'dots',
+  motion: 'system',
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */
@@ -77,6 +90,8 @@ const additiveStateKeys: StateKey[] = [
   'budgets',
   'budgetMode',
   'totalBudget',
+  'calendarView',
+  'motion',
 ];
 const txTypes: TxType[] = ['income', 'expense'];
 const repeats: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
@@ -239,7 +254,7 @@ function normalizeTransaction(value: unknown): Transaction | null {
 function validateField(key: StateKey, value: unknown): boolean {
   switch (key) {
     case 'theme':
-      return value === 'dark' || value === 'light';
+      return isThemePreference(value);
     case 'entries':
       return Array.isArray(value) && value.every((item) => normalizeTransaction(item) !== null);
     case 'recurrenceRules':
@@ -255,6 +270,10 @@ function validateField(key: StateKey, value: unknown): boolean {
       return value === 'category' || value === 'total';
     case 'totalBudget':
       return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+    case 'calendarView':
+      return isCalendarView(value);
+    case 'motion':
+      return isMotionPreference(value);
   }
 }
 

@@ -45,3 +45,9 @@ target/
 
 # Ralph backup directories (created by migration)
 .ralph_backup_*
+
+# Expo generated cache/state
+.expo/
+
+# WSL NTFS alternate-data-stream artifacts
+*:Zone.Identifier

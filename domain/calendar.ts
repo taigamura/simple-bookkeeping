@@ -5,6 +5,19 @@
  */
 import type { YM } from './types';
 
+/**
+ * How a day cell shows its activity. `dots` is the Kippu design's dot variant
+ * (a mark whose size and color track the day's net) and the app default; it
+ * reads as a calm density map and never truncates. `numbers` is the literal
+ * signed total, which is exact but can clip at seven columns of phone width.
+ */
+export type CalendarView = 'dots' | 'numbers';
+
+export const CALENDAR_VIEWS: readonly CalendarView[] = ['dots', 'numbers'] as const;
+
+export const isCalendarView = (value: unknown): value is CalendarView =>
+  value === 'dots' || value === 'numbers';
+
 /** Number of days in month `m` (0-based) of year `y`. */
 export function daysInMonth(y: number, m: number): number {
   return new Date(y, m + 1, 0).getDate();

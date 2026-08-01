@@ -184,6 +184,154 @@ describe('persistent recurrence', () => {
     });
   });
 
+  it('edits only the selected occurrence, leaving the rule and its other months alone (scope: one)', () => {
+    const original = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: 2027, m: 0, day: 31, repeat: 'monthly' }),
+      'off',
+    );
+    const march = entriesForMonth(original, { y: 2027, m: 2 })[0];
+
+    const edited = saveLedgerItem(
+      original,
+      draft({ y: 2027, m: 2, day: 31, amountStr: '1200', repeat: 'monthly' }),
+      'off',
+      march,
+      'one',
+    );
+
+    // The edited month shows the standalone replacement, one-time and at the
+    // new values; every other month still projects from the untouched rule.
+    expect(entriesForMonth(edited, { y: 2027, m: 1 })[0]).toMatchObject({
+      amount: 850,
+      repeat: 'monthly',
+    });
+    expect(entriesForMonth(edited, { y: 2027, m: 2 })[0]).toMatchObject({
+      amount: 1200,
+      repeat: 'never',
+    });
+    expect(entriesForMonth(edited, { y: 2027, m: 3 })[0]).toMatchObject({
+      day: 30, // April clamps the 31-anchor day, same as the untouched rule always did.
+      amount: 850,
+      repeat: 'monthly',
+    });
+    // The rule itself is untouched apart from gaining the one exception —
+    // still open-ended, still the original cadence and values.
+    expect(edited.recurrenceRules).toEqual([
+      { ...original.recurrenceRules[0], exceptions: ['2027-03-31'] },
+    ]);
+  });
+
+  it('moves a single-occurrence edit to a new date without disturbing the rule (scope: one)', () => {
+    const original = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: 2027, m: 0, day: 31, repeat: 'monthly' }),
+      'off',
+    );
+    const march = entriesForMonth(original, { y: 2027, m: 2 })[0];
+
+    const edited = saveLedgerItem(
+      original,
+      draft({ y: 2027, m: 2, day: 15, amountStr: '1200', repeat: 'monthly' }),
+      'off',
+      march,
+      'one',
+    );
+
+    // The rule stops generating on its original March date (the exception is
+    // keyed on the *scheduled* date, not wherever the replacement landed)...
+    expect(entriesForMonth(edited, { y: 2027, m: 2 })).toEqual([
+      expect.objectContaining({ day: 15, amount: 1200, repeat: 'never' }),
+    ]);
+    // ...and the rule's cadence for every other month is untouched.
+    expect(entriesForMonth(edited, { y: 2027, m: 3 })[0]).toMatchObject({
+      day: 30,
+      amount: 850,
+      repeat: 'monthly',
+    });
+  });
+
+  it('ignores the draft repeat cadence for a scope-one edit — a single occurrence cannot repeat', () => {
+    const original = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: 2027, m: 0, day: 31, repeat: 'monthly' }),
+      'off',
+    );
+    const march = entriesForMonth(original, { y: 2027, m: 2 })[0];
+
+    // The form still shows the ongoing cadence (yearly here, mismatched from
+    // the rule's monthly on purpose) since scope is chosen after Save, not
+    // via the form — scope: 'one' must not let that leak into the rule.
+    const edited = saveLedgerItem(
+      original,
+      draft({ y: 2027, m: 2, day: 31, amountStr: '1200', repeat: 'yearly' }),
+      'off',
+      march,
+      'one',
+    );
+
+    expect(edited.recurrenceRules).toHaveLength(1);
+    expect(edited.recurrenceRules[0].repeat).toBe('monthly');
+    expect(entriesForMonth(edited, { y: 2027, m: 2 })[0].repeat).toBe('never');
+  });
+
+  it('lands a scope-one edit on the weekend-shifted display date, not the raw anchor', () => {
+    // July 4, 2026 is a Saturday; 'after' shifts display to Monday the 6th.
+    // The Entry sheet's date field defaults to the *raw* scheduled anchor
+    // (day 4) — a scope-one save that leaves the field untouched must not
+    // silently plant the replacement back on that unshifted Saturday, since
+    // the user found and opened this occurrence on the Monday it displays on.
+    const original = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: Y, m: M, day: 4, repeat: 'monthly' }),
+      'after',
+    );
+    const july = entriesForMonth(original, { y: Y, m: M })[0];
+    expect(july.day).toBe(6); // sanity: confirms the fixture actually shifted
+
+    // Mirrors what EntrySheet actually submits when the date field is left
+    // alone: draft.y/m/day equal to the occurrence's raw *scheduled* date,
+    // not its shifted display date.
+    const edited = saveLedgerItem(
+      original,
+      draft({ y: Y, m: M, day: july.occurrence!.scheduled.day, amountStr: '1200', repeat: 'monthly' }),
+      'after',
+      july,
+      'one',
+    );
+
+    expect(entriesForMonth(edited, { y: Y, m: M })).toEqual([
+      expect.objectContaining({ day: 6, amount: 1200, repeat: 'never' }),
+    ]);
+    // The rule is untouched and still projects (and still shifts) normally
+    // for every other month.
+    expect(entriesForMonth(edited, { y: Y, m: M + 1 })[0]).toMatchObject({ amount: 850 });
+  });
+
+  it('honors an explicit date change for a scope-one edit, without re-applying the display shift', () => {
+    const original = saveLedgerItem(
+      { entries: [], recurrenceRules: [] },
+      draft({ y: Y, m: M, day: 4, repeat: 'monthly' }),
+      'after',
+    );
+    const july = entriesForMonth(original, { y: Y, m: M })[0];
+
+    // The user explicitly retypes the date to the 10th — that is an
+    // intentional choice and must be honored exactly, not treated as "field
+    // untouched" and redirected back to the shifted display date.
+    const edited = saveLedgerItem(
+      original,
+      draft({ y: Y, m: M, day: 10, amountStr: '1200', repeat: 'monthly' }),
+      'after',
+      july,
+      'one',
+    );
+
+    expect(entriesForMonth(edited, { y: Y, m: M })).toEqual([
+      expect.objectContaining({ day: 10, amount: 1200, repeat: 'never' }),
+    ]);
+  });
+
   it('keeps future single-occurrence deletions when editing the same cadence', () => {
     const original = saveLedgerItem(
       { entries: [], recurrenceRules: [] },

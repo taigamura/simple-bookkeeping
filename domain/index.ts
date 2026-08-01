@@ -16,7 +16,8 @@ export {
   DEFAULT_INC_CATS,
   DEFAULT_CURRENCY,
 } from './defaults';
-export { yen, signed, code, MINUS } from './format';
+export { yen, signed, code, stamp, MINUS } from './format';
+export { emojiFor, FALLBACK_EMOJI } from './emoji';
 export {
   monthEntries,
   dayEntries,
@@ -40,6 +41,9 @@ export {
   WEEKDAY_ABBR,
   MONTH_NAMES,
   dayLabel,
+  CALENDAR_VIEWS,
+  isCalendarView,
+  type CalendarView,
 } from './calendar';
 export {
   categoryBreakdown,

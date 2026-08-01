@@ -8,6 +8,11 @@
  * `flexWrap` row at `100/7 %` width; on device those seven percentage widths
  * could round past 100% and wrap the 7th cell onto a new line, collapsing the
  * week to 6 columns (Sunday looked skipped). Fixed-count rows guarantee 7.
+ *
+ * `pulseDay`/`pulseNonce` are pure pass-through to the one `DayCell` whose
+ * `day` matches `pulseDay` — the landing-pulse ring a just-saved entry gets is
+ * owned entirely by `DayCell`; this component only routes the nonce to the
+ * right cell.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -17,6 +22,7 @@ import {
   daysInMonth,
   firstWeekday,
   WEEKDAYS,
+  type CalendarView,
   type RecurrenceDate,
   type Transaction,
 } from '../domain';
@@ -30,6 +36,12 @@ interface CalendarGridProps {
   monthEntries: Transaction[];
   selectedDay: number;
   today?: RecurrenceDate;
+  /** Day-cell variant; defaults to the design's dot variant. */
+  view?: CalendarView;
+  /** The day, within this month, that should play the landing pulse. */
+  pulseDay?: number;
+  /** Nonce for that pulse — see `DayCell`'s `pulse` prop. */
+  pulseNonce?: number;
   onSelectDay: (day: number) => void;
 }
 
@@ -59,6 +71,9 @@ export function CalendarGrid({
   monthEntries,
   selectedDay,
   today,
+  view,
+  pulseDay,
+  pulseNonce,
   onSelectDay,
 }: CalendarGridProps) {
   const weeks = monthWeeks(y, m);
@@ -86,6 +101,8 @@ export function CalendarGrid({
                     net={dayNet(monthEntries, day)}
                     selected={day === selectedDay}
                     today={today?.y === y && today.m === m && today.day === day}
+                    view={view}
+                    pulse={day === pulseDay ? pulseNonce : undefined}
                     onPress={onSelectDay}
                   />
                 )}

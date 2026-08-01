@@ -1,7 +1,8 @@
 /**
- * ThemePreview — a temporary Stage-2 harness to eyeball the design system on
- * web: every type variant, the palette surfaces, accents, and the manual
- * dark/light toggle (decision 9). Removed once real screens land in Stage 5.
+ * ThemePreview — a dev-only harness to eyeball the design system on web: every
+ * type variant, the palette surfaces, the accents, and the light/dark toggle.
+ * Not mounted by the app; kept as a quick way to compare both Kippu palettes
+ * side by side.
  */
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -9,7 +10,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from './ThemeProvider';
 import { Txt } from './Txt';
-import { accents, metrics, type TypeVariant } from './tokens';
+import { metrics, type TypeVariant } from './tokens';
 
 const VARIANTS: TypeVariant[] = [
   'heroAmount',
@@ -67,10 +68,10 @@ function Body() {
           </Txt>
         </View>
         <View
-          style={[styles.cta, { backgroundColor: accents.positive }]}
+          style={[styles.cta, { backgroundColor: colors.positive }]}
         >
           <Txt variant="listItem" tone="onPositive">
-            Primary CTA (on-green = near-black)
+            Primary CTA (on-accent)
           </Txt>
         </View>
 

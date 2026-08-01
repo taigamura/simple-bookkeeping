@@ -28,7 +28,7 @@ import {
 import {
   CURRENCIES,
   addCategory,
-  code,
+  emojiFor,
   moveCategory,
   removeCategory,
   type Currency,
@@ -36,7 +36,15 @@ import {
 } from '../domain';
 import { strings } from '../i18n';
 import { IconButton } from '../nav/IconButton';
-import { useTheme, accents, metrics, Txt, type ThemeMode } from '../theme';
+import {
+  useMotion,
+  useTheme,
+  metrics,
+  Txt,
+  type MotionPreference,
+  type ThemePreference,
+} from '../theme';
+import { PressScale } from '../ui';
 
 /** Minimal shape shared by RN's `ScrollView` and gorhom's `BottomSheetScrollView`. */
 interface ScrollContainerProps {
@@ -105,6 +113,7 @@ export function SettingsSheet({
         showsVerticalScrollIndicator={false}
       >
         <Appearance />
+        <Motion />
         <CurrencyGrid value={currency} onChange={onChangeCurrency} />
         <Categories
           expCats={expCats}
@@ -126,12 +135,17 @@ export function SettingsSheet({
   );
 }
 
-/** Manual Dark/Light switch (decision 9 — no OS-appearance theming). */
+/**
+ * System/Light/Dark switch. `System` follows the OS appearance; the other two
+ * pin it. Selection reflects the stored *preference*, not the resolved mode —
+ * so `System` stays highlighted whichever way the OS is currently leaning.
+ */
 function Appearance() {
-  const { mode, setMode } = useTheme();
-  const MODES: { value: ThemeMode; label: string }[] = [
-    { value: 'dark', label: strings.settings.dark },
+  const { preference, setPreference } = useTheme();
+  const MODES: { value: ThemePreference; label: string }[] = [
+    { value: 'system', label: strings.settings.system },
     { value: 'light', label: strings.settings.light },
+    { value: 'dark', label: strings.settings.dark },
   ];
   return (
     <Section label={strings.settings.appearance}>
@@ -140,8 +154,41 @@ function Appearance() {
           <OptBox
             key={m.value}
             label={m.label}
-            active={mode === m.value}
-            onPress={() => setMode(m.value)}
+            active={preference === m.value}
+            onPress={() => setPreference(m.value)}
+          />
+        ))}
+      </View>
+    </Section>
+  );
+}
+
+/**
+ * System/Full/Reduced motion switch. Same shape as Appearance above, and for
+ * the same reason: `System` follows the OS reduce-motion accessibility setting,
+ * the other two pin it, and the selection shows the stored *preference* so
+ * `System` stays highlighted whichever way the OS is currently set.
+ *
+ * A three-way control rather than a toggle because "off" and "follow the OS"
+ * are genuinely different answers — a user with reduce-motion on system-wide
+ * may still want Kaji's motion, and a user with it off may not.
+ */
+function Motion() {
+  const { preference, setPreference } = useMotion();
+  const MODES: { value: MotionPreference; label: string }[] = [
+    { value: 'system', label: strings.settings.system },
+    { value: 'full', label: strings.settings.motionFull },
+    { value: 'reduced', label: strings.settings.motionReduced },
+  ];
+  return (
+    <Section label={strings.settings.motion}>
+      <View style={styles.optRow}>
+        {MODES.map((m) => (
+          <OptBox
+            key={m.value}
+            label={m.label}
+            active={preference === m.value}
+            onPress={() => setPreference(m.value)}
           />
         ))}
       </View>
@@ -175,9 +222,15 @@ function CurrencyGrid({
   );
 }
 
-/** Selection tile shared by Appearance & Currency: green-tint + inset green ring
- *  and green text when active, else card2 with a muted label (design §9). */
-const OPT_TINT = 'rgba(43,212,138,.15)';
+/** Selection tile shared by Appearance & Currency: accent-tinted fill + accent
+ *  ring and accent text when active, else card2 with a muted label.
+ *
+ * `PressScale` (`surface` — these tiles sit several to a row, closer to the
+ * CTA/option-tile case than to a small square control) is the only motion
+ * added here: the border-color and text-tone flips between active/inactive
+ * stay instant, same as everywhere else in Settings, since this tile is read
+ * as a discrete choice (Light vs Dark, ¥ vs $) rather than a value sliding
+ * between two states. */
 
 function OptBox({
   label,
@@ -194,7 +247,8 @@ function OptBox({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <PressScale
+      scale="surface"
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ selected: active }}
@@ -204,14 +258,14 @@ function OptBox({
       style={[
         styles.optBox,
         active
-          ? { backgroundColor: OPT_TINT, borderColor: accents.positive }
+          ? { backgroundColor: colors.card2, borderColor: colors.positive }
           : { backgroundColor: colors.card2, borderColor: 'transparent' },
       ]}
     >
       <Txt variant="optionLabel" tone={active ? 'positive' : 'muted'} numberOfLines={1}>
         {label}
       </Txt>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -262,7 +316,7 @@ function Categories({
                 accessibilityValue={{ text: active ? strings.a11y.selected : strings.a11y.notSelected }}
                 style={[
                   styles.miniPill,
-                  { backgroundColor: active ? accents.positive : colors.card2 },
+                  { backgroundColor: active ? colors.positive : colors.card2 },
                 ]}
               >
                 <Txt variant="microLabel" tone={active ? 'onPositive' : 'muted'}>
@@ -284,8 +338,13 @@ function Categories({
             ]}
           >
             <View style={[styles.codeTile, { backgroundColor: colors.card3 }]}>
-              <Txt variant="microLabel" tone="muted">
-                {code(cat)}
+              {/* Decorative: the category name is the label right beside it. */}
+              <Txt
+                style={styles.emoji}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              >
+                {emojiFor(cat)}
               </Txt>
             </View>
             <Txt variant="listItem" tone="ink" style={styles.catLabel} numberOfLines={1}>
@@ -338,7 +397,7 @@ function Categories({
           style={[
             styles.addBtn,
             {
-              backgroundColor: accents.positive,
+              backgroundColor: colors.positive,
               opacity: draft.trim().length === 0 ? 0.4 : 1,
             },
           ]}
@@ -569,6 +628,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /** Sized so the tile reads as an icon, not as text in a box. */
+  emoji: { fontSize: 16, lineHeight: 21 },
   catLabel: { flex: 1 },
   addRow: { flexDirection: 'row', gap: 8, marginTop: 2 },
   input: {

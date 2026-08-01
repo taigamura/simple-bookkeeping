@@ -80,31 +80,75 @@ const SHEET_HANDLE_HEIGHT = 40;
 const SHEET_CONTENT_TOP_PADDING = 4;
 const SHEET_CONTENT_BOTTOM_PADDING = 28;
 
+/**
+ * Everything the sheet itself consumes between the top of its container and the
+ * bottom of its content box: the dimmed strip left above the sheet, the drag
+ * handle, and the content view's own padding.
+ *
+ * Exported so fixed-form content (the Entry sheet) can work out how much room
+ * it will actually be given and size itself to fit, rather than each side
+ * keeping its own copy of these numbers and drifting apart. Pure arithmetic on
+ * the constants above — no behaviour here changes.
+ */
+export const SHEET_CHROME =
+  SHEET_TOP_STRIP +
+  SHEET_HANDLE_HEIGHT +
+  SHEET_CONTENT_TOP_PADDING +
+  SHEET_CONTENT_BOTTOM_PADDING;
+
+/**
+ * How long the open/close slide takes (ms) — see the "Snappy open/close"
+ * comment below for why it's short. Exported so a caller that needs to
+ * sequence something with the sheet's own animation (e.g. Root's save-landing
+ * pulse, which should land once the sheet has actually cleared the screen
+ * rather than racing its dismiss) can read the real number instead of
+ * hardcoding a second copy that would drift out of step with this one.
+ */
+export const SHEET_ANIMATION_DURATION = 200;
+
 // The web AppShell (nav/AppShell.tsx) centers the app in a phone frame inset by
 // 24px backdrop padding + a 1px border on every side; the sheet's gorhom
 // container is that frame, not the whole window. Native has no such frame — the
 // container is the window minus the top safe-area inset (the TabBar owns the
 // bottom edge). Keep this in sync with AppShell's `webBackdrop` padding.
-const WEB_FRAME_INSET = 2 * (24 + 1);
+export const WEB_FRAME_INSET = 2 * (24 + 1);
 
 // accessibilityLabel we pin on gorhom's full-screen sheet-content container so
 // the web CSS below can target it (gorhom's default label is "Bottom Sheet").
 const SHEET_SURFACE_LABEL = 'sheet-surface';
 
-// react-native-web renders gorhom's `pointerEvents="box-none"` sheet container
-// as plain `pointer-events: auto`, so that full-screen container swallows every
-// tap outside the sheet body — during a dismiss animation it eats the immediate
-// reopen (＋) / swap (⚙) tap and the sheet looks wedged shut (#63; native is
-// fine, box-none works there). Restore true box-none on web: the container
-// passes taps through, only its sheet-body child captures. Injected once.
+// react-native-web renders gorhom's `pointerEvents="box-none"` sheet containers
+// as plain `pointer-events: auto`, so a full-screen container swallows every tap
+// outside the sheet body — the backdrop-dismiss tap, the immediate reopen (＋) /
+// swap (⚙) tap during a dismiss, and every post-dismiss calendar tap — leaving
+// the sheet wedged shut (#63; native is fine, box-none works there). Restore
+// true box-none on web: the containers pass taps through, only the sheet body
+// (and its own children: the CTA, the handle, list rows) captures. Injected once.
+//
+// Two containers need neutralizing, confirmed by walking the live gorhom DOM
+// (headless Firefox, sheet open):
+//
+//   [aria-label="Bottom Sheet"]'s parent  ← gorhom's outer BottomSheetContainer:
+//       position:absolute, full-frame, flex-direction:column-reverse. This is the
+//       one painted *over* the dimmed backdrop; it is the direct PARENT of our
+//       labeled surface, so it is unreachable by a descendant selector and was
+//       the piece the original one-selector fix missed. Reach it with :has().
+//   [aria-label="sheet-surface"]          ← the modal's own content wrapper.
+//
+// In both, pointer-events:none only voids the container's *own* empty area; any
+// descendant that sets pointer-events:auto (the sheet body below, the handle's
+// Pressable) stays fully interactive, so the sheet still drags and its controls
+// still tap while the dimmed margin around it clicks through to the backdrop.
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const STYLE_ID = 'kaji-sheet-boxnone';
   if (!document.getElementById(STYLE_ID)) {
     const el = document.createElement('style');
     el.id = STYLE_ID;
+    const surface = `[aria-label="${SHEET_SURFACE_LABEL}"]`;
     el.textContent =
-      `[aria-label="${SHEET_SURFACE_LABEL}"]{pointer-events:none!important}` +
-      `[aria-label="${SHEET_SURFACE_LABEL}"]>*{pointer-events:auto}`;
+      `:has(> ${surface}){pointer-events:none!important}` +
+      `${surface}{pointer-events:none!important}` +
+      `${surface}>*{pointer-events:auto}`;
     document.head.appendChild(el);
   }
 }
@@ -226,7 +270,9 @@ export function BottomSheet({
   // not pass through on react-native-web) sits over the FAB/gear and eats an
   // immediate reopen/swap tap — the last piece of the "sheets never reopen" bug
   // (#63). The phase machine then re-presents once that tap lands.
-  const animationConfigs = useBottomSheetTimingConfigs({ duration: 200 });
+  const animationConfigs = useBottomSheetTimingConfigs({
+    duration: SHEET_ANIMATION_DURATION,
+  });
 
   // Always-current mirror of `visible` for the async onDismiss handler, which
   // fires from a stale render closure and so cannot read `visible` directly.

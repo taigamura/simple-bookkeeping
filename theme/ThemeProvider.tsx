@@ -1,11 +1,16 @@
 /**
- * ThemeProvider — supplies the active color palette and mode switching.
+ * ThemeProvider — supplies the active color palette and appearance switching.
  *
- * Decision 9: dark by default, manual only (OS appearance ignored — no
- * `useColorScheme`). The provider stays storage-agnostic: it accepts an
- * `initialMode` (seeded from persisted state) and reports changes via
- * `onModeChange`. `App` plugs the store into those two props, so the choice
- * persists across reload without this component knowing about AsyncStorage.
+ * Supersedes build-decision 9 (manual only). The user picks a *preference* —
+ * `system`, `light` or `dark` — and `system` resolves against the OS via
+ * `useColorScheme`, re-resolving live when the device flips. `mode` is always
+ * the concrete appearance being rendered; `preference` is what Settings shows
+ * as selected.
+ *
+ * The provider stays storage-agnostic: it accepts an `initialPreference`
+ * (seeded from persisted state) and reports changes via `onPreferenceChange`.
+ * `App` plugs the store into those two props, so the choice persists across
+ * reload without this component knowing about AsyncStorage.
  */
 import React, {
   createContext,
@@ -14,13 +19,26 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { useColorScheme } from 'react-native';
 
-import { colorsFor, type Colors, type ThemeMode } from './tokens';
+import {
+  colorsFor,
+  type Colors,
+  type ThemeMode,
+  type ThemePreference,
+} from './tokens';
 
 interface ThemeContextValue {
+  /** The appearance actually rendered — `system` already resolved. */
   mode: ThemeMode;
+  /** What the user selected; `system` stays `system` here. */
+  preference: ThemePreference;
   colors: Colors;
-  setMode: (mode: ThemeMode) => void;
+  setPreference: (preference: ThemePreference) => void;
+  /**
+   * Flip between light and dark, pinning the result. From `system` this pins
+   * the opposite of whatever the OS is currently giving us.
+   */
   toggle: () => void;
 }
 
@@ -28,36 +46,43 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 interface ThemeProviderProps {
   children: React.ReactNode;
-  /** Starting mode (e.g. restored from storage). Defaults to dark. */
-  initialMode?: ThemeMode;
-  /** Called whenever the mode changes, so callers can persist it. */
-  onModeChange?: (mode: ThemeMode) => void;
+  /** Starting preference (e.g. restored from storage). Defaults to `system`. */
+  initialPreference?: ThemePreference;
+  /** Called whenever the preference changes, so callers can persist it. */
+  onPreferenceChange?: (preference: ThemePreference) => void;
 }
 
 export function ThemeProvider({
   children,
-  initialMode = 'dark',
-  onModeChange,
+  initialPreference = 'system',
+  onPreferenceChange,
 }: ThemeProviderProps) {
-  const [mode, setModeState] = useState<ThemeMode>(initialMode);
+  const [preference, setPreferenceState] =
+    useState<ThemePreference>(initialPreference);
+  // null when the platform can't tell us (older Android, some web contexts) —
+  // fall back to light, which is the direction's home ground.
+  const systemScheme = useColorScheme();
 
-  const setMode = useCallback(
-    (next: ThemeMode) => {
-      setModeState((prev) => {
-        if (prev !== next) onModeChange?.(next);
+  const mode: ThemeMode =
+    preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
+
+  const setPreference = useCallback(
+    (next: ThemePreference) => {
+      setPreferenceState((prev) => {
+        if (prev !== next) onPreferenceChange?.(next);
         return next;
       });
     },
-    [onModeChange],
+    [onPreferenceChange],
   );
 
   const toggle = useCallback(() => {
-    setMode(mode === 'dark' ? 'light' : 'dark');
-  }, [mode, setMode]);
+    setPreference(mode === 'dark' ? 'light' : 'dark');
+  }, [mode, setPreference]);
 
   const value = useMemo<ThemeContextValue>(
-    () => ({ mode, colors: colorsFor(mode), setMode, toggle }),
-    [mode, setMode, toggle],
+    () => ({ mode, preference, colors: colorsFor(mode), setPreference, toggle }),
+    [mode, preference, setPreference, toggle],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
