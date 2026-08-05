@@ -18,9 +18,9 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import {
-  dayNet,
   daysInMonth,
   firstWeekday,
+  signedAmount,
   WEEKDAYS,
   type CalendarView,
   type RecurrenceDate,
@@ -77,6 +77,12 @@ export function CalendarGrid({
   onSelectDay,
 }: CalendarGridProps) {
   const weeks = monthWeeks(y, m);
+  // Build the daily totals once. Calling dayNet() from every cell filters the
+  // whole month once per day, which becomes noticeable for a busy ledger.
+  const dailyNets = new Map<number, number>();
+  for (const entry of monthEntries) {
+    dailyNets.set(entry.day, (dailyNets.get(entry.day) ?? 0) + signedAmount(entry));
+  }
 
   return (
     <View>
@@ -98,7 +104,7 @@ export function CalendarGrid({
                 {day != null && (
                   <DayCell
                     day={day}
-                    net={dayNet(monthEntries, day)}
+                    net={dailyNets.get(day) ?? 0}
                     selected={day === selectedDay}
                     today={today?.y === y && today.m === m && today.day === day}
                     view={view}

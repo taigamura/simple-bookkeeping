@@ -37,7 +37,7 @@
  *   rather than a flash.
  */
 import React, { useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import {
@@ -72,10 +72,17 @@ import {
   Txt,
   type Tone,
 } from '../theme';
-import { IconButton } from '../nav/IconButton';
+import {
+  CalendarViewToggleButton,
+  IconButton,
+  ThemeToggleButton,
+} from '../nav/IconButton';
+import type Swipeable from 'react-native-gesture-handler/Swipeable';
 
 /** How far the title block travels on a month swap, in either direction. */
 const TITLE_TRAVEL = 12;
+/** Small settle for the grid when the Calendar tab is mounted from Summary. */
+const GRID_TRAVEL = 14;
 
 interface CalendarScreenProps {
   entries: Transaction[];
@@ -139,6 +146,8 @@ export function CalendarScreen({
 }: CalendarScreenProps) {
   const { colors } = useTheme();
   const { enabled } = useMotion();
+  const openSwipeable = useRef<Swipeable | null>(null);
+  const { width: screenWidth } = useWindowDimensions();
   const month = monthEntries(entries, { y, m });
   const rows = dayEntries(month, day);
   const dNet = dayNet(month, day);
@@ -200,8 +209,52 @@ export function CalendarScreen({
 
   const dayListAnimatedStyle = useAnimatedStyle(() => ({ opacity: dayListOpacity.value }));
 
+  // The pager mounts its measured FlatList one layout pass after the first
+  // render. Without a small wrapper animation that implementation detail reads
+  // as the dates popping into place when returning from Summary. Animate only
+  // compositor-friendly properties so the grid settles as one continuous
+  // surface beneath the tab transition.
+  const gridTranslate = useSharedValue(enabled ? GRID_TRAVEL : 0);
+  const gridOpacity = useSharedValue(enabled ? 0.82 : 1);
+
+  useEffect(() => {
+    if (!enabled) {
+      gridTranslate.value = 0;
+      gridOpacity.value = 1;
+      return;
+    }
+    gridTranslate.value = withAppTiming(0, {
+      duration: durations.base,
+      easing: easings.standard,
+    });
+    gridOpacity.value = withAppTiming(1, {
+      duration: durations.quick,
+      easing: easings.standard,
+    });
+    // This is a mount-only entrance; the tab host remounts CalendarScreen per
+    // tab switch, so month changes should not replay it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const gridAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: gridOpacity.value,
+    transform: [{ translateY: gridTranslate.value }],
+  }));
+
   return (
-    <View style={styles.screen}>
+    <View
+      style={styles.screen}
+      onStartShouldSetResponderCapture={(event) => {
+        // The active Delete control lives in the rightmost action zone. It is
+        // part of the swipe row, not an outside tap, so do not close it before
+        // its confirmation alert is shown.
+        if (openSwipeable.current && event.nativeEvent.pageX >= screenWidth - 90) {
+          return false;
+        }
+        openSwipeable.current?.close();
+        return false;
+      }}
+    >
       <View style={styles.header}>
         <Animated.View style={[styles.titleBlock, enabled && titleAnimatedStyle]}>
           <Txt variant="screenTitle">
@@ -228,13 +281,8 @@ export function CalendarScreen({
           />
           {/* Labelled by the view it switches *to*, so the icon and the label
               agree about what a tap does. */}
-          <IconButton
-            name={view === 'dots' ? 'hash' : 'circle'}
-            accessibilityLabel={
-              view === 'dots' ? strings.calendar.showNumbers : strings.calendar.showDots
-            }
-            onPress={onToggleView}
-          />
+          <CalendarViewToggleButton view={view} onPress={onToggleView} />
+          <ThemeToggleButton />
           <IconButton name="settings" accessibilityLabel={strings.nav.settings} onPress={onSettings} />
         </View>
       </View>
@@ -273,18 +321,20 @@ export function CalendarScreen({
         )}
       </View>
 
-      <MonthPager
-        entries={entries}
-        y={y}
-        m={m}
-        selectedDay={day}
-        today={today}
-        view={view}
-        pulseDay={pulseDay}
-        pulseNonce={pulseNonce}
-        onSelectDay={onSelectDay}
-        onMonthChange={onMonthChange}
-      />
+      <Animated.View style={enabled && gridAnimatedStyle}>
+        <MonthPager
+          entries={entries}
+          y={y}
+          m={m}
+          selectedDay={day}
+          today={today}
+          view={view}
+          pulseDay={pulseDay}
+          pulseNonce={pulseNonce}
+          onSelectDay={onSelectDay}
+          onMonthChange={onMonthChange}
+        />
+      </Animated.View>
 
       <Animated.View style={[styles.dayList, enabled && dayListAnimatedStyle]}>
         <View style={[styles.dayHeader, { borderBottomColor: colors.line }]}>
@@ -307,7 +357,7 @@ export function CalendarScreen({
           </View>
         ) : (
           <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-            <View style={[styles.dayCard, { backgroundColor: colors.card }]}>
+            <View style={styles.dayCard}>
               {rows.map((entry, i) => (
                 <ListRow
                   key={entry.id}
@@ -316,6 +366,10 @@ export function CalendarScreen({
                   first={i === 0}
                   onPress={() => onEditEntry(entry)}
                   onDelete={onDeleteEntry ? () => onDeleteEntry(entry) : undefined}
+                  onSwipeableOpen={(swipeable) => {
+                    openSwipeable.current?.close();
+                    openSwipeable.current = swipeable;
+                  }}
                 />
               ))}
             </View>
@@ -401,7 +455,10 @@ const styles = StyleSheet.create({
   emptyText: { textAlign: 'center' },
   list: { paddingBottom: 8 },
   dayCard: {
+    width: '100%',
+    marginTop: 6,
+    gap: 6,
     borderRadius: metrics.cardRadius,
-    paddingHorizontal: 14,
+    paddingHorizontal: 0,
   },
 });

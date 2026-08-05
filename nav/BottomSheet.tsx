@@ -75,7 +75,7 @@ const MIN_CONTENT_HEIGHT = 200;
 // frame bottom (Settings/Budgets otherwise measured ~1072px and ran off-screen).
 // Kept modest so a tall phone still shows most Settings sections — through the
 // Budgets row — without scrolling (issue #61 acceptance); shorter phones scroll.
-const SHEET_TOP_STRIP = 44;
+export const SHEET_TOP_STRIP = 44;
 const SHEET_HANDLE_HEIGHT = 40;
 const SHEET_CONTENT_TOP_PADDING = 4;
 const SHEET_CONTENT_BOTTOM_PADDING = 28;

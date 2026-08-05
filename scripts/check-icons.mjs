@@ -45,4 +45,11 @@ assert.notDeepEqual(
   'light and dark iOS icons must be visually distinct assets',
 );
 
+const darkCorner = await sharp(buffers.get('dark')).raw().toBuffer();
+assert.deepEqual(
+  [...darkCorner.subarray(0, 3)],
+  [44, 44, 46],
+  'dark iOS icon tile must use the approved #2C2C2E gray',
+);
+
 console.log('iOS light/dark icon configuration and assets are valid.');

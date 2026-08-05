@@ -41,6 +41,8 @@ import { durations, useMotion, Txt, type Tone, type TypeVariant } from '../theme
 interface AnimatedNumberProps {
   /** The figure to display. Rolls whenever this changes. */
   value: number;
+  /** Optional starting point for a deliberate first-appearance roll. */
+  initialValue?: number;
   /** Renders a value as display text, e.g. `(n) => signed(n, symbol)`. */
   format: (value: number) => string;
   /** `Txt` type variant. Must be a monospace one — see "Layout stability". */
@@ -60,6 +62,7 @@ const easeOutExpo = (t: number): number => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t
 
 export function AnimatedNumber({
   value,
+  initialValue,
   format,
   variant,
   tone,
@@ -68,11 +71,11 @@ export function AnimatedNumber({
   testID,
 }: AnimatedNumberProps) {
   const { enabled } = useMotion();
-  const [display, setDisplay] = useState(value);
+  const [display, setDisplay] = useState(initialValue ?? value);
   // The value currently on screen, read at the start of a roll. Kept in a ref
   // so an interrupted roll starts from where the last one actually got to,
   // rather than snapping back to its origin.
-  const displayRef = useRef(value);
+  const displayRef = useRef(initialValue ?? value);
   displayRef.current = display;
 
   useEffect(() => {

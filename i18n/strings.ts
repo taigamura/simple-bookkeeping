@@ -41,6 +41,8 @@ export interface Strings {
     done: string;
     close: string;
     back: string;
+    useDarkMode: string;
+    useLightMode: string;
   };
   calendar: {
     previousMonth: string;
@@ -207,6 +209,8 @@ export const en: Strings = {
     done: 'Done',
     close: 'Close',
     back: 'Back',
+    useDarkMode: 'Use dark mode',
+    useLightMode: 'Use light mode',
   },
   calendar: {
     previousMonth: 'Previous month',
@@ -377,6 +381,8 @@ export const ja: Strings = {
     done: '完了',
     close: '閉じる',
     back: '戻る',
+    useDarkMode: 'ダークモードにする',
+    useLightMode: 'ライトモードにする',
   },
   calendar: {
     previousMonth: '前の月',

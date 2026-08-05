@@ -80,6 +80,24 @@ Components branch on `useMotion().enabled` and render the **end state**, rather
 than running the same animation at zero duration — a zeroed animation still
 schedules layout work and still fires completion callbacks a frame late.
 
+## Amendment (2026-08-05): appearance and calendar-view transitions
+
+Appearance changes now use one interruptible 240ms fade-through around the
+entire rendered composition. The requested palette becomes the ground
+immediately, the old composition fades out for 120ms, the rendered palette and
+status-bar style commit at the invisible midpoint, then the new composition
+fades in for 120ms. Because the boundary wraps navigation and sheets together,
+an open Settings sheet and its backdrop cannot hard-cut above the app. A rapid
+second selection retargets from the live opacity; input is never disabled.
+Cold launch and background-resume changes settle immediately, as do all changes
+when Kaji's resolved motion preference is reduced.
+
+The calendar's numbers/dots view change is a local 200ms crossfade plus a
+0.9→1 scale settle. Both symbols occupy one fixed stage in each active day cell,
+so the seven-column grid never reflows; all cells move together without a
+stagger. The hash/circle control mirrors the same transition. The sun/moon
+control mirrors the appearance fade with a restrained 45° crossfade/rotation.
+
 ## Consequences
 
 - `useMotion()` deliberately **does not throw** outside a provider (unlike

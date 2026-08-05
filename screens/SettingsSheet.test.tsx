@@ -49,6 +49,18 @@ describe('SettingsSheet', () => {
     expect(screen.getByText('¥ JPY')).toBeTruthy();
   });
 
+  it('renders all appearance choices and persists a dark-mode selection', () => {
+    renderSheet();
+
+    expect(screen.getByText('Appearance')).toBeTruthy();
+    expect(screen.getAllByLabelText('System').length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText('Light').length).toBeGreaterThan(0);
+    const dark = screen.getAllByLabelText('Dark')[0];
+    fireEvent.press(dark);
+
+    expect(dark.props.accessibilityState.selected).toBe(true);
+  });
+
   it('switches the edited category list when the Income sub-tab pill is tapped', () => {
     renderSheet();
     expect(screen.getByText('Food')).toBeTruthy();

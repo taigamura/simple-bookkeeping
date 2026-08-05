@@ -22,10 +22,16 @@ const format = (n: number) => signed(n, '¥');
  * `Txt` reads the palette from ThemeProvider and throws without one, so both
  * providers wrap every case here — theme for color, motion for the roll.
  */
-const tree = (value: number, animated: boolean) => (
+const tree = (value: number, animated: boolean, initialValue?: number) => (
   <ThemeProvider>
     <MotionProvider initialPreference={animated ? 'full' : 'reduced'}>
-      <AnimatedNumber testID="figure" value={value} format={format} variant="summaryNet" />
+      <AnimatedNumber
+        testID="figure"
+        value={value}
+        initialValue={initialValue}
+        format={format}
+        variant="summaryNet"
+      />
     </MotionProvider>
   </ThemeProvider>
 );
@@ -67,6 +73,15 @@ describe('AnimatedNumber', () => {
   it('renders the exact value on first paint, before any frame runs', () => {
     renderNumber(-42300, true);
     expect(shown()).toBe('−¥42,300');
+  });
+
+  it('can roll in from an explicit starting value', () => {
+    render(tree(100000, true, 0));
+    expect(shown()).toBe('+¥0');
+    advance(0);
+    advance(60);
+    expect(shown()).not.toBe('+¥0');
+    expect(shown()).not.toBe('+¥100,000');
   });
 
   it('lands precisely on the new value when the roll finishes', () => {

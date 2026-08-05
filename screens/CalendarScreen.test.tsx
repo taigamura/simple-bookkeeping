@@ -59,6 +59,13 @@ const renderCalendar = (
   );
 
 describe('CalendarScreen strip BUDGET column (#50)', () => {
+  it('exposes a working dark-mode icon that toggles its label', () => {
+    renderCalendar([], {});
+    const toggle = screen.getByLabelText('Use dark mode');
+    fireEvent.press(toggle);
+    expect(screen.getByLabelText('Use light mode')).toBeTruthy();
+  });
+
   it('stays a three-column strip when no budgets are set', () => {
     renderCalendar([tx({ amount: 5000 })], {});
     expect(screen.getByText('In')).toBeTruthy();

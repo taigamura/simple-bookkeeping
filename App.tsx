@@ -6,7 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Root } from './nav';
 import { useStore } from './store';
-import { MotionProvider, ThemeProvider } from './theme';
+import { MotionProvider, ThemeProvider, useTheme } from './theme';
 import { useAppFonts } from './theme/useAppFonts';
 import { SummaryGrowthPrototype } from './screens/SummaryGrowthPrototype';
 import { LoadingScreen } from './ui/LoadingScreen';
@@ -73,17 +73,17 @@ export default function App() {
     // and the @gorhom/bottom-sheet drags it powers — receive touches. flex:1 so
     // it fills, letting the web phone-frame still size the app below it.
     <GestureHandlerRootView style={styles.root}>
-      <ThemeProvider
-        initialPreference={state.theme}
-        onPreferenceChange={(theme) => update({ theme })}
+      <MotionProvider
+        initialPreference={state.motion}
+        onPreferenceChange={(motion) => update({ motion })}
       >
-        {/* Inside ThemeProvider so a motion-aware component can read both from
-            one render pass; the two are otherwise independent. */}
-        <MotionProvider
-          initialPreference={state.motion}
-          onPreferenceChange={(motion) => update({ motion })}
+        {/* ThemeProvider sits inside MotionProvider so appearance changes can
+            honor Kaji's own full/system/reduced preference. */}
+        <ThemeProvider
+          initialPreference={state.theme}
+          onPreferenceChange={(theme) => update({ theme })}
         >
-          <StatusBar style="auto" />
+          <ThemedStatusBar />
           {/* Calendar is the first meaningful React paint, mounted behind the
               opaque opening layer so the layer can reveal real content. */}
           <Root
@@ -97,10 +97,16 @@ export default function App() {
           {!openingComplete ? (
             <LoadingScreen ready onFinished={finishOpening} />
           ) : null}
-        </MotionProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </MotionProvider>
     </GestureHandlerRootView>
   );
+}
+
+/** Commits with ThemeProvider's rendered palette at the fade-through midpoint. */
+function ThemedStatusBar() {
+  const { mode } = useTheme();
+  return <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />;
 }
 
 const styles = StyleSheet.create({

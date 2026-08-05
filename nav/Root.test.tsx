@@ -34,7 +34,7 @@ jest.mock('expo-file-system', () => ({
 
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { Alert, StyleSheet } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 
 import {
@@ -137,7 +137,7 @@ describe('Root sheet click behavior', () => {
     expect(screen.getByTestId('entry-sheet')).toBeTruthy();
     const entrySnapPoints =
       require('../test-utils/gorhomBottomSheetWebMock').getLastBottomSheetModalProps().snapPoints;
-    expect(entrySnapPoints[0]).toBe(Math.round((entrySnapPoints[1] + 44) * 0.83));
+    expect(entrySnapPoints[0]).toBe(entrySnapPoints[1]);
   });
 
   it('saves a new Repeat selection as an infinite rule instead of materialized entries', () => {
@@ -272,6 +272,10 @@ describe('Root sheet click behavior', () => {
 
     expect(screen.getByTestId('settings-sheet')).toBeTruthy();
     expect(screen.getByText(strings.nav.settings)).toBeTruthy();
+    expect(screen.getByText(strings.settings.appearance)).toBeTruthy();
+    expect(screen.getByLabelText(strings.settings.dark)).toBeTruthy();
+    const sheetBody = screen.getByTestId('sheet-body');
+    expect(StyleSheet.flatten(sheetBody.props.style).height).toBe('100%');
     const settingsSnapPoints =
       require('../test-utils/gorhomBottomSheetWebMock').getLastBottomSheetModalProps().snapPoints;
     expect(settingsSnapPoints[0]).toBe(Math.round((settingsSnapPoints[1] + 44) * 0.8));

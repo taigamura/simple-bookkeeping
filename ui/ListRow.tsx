@@ -37,8 +37,9 @@
  */
 import React, { useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutLeft, LinearTransition } from 'react-native-reanimated';
 
 import {
   emojiFor,
@@ -61,6 +62,8 @@ interface ListRowProps {
   onPress?: () => void;
   /** When set, swiping left reveals a destructive action. */
   onDelete?: () => void;
+  /** Registers the open row so its action can be dismissed by the parent. */
+  onSwipeableOpen?: (swipeable: Swipeable) => void;
 }
 
 export function ListRow({
@@ -69,10 +72,12 @@ export function ListRow({
   first = false,
   onPress,
   onDelete,
+  onSwipeableOpen,
 }: ListRowProps) {
   const { colors } = useTheme();
   const { enabled } = useMotion();
   const swipeInProgress = useRef(false);
+  const swipeableRef = useRef<Swipeable | null>(null);
   const value = signedAmount(entry);
   // Entries carried over from before timestamps existed only know their day, so
   // their reconstructed time is marked approximate.
@@ -81,6 +86,7 @@ export function ListRow({
 
   const rowStyle = [
     styles.row,
+    { backgroundColor: colors.card2 },
     !first && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hair },
   ];
 
@@ -139,9 +145,20 @@ export function ListRow({
       <View style={rowStyle}>{content}</View>
     );
 
+  // This surface is deliberately inside Swipeable's translated child tree.
+  // The card must travel with the item, not remain as a background layer.
+  const rowSurface = (
+    <View style={[styles.rowSurface, { backgroundColor: colors.card2 }]}>
+      {row}
+    </View>
+  );
+
   const wrapped = onDelete ? (
     <Swipeable
+      ref={swipeableRef}
       testID={`swipeable-${entry.id}`}
+      containerStyle={styles.swipeable}
+      childrenContainerStyle={styles.swipeableRow}
       overshootRight={false}
       rightThreshold={40}
       onSwipeableOpenStartDrag={() => {
@@ -152,30 +169,39 @@ export function ListRow({
       }}
       onSwipeableOpen={() => {
         swipeInProgress.current = false;
+        if (swipeableRef.current) onSwipeableOpen?.(swipeableRef.current);
       }}
       onSwipeableClose={() => {
         swipeInProgress.current = false;
       }}
-      renderRightActions={(_progress, _drag, swipeable) => (
+      renderRightActions={(_progress, _drag, swipeable) => {
+        swipeableRef.current = swipeable;
+        return (
         <Pressable
           onPress={() => {
-            swipeable.close();
+            // Keep the destructive affordance visible while the confirmation
+            // is up; the calendar excludes this action zone from dismissal.
             onDelete();
           }}
           accessibilityRole="button"
           accessibilityLabel={strings.entry.deleteFromList(entry.category)}
-          style={[styles.deleteAction, { backgroundColor: colors.negative }]}
+          style={({ pressed }) => [
+            styles.deleteAction,
+            { backgroundColor: colors.negative, opacity: pressed ? 0.78 : 1 },
+          ]}
         >
-          <Txt variant="listItem" tone="onNegative">
+          <Feather name="trash-2" size={16} color={colors.onNegative} />
+          <Txt variant="microLabel" tone="onNegative">
             {strings.common.delete}
           </Txt>
         </Pressable>
-      )}
+        );
+      }}
     >
-      {row}
+      {rowSurface}
     </Swipeable>
   ) : (
-    row
+    rowSurface
   );
 
   return (
@@ -189,7 +215,9 @@ export function ListRow({
       }
       exiting={
         enabled
-          ? FadeOut.duration(durations.quick).easing(easings.exit).reduceMotion(ReduceMotion.Never)
+          ? FadeOutLeft.duration(durations.base)
+              .easing(easings.exit)
+              .reduceMotion(ReduceMotion.Never)
           : undefined
       }
       layout={
@@ -205,10 +233,32 @@ export function ListRow({
 
 const styles = StyleSheet.create({
   row: {
+    width: '100%',
+    alignSelf: 'stretch',
+    borderRadius: metrics.cardRadius,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  rowSurface: {
+    width: '100%',
+    alignSelf: 'stretch',
+    borderRadius: metrics.cardRadius,
+    overflow: 'hidden',
+  },
+  // Keep the action behind an opaque, full-width row. Without this, the
+  // transparent row lets the trailing amount column remain visible over the
+  // revealed delete control on narrow iPhones.
+  swipeable: {
+    width: '100%',
+    alignSelf: 'stretch',
+    overflow: 'hidden',
+  },
+  swipeableRow: {
+    width: '100%',
+    alignSelf: 'stretch',
   },
   tile: {
     width: 38,
@@ -219,8 +269,8 @@ const styles = StyleSheet.create({
   },
   /** Sized so the tile reads as an icon, not as text in a box. */
   emoji: { fontSize: 17, lineHeight: 22 },
-  body: { flex: 1, gap: 2 },
-  trailing: { alignItems: 'flex-end', gap: 2 },
+  body: { flex: 1, minWidth: 0, gap: 2 },
+  trailing: { alignItems: 'flex-end', flexShrink: 0, gap: 2 },
   /** One invariant width for both stacked figures, so amounts and timestamps
    *  each line up down the list. Sized for the longest timestamp
    *  (`~YYYY/MM/DD HH:MM` at the mono advance width). */
@@ -229,7 +279,15 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   deleteAction: {
-    width: 88,
+    width: 72,
+    marginVertical: 6,
+    // Swipeable measures the action including this left inset, so the row
+    // travels far enough to expose a deliberate gap before the control.
+    marginLeft: 6,
+    borderRadius: 12,
+    borderTopLeftRadius: 14,
+    borderBottomLeftRadius: 14,
+    gap: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
