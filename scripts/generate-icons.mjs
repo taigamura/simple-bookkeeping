@@ -59,11 +59,26 @@ const opaque = (svg, bg) => png(svg).flatten({ background: bg });
 const TARGETS = [
   {
     file: 'icon.png',
-    note: 'store / home-screen icon — opaque white tile, system applies the mask',
+    note: 'iOS light / fallback icon — opaque white tile, system applies the mask',
     build: () =>
       opaque(
         markSvg({ size: 1024, fraction: 0.56, bar: BLUE, bar2: DEEP, bg: TILE }),
         TILE,
+      ),
+  },
+  {
+    file: 'icon-dark.png',
+    note: 'iOS dark home-screen icon — opaque dark tile with lifted brand blues',
+    build: () =>
+      opaque(
+        markSvg({
+          size: 1024,
+          fraction: 0.56,
+          bar: BLUE_DARK,
+          bar2: DEEP_DARK,
+          bg: GROUND_DARK,
+        }),
+        GROUND_DARK,
       ),
   },
   {

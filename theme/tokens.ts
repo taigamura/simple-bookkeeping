@@ -63,6 +63,8 @@ export interface Colors {
   border: string;
   /** Income, primary CTAs, selection. The one hue the UI carries. */
   positive: string;
+  /** Second tone of the Kippu brand mark; distinct from the Summary hero. */
+  brandSecondary: string;
   /** Alarm only — over-budget, destructive actions. Never plain expenses. */
   negative: string;
   /** Text/icons on a `positive` surface. */
@@ -96,6 +98,7 @@ export const palettes: Record<ThemeMode, Colors> = {
     line: 'rgba(22,22,26,.12)',
     border: 'rgba(22,22,26,.08)',
     positive: '#2B33E8',
+    brandSecondary: '#1E2499',
     negative: '#C93B31',
     onPositive: '#FFFFFF',
     onNegative: '#FFFFFF',
@@ -117,6 +120,7 @@ export const palettes: Record<ThemeMode, Colors> = {
     line: 'rgba(255,255,255,.12)',
     border: 'rgba(255,255,255,.09)',
     positive: '#6B72FF',
+    brandSecondary: '#3A42D8',
     negative: '#FF6B60',
     // Near-black rather than white: on the lifted blue it reads 5.0:1 where
     // white would only manage 3.8:1.

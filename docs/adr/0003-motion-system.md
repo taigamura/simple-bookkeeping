@@ -306,6 +306,23 @@ original symptom, the fastest path is not a fifth theory — it's getting one
 piece of real data (a console dump, a screenshot, a DOM query) out of the
 environment the loop can't reach.
 
+## Amendment (2026-08-05): finite brand assembly at launch
+
+The earlier open note that first launch deliberately had no motion is
+superseded. At the user's request, launch now has one finite, brand-specific
+exception to the "motion confirms and points" rule: the three pieces of the
+Kippu mark assemble once over about 900ms. The React handoff begins with the
+same 200pt raster as the native splash, then the top bar slides in, the lower
+bar rises, and the punched dot lands with a restrained spring. It does not
+loop and it is not a progress indicator.
+
+The native splash remains the readiness cover until fonts and persisted state
+have hydrated. The first meaningful Calendar then mounts behind the opaque
+React opening overlay; the overlay leaves only after both readiness and the
+finite assembly gate have completed, so animation never reveals an unready or
+incorrectly themed app. Reduced Motion renders the complete mark statically
+and removes the overlay without scheduling an assembly or exit animation.
+
 ## Open
 
 - The bloom is clipped to the Entry sheet's content box. On a very short phone
@@ -321,6 +338,3 @@ environment the loop can't reach.
   probe needs rewriting against the fill layer before the e2e suite can be
   trusted on selection — independent of the pre-existing sheet-reopen failure
   that already has the suite red.
-- Nothing animates on first app launch, deliberately — an entrance on the
-  calendar grid would put an animation between the user and their first
-  meaningful paint. Worth revisiting only if launch stops feeling instant.

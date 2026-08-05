@@ -21,13 +21,19 @@ export type SheetId =
 
 /**
  * A fresh cold page load: navigate, then wait for the app to pass its
- * fonts/persisted-state gate (the tab bar's ＋ FAB appearing is that signal).
+ * fonts/persisted-state gate and the finite launch overlay. The Calendar and
+ * its controls deliberately mount behind that opaque overlay, so visibility
+ * alone is not an interaction-ready signal; the overlay must be detached.
  * Returns the fixed screen coordinates of the ＋ FAB and the Settings gear so
  * callers can tap like a finger does — at the position, immediately, without
  * Playwright's stability waits softening the first-tap race.
  */
 export async function coldLoad(page: Page) {
   await page.goto('/');
+  await expect(
+    page.getByTestId('loading-screen'),
+    'launch overlay should finish before the first physical tap',
+  ).toBeHidden({ timeout: OPEN_TIMEOUT });
   const fab = page.getByLabel('Add entry', { exact: true });
   await expect(fab).toBeVisible();
   const gear = page.getByLabel('Settings', { exact: true });

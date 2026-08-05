@@ -25,6 +25,7 @@ export interface Strings {
     delete: string;
   };
   a11y: {
+    loadingKaji: string;
     selected: string;
     notSelected: string;
     textInput: string;
@@ -190,6 +191,7 @@ export const en: Strings = {
     delete: 'Delete',
   },
   a11y: {
+    loadingKaji: 'Loading Kaji',
     selected: 'Selected',
     notSelected: 'Not selected',
     textInput: 'Text input',
@@ -359,6 +361,7 @@ export const ja: Strings = {
     delete: '削除',
   },
   a11y: {
+    loadingKaji: 'Kajiを読み込み中',
     selected: '選択中',
     notSelected: '未選択',
     textInput: 'テキスト入力',

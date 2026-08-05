@@ -209,6 +209,7 @@ export function withAppSpring<T extends AnimatableValue>(
   config?: WithSpringConfig,
   callback?: AnimationCallback,
 ): T {
+  'worklet';
   return withSpring(toValue, { ...config, reduceMotion: ReduceMotion.Never }, callback);
 }
 
