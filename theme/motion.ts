@@ -87,6 +87,8 @@ export const durations = {
   instant: 90,
   /** Small local changes: a chip fill, a segment slide, a dot resizing. */
   quick: 160,
+  /** Two glyphs trading places without moving their surrounding layout. */
+  symbolSwap: 200,
   /** Crossfades and slides at screen scale: tab swap, month commit. */
   base: 240,
   /** Number rolls and the day-list swap — long enough to read as a transition. */
@@ -209,6 +211,7 @@ export function withAppSpring<T extends AnimatableValue>(
   config?: WithSpringConfig,
   callback?: AnimationCallback,
 ): T {
+  'worklet';
   return withSpring(toValue, { ...config, reduceMotion: ReduceMotion.Never }, callback);
 }
 

@@ -1,21 +1,21 @@
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Root } from './nav';
 import { useStore } from './store';
-import { MotionProvider, ThemeProvider } from './theme';
+import { MotionProvider, ThemeProvider, useTheme } from './theme';
 import { useAppFonts } from './theme/useAppFonts';
 import { SummaryGrowthPrototype } from './screens/SummaryGrowthPrototype';
+import { LoadingScreen } from './ui/LoadingScreen';
 
 // Keep the native splash screen (asset + dark background configured via the
-// expo-splash-screen plugin in app.json, #25) up past its own auto-hide, so it
-// still covers the fonts/persisted-state gate below. Called at module scope,
-// not inside the component, per the package's own guidance — inside a
-// component risks running after the splash has already auto-hidden. A no-op
-// on web (no native splash there).
+// expo-splash-screen plugin in app.json, #25) from auto-hiding before React is
+// mounted. It hands off to LoadingScreen once the component tree is ready.
+// Called at module scope, not inside the component, per the package's own
+// guidance. A no-op on web (no native splash there).
 SplashScreen.preventAutoHideAsync();
 
 /**
@@ -26,6 +26,7 @@ SplashScreen.preventAutoHideAsync();
  */
 export default function App() {
   const fontsLoaded = useAppFonts();
+  const [openingComplete, setOpeningComplete] = useState(false);
   const {
     ready,
     state,
@@ -38,10 +39,13 @@ export default function App() {
   const appReady = fontsLoaded && ready;
 
   useEffect(() => {
+    // Keep the native splash as the readiness cover. Providers must not mount
+    // against DEFAULT_STATE: their initial preferences are captured once, so
+    // wait for the hydrated theme/motion values before the React handoff.
     if (appReady) SplashScreen.hideAsync();
   }, [appReady]);
 
-  if (!appReady) return null;
+  const finishOpening = useCallback(() => setOpeningComplete(true), []);
 
   // THROWAWAY UI PROTOTYPE. Development web only; production always mounts
   // the real app. Open with `?prototype=growth&variant=A`.
@@ -59,22 +63,29 @@ export default function App() {
     );
   }
 
+  // The native splash remains visible over this null tree. Mounting providers
+  // only after hydration ensures persisted dark/reduced preferences seed their
+  // useState values on the very first render.
+  if (!appReady) return null;
+
   return (
     // GestureHandlerRootView (#39) must wrap the whole app so gesture-handler —
     // and the @gorhom/bottom-sheet drags it powers — receive touches. flex:1 so
     // it fills, letting the web phone-frame still size the app below it.
     <GestureHandlerRootView style={styles.root}>
-      <ThemeProvider
-        initialPreference={state.theme}
-        onPreferenceChange={(theme) => update({ theme })}
+      <MotionProvider
+        initialPreference={state.motion}
+        onPreferenceChange={(motion) => update({ motion })}
       >
-        {/* Inside ThemeProvider so a motion-aware component can read both from
-            one render pass; the two are otherwise independent. */}
-        <MotionProvider
-          initialPreference={state.motion}
-          onPreferenceChange={(motion) => update({ motion })}
+        {/* ThemeProvider sits inside MotionProvider so appearance changes can
+            honor Kaji's own full/system/reduced preference. */}
+        <ThemeProvider
+          initialPreference={state.theme}
+          onPreferenceChange={(theme) => update({ theme })}
         >
-          <StatusBar style="auto" />
+          <ThemedStatusBar />
+          {/* Calendar is the first meaningful React paint, mounted behind the
+              opaque opening layer so the layer can reveal real content. */}
           <Root
             state={state}
             update={update}
@@ -83,10 +94,19 @@ export default function App() {
             readCorruptStash={readCorruptStash}
             persistenceNotice={persistenceNotice}
           />
-        </MotionProvider>
-      </ThemeProvider>
+          {!openingComplete ? (
+            <LoadingScreen ready onFinished={finishOpening} />
+          ) : null}
+        </ThemeProvider>
+      </MotionProvider>
     </GestureHandlerRootView>
   );
+}
+
+/** Commits with ThemeProvider's rendered palette at the fade-through midpoint. */
+function ThemedStatusBar() {
+  const { mode } = useTheme();
+  return <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />;
 }
 
 const styles = StyleSheet.create({

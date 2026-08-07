@@ -24,11 +24,9 @@
  * together for no benefit.
  *
  * Both spring on every prop change with `springs.gentle`, matching
- * `CategoryBar`'s "larger travel, no overshoot" case. Unlike `CategoryBar`
- * there is no explicit grow-from-zero on mount: the shared values start at the
- * real fractions, so the first paint is correct immediately and only later
- * month swaps animate — the same contract `AnimatedNumber` uses for the
- * figures next to this bar.
+ * `CategoryBar`'s "larger travel, no overshoot" case. On first mount they grow
+ * from zero so the split bar reads as part of the Summary entrance rather than
+ * static furniture; later month swaps spring from the current widths.
  */
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -50,8 +48,8 @@ export function SplitBar({ incomeFraction, expenseFraction, onDeep = false }: Sp
   const income = onDeep ? colors.onDeep : colors.positive;
   const expense = onDeep ? 'rgba(255,255,255,.42)' : colors.muted;
 
-  const incomeProgress = useSharedValue(incomeFraction);
-  const expenseProgress = useSharedValue(expenseFraction);
+  const incomeProgress = useSharedValue(enabled ? 0 : incomeFraction);
+  const expenseProgress = useSharedValue(enabled ? 0 : expenseFraction);
 
   useEffect(() => {
     if (!enabled) {

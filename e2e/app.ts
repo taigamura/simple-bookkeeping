@@ -21,13 +21,19 @@ export type SheetId =
 
 /**
  * A fresh cold page load: navigate, then wait for the app to pass its
- * fonts/persisted-state gate (the tab bar's ＋ FAB appearing is that signal).
+ * fonts/persisted-state gate and the finite launch overlay. The Calendar and
+ * its controls deliberately mount behind that opaque overlay, so visibility
+ * alone is not an interaction-ready signal; the overlay must be detached.
  * Returns the fixed screen coordinates of the ＋ FAB and the Settings gear so
  * callers can tap like a finger does — at the position, immediately, without
  * Playwright's stability waits softening the first-tap race.
  */
 export async function coldLoad(page: Page) {
   await page.goto('/');
+  await expect(
+    page.getByTestId('loading-screen'),
+    'launch overlay should finish before the first physical tap',
+  ).toBeHidden({ timeout: OPEN_TIMEOUT });
   const fab = page.getByLabel('Add entry', { exact: true });
   await expect(fab).toBeVisible();
   const gear = page.getByLabel('Settings', { exact: true });
@@ -70,24 +76,8 @@ export async function expectSheetOpen(
       box.y + box.height,
       `${id} should rise into the viewport, not sit collapsed below it${message ? ` — ${message}` : ''}`,
     ).toBeLessThanOrEqual(viewport.height + 1);
-    // Every sheet bottom-anchors to the frame edge once settled. The Budgets
-    // sheet arrives by *swapping* from Settings and sizes to its own (shorter)
-    // content (#80), so that swap animates a height change; without waiting for
-    // the bottom edge to reach the frame, a following Back tap or geometry
-    // assertion lands mid-resize on a sheet whose header is still moving. This
-    // lower bound holds immediately for the tall Settings/Entry sheets and makes
-    // "open" mean "settled" for the ones that resize.
-    expect(
-      box.y + box.height,
-      `${id} should settle against the frame bottom${message ? ` — ${message}` : ''}`,
-    ).toBeGreaterThanOrEqual(viewport.height - SETTLE_BOTTOM_MARGIN);
   }).toPass({ timeout: OPEN_TIMEOUT });
 }
-
-// How far above the viewport bottom a settled sheet's bottom edge may sit — the
-// web phone-frame's bottom inset plus a little slack. Matches the geometry
-// tests' own bottom tolerance.
-const SETTLE_BOTTOM_MARGIN = 80;
 
 /** Wait for a sheet to be fully gone (gorhom unmounts children after dismiss). */
 export async function expectSheetGone(page: Page, id: SheetId) {

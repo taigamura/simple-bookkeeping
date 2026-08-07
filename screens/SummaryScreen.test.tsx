@@ -9,6 +9,7 @@ import { StyleSheet } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 
 import type { Budgets, Transaction } from '../domain';
+import { strings } from '../i18n';
 import { ThemeProvider, palettes } from '../theme';
 
 const light = palettes.light;
@@ -50,6 +51,11 @@ const renderSummary = (
   );
 
 describe('SummaryScreen net card budget-left line (#51)', () => {
+  it('exposes the dark-mode icon from the Summary tab too', () => {
+    renderSummary([], {});
+    expect(screen.getByLabelText(strings.nav.useDarkMode)).toBeTruthy();
+  });
+
   it('is absent when no budgets are set', () => {
     renderSummary([tx({ amount: 5000 })], {});
     expect(screen.getByText('Net this month')).toBeTruthy();

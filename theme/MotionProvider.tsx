@@ -34,6 +34,8 @@ import { AccessibilityInfo } from 'react-native';
 import type { MotionPreference } from './motion';
 
 interface MotionContextValue {
+  /** Whether the initial system preference has been resolved. */
+  resolved: boolean;
   /** Whether to animate at all — the `system` preference already resolved. */
   enabled: boolean;
   /** What the user selected; `system` stays `system` here. */
@@ -60,7 +62,9 @@ export function MotionProvider({
 }: MotionProviderProps) {
   const [preference, setPreferenceState] =
     useState<MotionPreference>(initialPreference);
-  const systemReducedMotion = useSystemReducedMotion();
+  const systemMotion = useSystemReducedMotion();
+  const systemReducedMotion = systemMotion.reduced;
+  const resolved = preference !== 'system' || systemMotion.resolved;
 
   const setPreference = useCallback(
     (next: MotionPreference) => {
@@ -73,11 +77,13 @@ export function MotionProvider({
   );
 
   const enabled =
-    preference === 'system' ? !systemReducedMotion : preference === 'full';
+    preference === 'system'
+      ? systemMotion.resolved && !systemReducedMotion
+      : preference === 'full';
 
   const value = useMemo<MotionContextValue>(
-    () => ({ enabled, preference, systemReducedMotion, setPreference }),
-    [enabled, preference, systemReducedMotion, setPreference],
+    () => ({ enabled, preference, resolved, systemReducedMotion, setPreference }),
+    [enabled, preference, resolved, systemReducedMotion, setPreference],
   );
 
   return <MotionContext.Provider value={value}>{children}</MotionContext.Provider>;
@@ -86,32 +92,41 @@ export function MotionProvider({
 /**
  * The OS reduce-motion flag, kept live.
  *
- * Starts `false` (animate) and corrects itself once the async initial read
- * lands — the alternative, starting `true`, would suppress the first frame of
- * animation for every user on every launch to spare a single frame for the few
- * who have the setting on. The `cancelled` guard keeps a slow read from writing
- * state into an unmounted provider.
+ * Starts unresolved and becomes authoritative once the async initial read
+ * settles. Launch keeps its matching static raster during that short window,
+ * so an OS Reduced Motion user can never accidentally schedule the assembly.
+ * The `cancelled` guard keeps a slow read from writing into an unmounted
+ * provider.
  *
  * Every platform this ships to is covered: iOS/Android implement the event
  * natively, and react-native-web maps it onto the
  * `(prefers-reduced-motion: reduce)` media query.
  */
-function useSystemReducedMotion(): boolean {
+function useSystemReducedMotion(): { reduced: boolean; resolved: boolean } {
   const [reduced, setReduced] = useState(false);
+  const [resolved, setResolved] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     AccessibilityInfo.isReduceMotionEnabled?.()
       .then((value) => {
-        if (!cancelled) setReduced(value);
+        if (!cancelled) {
+          setReduced(value);
+          setResolved(true);
+        }
       })
       // Reading the flag is best-effort; a platform that cannot answer keeps
       // the animate-by-default assumption rather than erroring on boot.
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setResolved(true);
+      });
 
     const subscription = AccessibilityInfo.addEventListener(
       'reduceMotionChanged',
-      (value: boolean) => setReduced(value),
+      (value: boolean) => {
+        setReduced(value);
+        setResolved(true);
+      },
     );
 
     return () => {
@@ -122,7 +137,7 @@ function useSystemReducedMotion(): boolean {
     };
   }, []);
 
-  return reduced;
+  return { reduced, resolved };
 }
 
 /**
@@ -139,6 +154,7 @@ export function useMotion(): MotionContextValue {
     useContext(MotionContext) ?? {
       enabled: false,
       preference: 'system' as const,
+      resolved: true,
       systemReducedMotion: false,
       setPreference: () => {},
     }

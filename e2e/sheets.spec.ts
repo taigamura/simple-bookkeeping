@@ -111,14 +111,7 @@ test('Settings, Repeats, and Budgets render visible bodies after opening and dri
   await budgets.scrollIntoViewIfNeeded();
   await tapAt(page, await center(budgets));
   await expectSheetHeadingInViewport(page, 'budgets-sheet', 'Budgets');
-  // Budgets sizes to its own content (#80), so unlike Repeats it does not match
-  // the Settings detent — it opens shorter (never taller) and always as a real,
-  // on-screen sheet, not a collapsed sliver.
-  const budgetsHeight = (await sheet(page, 'budgets-sheet').boundingBox())!.height;
-  expect(budgetsHeight, 'budgets sheet renders a real body').toBeGreaterThan(150);
-  expect(budgetsHeight, 'budgets fits its content, never taller than the detent').toBeLessThanOrEqual(
-    defaultHeight + 1,
-  );
+  expect((await sheet(page, 'budgets-sheet').boundingBox())!.height).toBeCloseTo(defaultHeight, 0);
 });
 
 test('Settings can scroll through the final Data action', async ({ page }) => {
@@ -369,7 +362,12 @@ test.describe('sheet geometry', () => {
     });
   }
 
-  test('budgets-sheet: content fills the sheet, no dead zone', async ({ page }) => {
+  // Budgets is a fixed-height drill-in like Repeats: it opens at the shared
+  // Settings detent (asserted by the render-visible-bodies test above), so short
+  // content leaves breathing room below rather than filling to the bottom — there
+  // is no dead-zone check here for the same reason Repeats has none. It must still
+  // bottom-anchor to the frame, not float.
+  test('budgets-sheet: bottom-anchored at the shared Settings detent', async ({ page }) => {
     const { gear } = await coldLoad(page);
     await tapAt(page, gear);
     await expectSheetOpen(page, 'settings-sheet');
@@ -382,6 +380,5 @@ test.describe('sheet geometry', () => {
     const box = (await sheet(page, 'budgets-sheet').boundingBox())!;
     const viewport = page.viewportSize()!;
     expect(box.y + box.height).toBeGreaterThanOrEqual(viewport.height - 80);
-    expect(await deadZoneBelowContent(page, 'budgets-sheet')).toBeLessThanOrEqual(DEAD_ZONE_TOLERANCE);
   });
 });

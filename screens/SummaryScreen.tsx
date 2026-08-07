@@ -61,7 +61,7 @@ import {
 import { strings } from '../i18n';
 import { CategoryBar, SplitBar, AnimatedNumber } from '../ui';
 import { useTheme, useMotion, metrics, staggerDelay, ReduceMotion, Txt } from '../theme';
-import { IconButton } from '../nav/IconButton';
+import { IconButton, ThemeToggleButton } from '../nav/IconButton';
 
 interface SummaryScreenProps {
   entries: Transaction[];
@@ -106,7 +106,10 @@ export function SummaryScreen({
             {MONTH_NAMES[m]} {y}
           </Txt>
         </View>
-        <IconButton name="settings" accessibilityLabel={strings.nav.settings} onPress={onSettings} />
+        <View style={styles.headerActions}>
+          <ThemeToggleButton />
+          <IconButton name="settings" accessibilityLabel={strings.nav.settings} onPress={onSettings} />
+        </View>
       </View>
 
       <ScrollView
@@ -122,6 +125,7 @@ export function SummaryScreen({
           </Txt>
           <AnimatedNumber
             value={total}
+            initialValue={0}
             format={(n) => signed(n, symbol)}
             variant="summaryNet"
             tone="onDeep"
@@ -256,6 +260,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 16,
   },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   subtitle: { marginTop: 2 },
   scroll: { flex: 1 },
   body: { paddingBottom: 8 },

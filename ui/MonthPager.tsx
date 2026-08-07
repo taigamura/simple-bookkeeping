@@ -98,11 +98,16 @@ export function MonthPager({
   const [generation, setGeneration] = useState(0);
 
   const listRef = useRef<FlatList<YM>>(null);
+  const pendingScrollIndex = useRef<number | null>(null);
   const monthsRef = useRef(months);
   monthsRef.current = months;
   // The month this pager currently shows — the last settle it committed or the
   // last external cursor move it followed.
   const shownRef = useRef<YM>({ y, m });
+  // iOS can report both `onScrollEndDrag` and `onMomentumScrollEnd` for the
+  // same page. Coalescing that report prevents a second scroll/commit cycle
+  // while the chevron animation is still settling.
+  const lastSettledOffset = useRef<number | null>(null);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
@@ -115,22 +120,44 @@ export function MonthPager({
     const cur: YM = { y, m };
     if (sameYM(cur, shownRef.current)) return;
     shownRef.current = cur;
+    lastSettledOffset.current = null;
     const index = monthsRef.current.findIndex((ym) => sameYM(ym, cur));
     if (index === -1) {
       setMonths(buildWindow(cur, WINDOW_RADIUS));
       setGeneration((g) => g + 1);
     } else {
+      pendingScrollIndex.current = index;
       listRef.current?.scrollToIndex({ index, animated: true });
     }
   }, [y, m]);
+
+  // iOS can deliver an external cursor update before the newly mounted list
+  // has calculated its frames. Calling scrollToIndex in that window reports
+  // `onScrollToIndexFailed`; retry after the list has had a layout pass instead
+  // of allowing the native list to abort the date switch.
+  const onScrollToIndexFailed = ({ index }: { index: number }) => {
+    pendingScrollIndex.current = index;
+    requestAnimationFrame(() => {
+      const pending = pendingScrollIndex.current;
+      if (pending == null) return;
+      pendingScrollIndex.current = null;
+      listRef.current?.scrollToIndex({ index: pending, animated: true });
+    });
+  };
 
   // settle(): map the settled offset to a month, commit it if it moved, and
   // grow the window when the settle lands near an edge (prepends stay visually
   // still via maintainVisibleContentPosition).
   const settle = (offsetX: number) => {
+    if (width <= 0 || !Number.isFinite(offsetX)) return;
+    const page = Math.round(offsetX / width);
+    const settledOffset = page * width;
+    if (lastSettledOffset.current === settledOffset) return;
+    lastSettledOffset.current = settledOffset;
     const window = monthsRef.current;
-    const index = pageIndex(offsetX, width, window.length);
+    const index = pageIndex(settledOffset, width, window.length);
     const ym = window[index];
+    if (!ym) return;
     if (!sameYM(ym, shownRef.current)) {
       shownRef.current = ym;
       onMonthChange(ym);
@@ -155,7 +182,7 @@ export function MonthPager({
   // the drag with no momentum phase, so momentum-end never fires.
   const onScrollEndDrag = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const x = e.nativeEvent.contentOffset.x;
-    if (width > 0 && x % width === 0) settle(x);
+    if (width > 0 && Math.abs(x / width - Math.round(x / width)) < 0.01) settle(x);
   };
 
   // Pre-measurement (and the test path): one static grid, no scroll code.
@@ -214,11 +241,19 @@ export function MonthPager({
         getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
         initialScrollIndex={initialIndex}
         maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+        onScrollBeginDrag={() => {
+          lastSettledOffset.current = null;
+        }}
         onMomentumScrollEnd={onMomentumScrollEnd}
         onScrollEndDrag={onScrollEndDrag}
-        initialNumToRender={3}
-        maxToRenderPerBatch={3}
-        windowSize={5}
+        onScrollToIndexFailed={onScrollToIndexFailed}
+        // The calendar tab is mounted during a tab transition. Keep the first
+        // frame cheap: the current month is all that is needed immediately;
+        // neighbours can be filled in after the first paint instead of making
+        // three full grids compete with the entrance animation.
+        initialNumToRender={1}
+        maxToRenderPerBatch={2}
+        windowSize={3}
       />
     </View>
   );

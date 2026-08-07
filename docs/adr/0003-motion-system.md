@@ -80,6 +80,24 @@ Components branch on `useMotion().enabled` and render the **end state**, rather
 than running the same animation at zero duration — a zeroed animation still
 schedules layout work and still fires completion callbacks a frame late.
 
+## Amendment (2026-08-05): appearance and calendar-view transitions
+
+Appearance changes now use one interruptible 240ms fade-through around the
+entire rendered composition. The requested palette becomes the ground
+immediately, the old composition fades out for 120ms, the rendered palette and
+status-bar style commit at the invisible midpoint, then the new composition
+fades in for 120ms. Because the boundary wraps navigation and sheets together,
+an open Settings sheet and its backdrop cannot hard-cut above the app. A rapid
+second selection retargets from the live opacity; input is never disabled.
+Cold launch and background-resume changes settle immediately, as do all changes
+when Kaji's resolved motion preference is reduced.
+
+The calendar's numbers/dots view change is a local 200ms crossfade plus a
+0.9→1 scale settle. Both symbols occupy one fixed stage in each active day cell,
+so the seven-column grid never reflows; all cells move together without a
+stagger. The hash/circle control mirrors the same transition. The sun/moon
+control mirrors the appearance fade with a restrained 45° crossfade/rotation.
+
 ## Consequences
 
 - `useMotion()` deliberately **does not throw** outside a provider (unlike
@@ -306,6 +324,23 @@ original symptom, the fastest path is not a fifth theory — it's getting one
 piece of real data (a console dump, a screenshot, a DOM query) out of the
 environment the loop can't reach.
 
+## Amendment (2026-08-05): finite brand assembly at launch
+
+The earlier open note that first launch deliberately had no motion is
+superseded. At the user's request, launch now has one finite, brand-specific
+exception to the "motion confirms and points" rule: the three pieces of the
+Kippu mark assemble once over about 900ms. The React handoff begins with the
+same 200pt raster as the native splash, then the top bar slides in, the lower
+bar rises, and the punched dot lands with a restrained spring. It does not
+loop and it is not a progress indicator.
+
+The native splash remains the readiness cover until fonts and persisted state
+have hydrated. The first meaningful Calendar then mounts behind the opaque
+React opening overlay; the overlay leaves only after both readiness and the
+finite assembly gate have completed, so animation never reveals an unready or
+incorrectly themed app. Reduced Motion renders the complete mark statically
+and removes the overlay without scheduling an assembly or exit animation.
+
 ## Open
 
 - The bloom is clipped to the Entry sheet's content box. On a very short phone
@@ -321,6 +356,3 @@ environment the loop can't reach.
   probe needs rewriting against the fill layer before the e2e suite can be
   trusted on selection — independent of the pre-existing sheet-reopen failure
   that already has the suite red.
-- Nothing animates on first app launch, deliberately — an entrance on the
-  calendar grid would put an animation between the user and their first
-  meaningful paint. Worth revisiting only if launch stops feeling instant.

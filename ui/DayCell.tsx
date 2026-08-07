@@ -17,7 +17,7 @@
  *
  * ## Motion
  *
- * Three independent things animate here, each gated on `useMotion()` and each
+ * Four independent things animate here, each gated on `useMotion()` and each
  * a no-op (exactly today's static render) when motion is off:
  *
  * 1. **Selection arrival.** The cell scales 1 → ~1.06 → 1 (`springs.snap`) and
@@ -41,6 +41,9 @@
  *    two independently-timed animations, so they can never land visibly out of
  *    step, and so the synchronous jest-mock resolution of `withSpring` lands
  *    the ring fully faded rather than stuck mid-pulse.
+ * 4. **View changes.** The number and dot occupy one fixed-height stage and
+ *    crossfade/scale over 200ms. Both stay mounted while motion is enabled, so
+ *    a second tap retargets one live progress value without moving the grid.
  */
 import React, { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -91,7 +94,83 @@ interface DayCellProps {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function DayCell({
+export function DayCell(props: DayCellProps) {
+  const { enabled } = useMotion();
+
+  // Keep the host component stable for the lifetime of a cell. Switching an
+  // empty day from StaticDayCell to AnimatedDayCell precisely when it became
+  // selected tore down and recreated the native pressable while Reanimated was
+  // attaching its selection worklets. iOS can abort in that handoff. Motion is
+  // a session-level preference, so choosing the implementation from `enabled`
+  // keeps date taps on one native tree without changing reduced-motion output.
+  return enabled ? <AnimatedDayCell {...props} /> : <StaticDayCell {...props} />;
+}
+
+function StaticDayCell({
+  day,
+  net,
+  selected,
+  today = false,
+  view = 'dots',
+  onPress,
+}: DayCellProps) {
+  const { colors } = useTheme();
+  const hasNet = net !== 0;
+  const income = net > 0;
+  const netTone = income ? 'positive' : 'ink';
+  const heavy = !income && Math.abs(net) >= HEAVY_DAY;
+  const dotSize = heavy ? metrics.dayDotLarge : metrics.dayDot;
+  const dotColor = selected ? colors.onPositive : income ? colors.positive : colors.ink;
+  const dotOpacity = selected ? 0.85 : income ? 1 : heavy ? 0.65 : 0.3;
+  const netText = signed(net, '');
+
+  return (
+    <Pressable
+      onPress={() => onPress(day)}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={strings.calendar.dayAccessibilityLabel(day)}
+      accessibilityValue={
+        hasNet
+          ? { text: strings.calendar.dayNetAccessibilityValue(netText) }
+          : undefined
+      }
+      style={[
+        styles.cell,
+        { backgroundColor: selected ? colors.positive : colors.card },
+        today && !selected && { borderWidth: 1.5, borderColor: colors.positive },
+      ]}
+    >
+      <Txt variant="calendarDay" tone={selected ? 'onPositive' : 'ink'}>
+        {day}
+      </Txt>
+      {hasNet &&
+        (view === 'dots' ? (
+          <View
+            testID={`day-dot-${day}`}
+            style={{
+              width: dotSize,
+              height: dotSize,
+              borderRadius: metrics.pill,
+              backgroundColor: dotColor,
+              opacity: dotOpacity,
+            }}
+          />
+        ) : (
+          <Txt
+            variant="calendarDayTotal"
+            tone={selected ? 'onPositive' : netTone}
+            style={selected ? styles.selectedTotal : undefined}
+            numberOfLines={1}
+          >
+            {netText}
+          </Txt>
+        ))}
+    </Pressable>
+  );
+}
+
+function AnimatedDayCell({
   day,
   net,
   selected,
@@ -120,6 +199,7 @@ export function DayCell({
   const dotScale = useSharedValue(hasNet ? 1 : 0);
   const dotSizeSV = useSharedValue(dotSize);
   const pulseProgress = useSharedValue(0);
+  const viewProgress = useSharedValue(view === 'dots' ? 1 : 0);
 
   const prevSelected = useRef(selected);
   const prevHasNet = useRef(hasNet);
@@ -181,6 +261,20 @@ export function DayCell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dotSize, enabled]);
 
+  // Numbers and dots occupy one fixed slot. Retargeting this single progress
+  // value reverses cleanly from the current frame when the toggle is tapped
+  // again before the 200ms crossfade settles.
+  useEffect(() => {
+    const target = view === 'dots' ? 1 : 0;
+    viewProgress.value = enabled
+      ? withAppTiming(target, {
+          duration: durations.symbolSwap,
+          easing: easings.inOut,
+        })
+      : target;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, enabled]);
+
   // Landing pulse: only a *new* non-zero nonce plays it, so a re-render that
   // merely carries the same nonce forward (or a day with no nonce at all)
   // stays silent.
@@ -207,6 +301,14 @@ export function DayCell({
     height: dotSizeSV.value,
     transform: [{ scale: dotScale.value }],
   }));
+  const dotViewStyle = useAnimatedStyle(() => ({
+    opacity: viewProgress.value,
+    transform: [{ scale: 0.9 + viewProgress.value * 0.1 }],
+  }));
+  const numberViewStyle = useAnimatedStyle(() => ({
+    opacity: 1 - viewProgress.value,
+    transform: [{ scale: 1 - viewProgress.value * 0.1 }],
+  }));
   // 0 -> 1 progress maps onto both the ring's grow (1 -> 1.5 scale) and its
   // fade (0.7 -> 0 opacity) in one pass — see file header.
   const ringAnimatedStyle = useAnimatedStyle(() => ({
@@ -223,40 +325,30 @@ export function DayCell({
       : undefined,
   };
 
-  const dotNode =
-    hasNet &&
-    (view === 'dots' ? (
-      enabled ? (
+  const indicatorNode = hasNet && (
+    <View style={styles.indicatorSlot} pointerEvents="none">
+      <Animated.View style={[styles.indicatorLayer, dotViewStyle]}>
         <Animated.View
-          testID={`day-dot-${day}`}
+          testID={view === 'dots' ? `day-dot-${day}` : undefined}
           style={[
             { borderRadius: metrics.pill, backgroundColor: dotColor, opacity: dotOpacity },
             dotAnimatedStyle,
           ]}
         />
-      ) : (
-        <View
-          testID={`day-dot-${day}`}
-          style={{
-            width: dotSize,
-            height: dotSize,
-            borderRadius: metrics.pill,
-            backgroundColor: dotColor,
-            opacity: dotOpacity,
-          }}
-        />
-      )
-    ) : (
-      <Txt
-        variant="calendarDayTotal"
-        tone={selected ? 'onPositive' : netTone}
-        style={selected ? styles.selectedTotal : undefined}
-        numberOfLines={1}
-      >
-        {/* compact signed net, no currency symbol, to fit the cell */}
-        {netText}
-      </Txt>
-    ));
+      </Animated.View>
+      <Animated.View style={[styles.indicatorLayer, numberViewStyle]}>
+        <Txt
+          variant="calendarDayTotal"
+          tone={selected ? 'onPositive' : netTone}
+          style={selected ? styles.selectedTotal : undefined}
+          numberOfLines={1}
+        >
+          {/* compact signed net, no currency symbol, to fit the cell */}
+          {netText}
+        </Txt>
+      </Animated.View>
+    </View>
+  );
 
   if (!enabled) {
     return (
@@ -272,7 +364,7 @@ export function DayCell({
         <Txt variant="calendarDay" tone={selected ? 'onPositive' : 'ink'}>
           {day}
         </Txt>
-        {dotNode}
+        {indicatorNode}
       </Pressable>
     );
   }
@@ -299,7 +391,7 @@ export function DayCell({
       <Txt variant="calendarDay" tone={selected ? 'onPositive' : 'ink'}>
         {day}
       </Txt>
-      {dotNode}
+      {indicatorNode}
       {pulse != null && (
         <Animated.View
           pointerEvents="none"
@@ -325,6 +417,18 @@ const styles = StyleSheet.create({
   },
   /** Slightly recessive against the accent tile so the day number leads. */
   selectedTotal: { opacity: 0.75 },
+  /** Fixed symbol stage: numbers and dots trade opacity/scale without changing
+   * the day cell's measured layout or nudging the grid. */
+  indicatorSlot: { width: '100%', height: 10, position: 'relative' },
+  indicatorLayer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   /** The accent fill layer: sized to exactly cover the cell, behind the
    *  content, faded in/out instead of swapping the Pressable's own
    *  `backgroundColor` — see file header. */

@@ -45,7 +45,7 @@ import { strings } from '../i18n';
 import { entrySaved } from '../platform/haptics';
 import { shareTextFile } from '../platform/shareFile';
 import { useToday } from '../platform/useToday';
-import { BudgetsSheet, estimateBudgetsContentHeight } from '../screens/BudgetsSheet';
+import { BudgetsSheet } from '../screens/BudgetsSheet';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
 import { RepeatsSheet } from '../screens/RepeatsSheet';
@@ -258,13 +258,6 @@ function Shell({
   // Which entry the Entry sheet is editing (#43); null = create mode.
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [entryContentHeight, setEntryContentHeight] = useState(0);
-  // Budgets' height is computed from its row set (#80), not measured — so the
-  // sheet opens at content height on the first present with no re-snap. Derived,
-  // not state: it just tracks the current categories/mode.
-  const budgetsContentHeight = estimateBudgetsContentHeight(
-    state.expCats.length,
-    state.budgetMode,
-  );
 
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
   // real current month, with the selected day defaulting to today.
@@ -663,18 +656,17 @@ function Shell({
       <BottomSheet
         visible={sheet !== null}
         onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
-        defaultHeightRatio={sheet === 'entry' || sheet === 'repeat-entry' ? 0.83 : 0.8}
-        contentHeight={
-          sheet === 'entry' || sheet === 'repeat-entry'
-            ? entryContentHeight
-            : sheet === 'budgets'
-              ? budgetsContentHeight
-              : 0
-        }
+        // Entry is a focused calculator, so start it at the largest available
+        // detent. The form still compacts its controls to avoid making the
+        // bottom keypad rows a scroll target on short iPhones.
+        defaultHeightRatio={sheet === 'entry' || sheet === 'repeat-entry' ? 1 : 0.8}
+        contentHeight={sheet === 'entry' || sheet === 'repeat-entry' ? entryContentHeight : 0}
         testID={sheet ? `${sheet}-sheet` : undefined}
       >
-        {(sheet === 'entry' || sheet === 'repeat-entry') && (
-          <EntrySheet
+        <SheetBody
+          sheet={sheet}
+          entry={
+            <EntrySheet
             expCats={state.expCats}
             incCats={state.incCats}
             y={cursor.y}
@@ -689,10 +681,10 @@ function Shell({
             onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
             onContentHeightChange={setEntryContentHeight}
             ScrollContainer={BottomSheetScrollView}
-          />
-        )}
-        {sheet === 'settings' && (
-          <SettingsSheet
+            />
+          }
+          settings={
+            <SettingsSheet
             currency={state.currency}
             expCats={state.expCats}
             incCats={state.incCats}
@@ -711,10 +703,10 @@ function Shell({
             onDeleteAllData={deleteAllData}
             onClose={closeSheet}
             ScrollContainer={BottomSheetScrollView}
-          />
-        )}
-        {sheet === 'budgets' && (
-          <BudgetsSheet
+            />
+          }
+          budgets={
+            <BudgetsSheet
             expCats={state.expCats}
             budgets={state.budgets}
             budgetMode={state.budgetMode}
@@ -725,25 +717,71 @@ function Shell({
             onChangeTotalBudget={(totalBudget) => update({ totalBudget })}
             onDone={backToSettings}
             ScrollContainer={BottomSheetScrollView}
-          />
-        )}
-        {sheet === 'repeats' && (
-          <RepeatsSheet
+            />
+          }
+          repeats={
+            <RepeatsSheet
             recurrenceRules={state.recurrenceRules}
             today={todayDate}
             symbol={symbol}
             onEdit={openRepeatEdit}
             onDone={backToSettings}
             ScrollContainer={BottomSheetScrollView}
-          />
-        )}
+            />
+          }
+        />
       </BottomSheet>
+    </View>
+  );
+}
+
+/**
+ * Keep one stable child under BottomSheetModal. Gorhom measures its content
+ * while presenting; handing it `null` on the first render makes iOS sometimes
+ * open a zero-height/empty sheet when the requested body is swapped in.
+ */
+function SheetBody({
+  sheet,
+  entry,
+  settings,
+  budgets,
+  repeats,
+}: {
+  sheet: Sheet | null;
+  entry: React.ReactNode;
+  settings: React.ReactNode;
+  budgets: React.ReactNode;
+  repeats: React.ReactNode;
+}) {
+  // BottomSheetView measures its direct child on native. A Fragment can
+  // flatten into a changing child list while the modal is swapping sheets;
+  // iOS may then retain only the header-sized measurement. Keep one concrete
+  // flexing view under the host for every sheet state so content swaps are
+  // measured as a body, not as a transient fragment.
+  const body =
+    sheet === 'entry' || sheet === 'repeat-entry'
+      ? entry
+      : sheet === 'settings'
+        ? settings
+        : sheet === 'budgets'
+          ? budgets
+          : sheet === 'repeats'
+            ? repeats
+            : null;
+
+  return (
+    <View testID="sheet-body" style={styles.sheetBody}>
+      {body}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  // BottomSheetView has an explicit pixel height. A percentage gives gorhom a
+  // concrete native measurement on its first iOS layout pass; flex:1 can be
+  // measured as zero while the modal portal is still being presented.
+  sheetBody: { height: '100%', minHeight: 0, width: '100%' },
   // Native SafeAreaView (AppShell) insets the top; web has no safe area, so add
   // the design's status offset there to keep content off the container edge.
   body: { flex: 1, paddingTop: Platform.OS === 'web' ? metrics.statusOffset : 0 },

@@ -34,12 +34,13 @@ jest
   });
 
 function Probe() {
-  const { enabled, preference, systemReducedMotion, setPreference } = useMotion();
+  const { enabled, preference, resolved, systemReducedMotion, setPreference } = useMotion();
   return (
     <>
       <Text testID="enabled">{String(enabled)}</Text>
       <Text testID="preference">{preference}</Text>
       <Text testID="system">{String(systemReducedMotion)}</Text>
+      <Text testID="resolved">{String(resolved)}</Text>
       <Text testID="pick-system" onPress={() => setPreference('system')}>
         system
       </Text>
@@ -96,12 +97,13 @@ describe('MotionProvider', () => {
     expect(text('enabled')).toBe('false');
   });
 
-  it('animates on the first frame rather than suppressing until the read lands', () => {
-    // Deliberate: starting "reduced" would cost every user the opening frame of
-    // every launch animation to spare it for the few with the setting on.
+  it('reports System motion unresolved until the initial OS read lands', async () => {
     mockReduceMotion = true;
     renderMotion();
-    expect(text('enabled')).toBe('true');
+    expect(text('resolved')).toBe('false');
+    expect(text('enabled')).toBe('false');
+    await settleInitialRead();
+    expect(text('resolved')).toBe('true');
   });
 
   it('re-resolves live when the OS flag flips', async () => {
@@ -120,6 +122,7 @@ describe('MotionProvider', () => {
     // The OS flag is still reported truthfully — the preference just wins.
     expect(text('system')).toBe('true');
     expect(text('enabled')).toBe('true');
+    expect(text('resolved')).toBe('true');
   });
 
   it('lets `reduced` override an OS that did not ask for it', async () => {
@@ -127,6 +130,7 @@ describe('MotionProvider', () => {
     await settleInitialRead();
     expect(text('system')).toBe('false');
     expect(text('enabled')).toBe('false');
+    expect(text('resolved')).toBe('true');
   });
 
   it('reports preference changes so the caller can persist them', async () => {
@@ -150,5 +154,6 @@ describe('MotionProvider', () => {
     render(<Probe />);
     expect(text('enabled')).toBe('false');
     expect(text('preference')).toBe('system');
+    expect(text('resolved')).toBe('true');
   });
 });

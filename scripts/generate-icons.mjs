@@ -24,6 +24,9 @@ const DEEP = '#1E2499'; // light-mode hero / the mark's second bar
 const BLUE_DARK = '#6B72FF'; // dark-mode accent
 const DEEP_DARK = '#3A42D8';
 const TILE = '#FFFFFF';
+// Lift only the iOS home-screen tile. The splash and in-app dark ground stay
+// near-black so launch still hands off seamlessly to the rendered app.
+const ICON_DARK_TILE = '#2C2C2E';
 const GROUND_LIGHT = '#F2F2F0';
 const GROUND_DARK = '#0F0F13';
 
@@ -59,11 +62,26 @@ const opaque = (svg, bg) => png(svg).flatten({ background: bg });
 const TARGETS = [
   {
     file: 'icon.png',
-    note: 'store / home-screen icon — opaque white tile, system applies the mask',
+    note: 'iOS light / fallback icon — opaque white tile, system applies the mask',
     build: () =>
       opaque(
         markSvg({ size: 1024, fraction: 0.56, bar: BLUE, bar2: DEEP, bg: TILE }),
         TILE,
+      ),
+  },
+  {
+    file: 'icon-dark.png',
+    note: 'iOS dark home-screen icon — opaque dark tile with lifted brand blues',
+    build: () =>
+      opaque(
+        markSvg({
+          size: 1024,
+          fraction: 0.56,
+          bar: BLUE_DARK,
+          bar2: DEEP_DARK,
+          bg: ICON_DARK_TILE,
+        }),
+        ICON_DARK_TILE,
       ),
   },
   {

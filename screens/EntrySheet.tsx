@@ -50,7 +50,7 @@ import {
   type Tone,
 } from '../theme';
 import { IconButton } from '../nav/IconButton';
-import { SHEET_CHROME, WEB_FRAME_INSET } from '../nav/BottomSheet';
+import { SHEET_CHROME, SHEET_TOP_STRIP, WEB_FRAME_INSET } from '../nav/BottomSheet';
 
 interface EntrySheetProps {
   expCats: string[];
@@ -152,7 +152,10 @@ const NATURAL_FORM_HEIGHT = 760;
  * can without the controls becoming hard to hit (see `MIN_KEY_HEIGHT` in
  * `Keypad`), and the remainder is taken as scroll instead.
  */
-const MIN_COMPACT_SCALE = 0.78;
+const MIN_COMPACT_SCALE = 0.72;
+
+/** The footer is outside the scaled body and must get its own room budget. */
+const FOOTER_BUDGET = metrics.ctaHeight + 14;
 
 /** Rough home-indicator / bottom safe area on native; see `useCompactScale`. */
 const NATIVE_BOTTOM_ALLOWANCE = 34;
@@ -194,7 +197,11 @@ function useCompactScale(): number {
   // is reachable, so precision here buys nothing.
   const chrome =
     Platform.OS === 'web' ? WEB_FRAME_INSET : metrics.statusOffset + NATIVE_BOTTOM_ALLOWANCE;
-  const budget = windowHeight - chrome - SHEET_CHROME;
+  // Entry opens at the host's expanded detent. Account for the host's dimmed
+  // top strip and reserve the pinned footer before scaling the scrollable body;
+  // otherwise the form can still be just tall enough to push 0/00 below the
+  // fold even though the sheet itself is fullscreen.
+  const budget = windowHeight - chrome - SHEET_TOP_STRIP - SHEET_CHROME - FOOTER_BUDGET;
   return Math.max(MIN_COMPACT_SCALE, Math.min(1, budget / NATURAL_FORM_HEIGHT));
 }
 

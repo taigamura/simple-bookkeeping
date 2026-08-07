@@ -25,6 +25,7 @@ export interface Strings {
     delete: string;
   };
   a11y: {
+    loadingKaji: string;
     selected: string;
     notSelected: string;
     textInput: string;
@@ -40,6 +41,8 @@ export interface Strings {
     done: string;
     close: string;
     back: string;
+    useDarkMode: string;
+    useLightMode: string;
   };
   calendar: {
     previousMonth: string;
@@ -190,6 +193,7 @@ export const en: Strings = {
     delete: 'Delete',
   },
   a11y: {
+    loadingKaji: 'Loading Kaji',
     selected: 'Selected',
     notSelected: 'Not selected',
     textInput: 'Text input',
@@ -205,6 +209,8 @@ export const en: Strings = {
     done: 'Done',
     close: 'Close',
     back: 'Back',
+    useDarkMode: 'Use dark mode',
+    useLightMode: 'Use light mode',
   },
   calendar: {
     previousMonth: 'Previous month',
@@ -359,6 +365,7 @@ export const ja: Strings = {
     delete: '削除',
   },
   a11y: {
+    loadingKaji: 'Kajiを読み込み中',
     selected: '選択中',
     notSelected: '未選択',
     textInput: 'テキスト入力',
@@ -374,6 +381,8 @@ export const ja: Strings = {
     done: '完了',
     close: '閉じる',
     back: '戻る',
+    useDarkMode: 'ダークモードにする',
+    useLightMode: 'ライトモードにする',
   },
   calendar: {
     previousMonth: '前の月',

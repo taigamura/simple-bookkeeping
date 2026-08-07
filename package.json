@@ -46,7 +46,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "icons": "node scripts/generate-icons.mjs",
+    "icons": "node scripts/generate-icons.mjs && node scripts/check-icons.mjs",
+    "icons:check": "node scripts/check-icons.mjs",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",

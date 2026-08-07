@@ -177,4 +177,16 @@ describe('ListRow', () => {
 
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps the delete action behind a full-width opaque row', () => {
+    renderRow({ onPress: () => {}, onDelete: () => {} });
+    const swipeable = screen.getByTestId('swipeable-t1');
+    const row = screen.getByLabelText('Edit Food');
+    const rowStyle = StyleSheet.flatten(row.props.style);
+
+    expect(swipeable).toBeTruthy();
+    expect(rowStyle.width).toBe('100%');
+    expect(rowStyle.backgroundColor).toBeTruthy();
+    expect(rowStyle.borderRadius).toBeGreaterThan(0);
+  });
 });

@@ -3,5 +3,9 @@ export { Root } from './Root';
 export { AppShell } from './AppShell';
 export { TabBar } from './TabBar';
 export { BottomSheet } from './BottomSheet';
-export { IconButton } from './IconButton';
+export {
+  CalendarViewToggleButton,
+  IconButton,
+  ThemeToggleButton,
+} from './IconButton';
 export type { Tab, Sheet } from './types';

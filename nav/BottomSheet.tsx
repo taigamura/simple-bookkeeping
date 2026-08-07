@@ -75,7 +75,7 @@ const MIN_CONTENT_HEIGHT = 200;
 // frame bottom (Settings/Budgets otherwise measured ~1072px and ran off-screen).
 // Kept modest so a tall phone still shows most Settings sections — through the
 // Budgets row — without scrolling (issue #61 acceptance); shorter phones scroll.
-const SHEET_TOP_STRIP = 44;
+export const SHEET_TOP_STRIP = 44;
 const SHEET_HANDLE_HEIGHT = 40;
 const SHEET_CONTENT_TOP_PADDING = 4;
 const SHEET_CONTENT_BOTTOM_PADDING = 28;
@@ -273,16 +273,7 @@ export function BottomSheet({
         SHEET_CONTENT_BOTTOM_PADDING +
         insets.bottom
       : 0;
-  // When the body reports its intrinsic height, open exactly that tall (floored
-  // at MIN_CONTENT_HEIGHT, capped at max below) — the ratio is the fallback only
-  // for bodies that don't measure (Settings/Repeats). Using `max(ratio, measured)`
-  // floored every sheet at the ratio, which left a short measured body (the
-  // Budgets sheet, #80) opening at 80% with a large dead zone. Tall measured
-  // bodies (Entry) already exceeded the ratio, so their detent is unchanged.
-  const defaultSheetHeight =
-    measuredSheetHeight > 0
-      ? Math.max(MIN_CONTENT_HEIGHT, measuredSheetHeight)
-      : ratioSheetHeight;
+  const defaultSheetHeight = Math.max(ratioSheetHeight, measuredSheetHeight);
   const snapPoints = useMemo(
     () => [Math.min(defaultSheetHeight, maxSheetHeight), maxSheetHeight],
     [defaultSheetHeight, maxSheetHeight],

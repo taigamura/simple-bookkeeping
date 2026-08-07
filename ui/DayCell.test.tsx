@@ -13,7 +13,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 
-import { ThemeProvider, palettes } from '../theme';
+import { MotionProvider, ThemeProvider, palettes } from '../theme';
 
 const light = palettes.light;
 import { DayCell, HEAVY_DAY } from './DayCell';
@@ -37,6 +37,27 @@ const cellBg = (day: number) => {
 };
 
 describe('DayCell', () => {
+  it('keeps the same native pressable mounted when selection changes with motion enabled', () => {
+    const view = render(
+      <MotionProvider initialPreference="full">
+        <ThemeProvider>
+          <DayCell day={5} net={0} selected onPress={() => {}} />
+        </ThemeProvider>
+      </MotionProvider>,
+    );
+    const selectedHost = screen.getByLabelText('Day 5');
+
+    view.rerender(
+      <MotionProvider initialPreference="full">
+        <ThemeProvider>
+          <DayCell day={5} net={0} selected={false} onPress={() => {}} />
+        </ThemeProvider>
+      </MotionProvider>,
+    );
+
+    expect(screen.getByLabelText('Day 5')).toBe(selectedHost);
+  });
+
   it('shows the day number', () => {
     renderCell({ day: 12 });
     expect(screen.getByText('12')).toBeTruthy();
