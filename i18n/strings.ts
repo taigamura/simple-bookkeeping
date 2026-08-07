@@ -63,10 +63,19 @@ export interface Strings {
   };
   summary: {
     netThisMonth: string;
+    /** Hero label in annual mode, where the period is a calendar year. */
+    netThisYear: string;
     spendingByCategory: string;
     noSpending: string;
+    /** Empty state in annual mode. */
+    noSpendingThisYear: string;
     /** Net-card label for the month's remaining budget (#51). */
     budgetLeft: string;
+    /** Monthly/Annual granularity toggle. */
+    monthly: string;
+    annual: string;
+    previousPeriod: string;
+    nextPeriod: string;
   };
   entry: {
     dateRowLabel: string;
@@ -228,9 +237,15 @@ export const en: Strings = {
   },
   summary: {
     netThisMonth: 'Net this month',
+    netThisYear: 'Net this year',
     spendingByCategory: 'Spending by category',
     noSpending: 'No spending this month.',
+    noSpendingThisYear: 'No spending this year.',
     budgetLeft: 'Budget left',
+    monthly: 'Monthly',
+    annual: 'Annual',
+    previousPeriod: 'Previous period',
+    nextPeriod: 'Next period',
   },
   entry: {
     dateRowLabel: 'Date',
@@ -400,9 +415,15 @@ export const ja: Strings = {
   },
   summary: {
     netThisMonth: '今月の収支',
+    netThisYear: '今年の収支',
     spendingByCategory: 'カテゴリ別の支出',
     noSpending: '今月の支出はありません。',
+    noSpendingThisYear: '今年の支出はありません。',
     budgetLeft: '予算の残り',
+    monthly: '月別',
+    annual: '年別',
+    previousPeriod: '前の期間',
+    nextPeriod: '次の期間',
   },
   entry: {
     dateRowLabel: '日付',

@@ -4,8 +4,73 @@
  * `Transaction[]` (already month-filtered by the caller).
  */
 import type { Budgets } from './budgets';
-import { expense, income } from './entries';
-import type { Transaction } from './types';
+import { MONTH_NAMES, shiftMonth } from './calendar';
+import { expense, income, monthEntries } from './entries';
+import type { Transaction, YM } from './types';
+
+/**
+ * How wide a window the Summary screen aggregates over (#swipe/toggle work).
+ * `annual` is the calendar year Jan–Dec, not a trailing twelve months: it is
+ * the window people already hold budgets, taxes and "what did last year cost"
+ * in, and it makes a period a single unambiguous label ("2026") that a pager
+ * can step through one page at a time.
+ *
+ * Everything below is expressed as (cursor `YM` + granularity) rather than as a
+ * separate period type. The app has exactly one nav cursor, shared with the
+ * Calendar tab, and in `annual` mode the cursor's *month* is deliberately
+ * carried along untouched even though nothing reads it — that is what lets a
+ * user flip Annual → Monthly and land back on the month they left, and what
+ * keeps the Calendar tab where they left it.
+ */
+export type SummaryGranularity = 'monthly' | 'annual';
+
+export const SUMMARY_GRANULARITIES: readonly SummaryGranularity[] = [
+  'monthly',
+  'annual',
+] as const;
+
+export const isSummaryGranularity = (value: unknown): value is SummaryGranularity =>
+  value === 'monthly' || value === 'annual';
+
+/** The entries falling inside the period the cursor and granularity describe. */
+export function periodEntries(
+  all: Transaction[],
+  ym: YM,
+  granularity: SummaryGranularity,
+): Transaction[] {
+  return granularity === 'annual'
+    ? all.filter((entry) => entry.y === ym.y)
+    : monthEntries(all, ym);
+}
+
+/**
+ * Move the cursor by `delta` whole periods — a month in `monthly`, a year in
+ * `annual`. The annual case shifts the year and leaves `m` alone; see the
+ * `SummaryGranularity` note on why the month is preserved rather than reset.
+ */
+export function shiftPeriod(
+  ym: YM,
+  delta: number,
+  granularity: SummaryGranularity,
+): YM {
+  return granularity === 'annual' ? { y: ym.y + delta, m: ym.m } : shiftMonth(ym, delta);
+}
+
+/** Every month a period covers — one in `monthly`, twelve in `annual`. */
+export function periodMonths(ym: YM, granularity: SummaryGranularity): YM[] {
+  if (granularity === 'monthly') return [{ y: ym.y, m: ym.m }];
+  return Array.from({ length: 12 }, (_, m) => ({ y: ym.y, m }));
+}
+
+/** The period's subtitle: "August 2026" monthly, "2026" annually. */
+export function periodLabel(ym: YM, granularity: SummaryGranularity): string {
+  return granularity === 'annual' ? String(ym.y) : `${MONTH_NAMES[ym.m]} ${ym.y}`;
+}
+
+/** Stable identity for a period, for pager keys and same-period comparisons. */
+export function periodKey(ym: YM, granularity: SummaryGranularity): string {
+  return granularity === 'annual' ? `${ym.y}` : `${ym.y}-${ym.m}`;
+}
 
 /** One ranked expense category: its total and bar width scaled to the max. */
 export interface CategorySlice {

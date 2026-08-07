@@ -1,34 +1,14 @@
 /**
- * MonthPager — native paged month list for the calendar grid (#48). A
- * horizontal `FlatList` with `pagingEnabled` renders a window of months, so
- * snapping, momentum, and rapid successive flings are handled by the native
- * scroll view (the custom pan-gesture pager they replace ate fast flings and
- * flashed on settle). `disableIntervalMomentum` keeps one fling = exactly one
- * month, by design.
+ * MonthPager — the calendar grid's month-by-month pager (#48).
  *
- * The month cursor commits when scroll momentum ends: `onMonthChange` reports
- * the absolute month the list settled on (after rapid flings that can be
- * several months from the last commit — a delta would drift). The title,
- * In/Out/Net strip, and day-list live outside this component and re-read the
- * new month at that commit, so they swap exactly at snap-end, never
- * mid-animation. External cursor moves (the header's ‹ › chevrons) slide the
- * list to the new month via `scrollToIndex`.
- *
- * The window starts at ±WINDOW_RADIUS months and grows by WINDOW_CHUNK when a
- * settle lands within WINDOW_EDGE pages of an end; `maintainVisibleContentPosition`
- * keeps the viewport still when months are prepended. Until the viewport is
- * measured (and in the jsdom test path, where no layout fires) it renders a
- * single static grid, so no scroll code runs there.
+ * All the paging mechanics (window growth, settle-on-momentum-end commit,
+ * external cursor follow, the pre-measurement static fallback) live in
+ * `PeriodPager`, which this and the Summary screen's category list share. What
+ * remains here is the calendar-specific part: a page is a `CalendarGrid`, a
+ * step is one month, and only the committed month's grid takes day taps while
+ * its neighbours merely preview the carried-over selection.
  */
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  FlatList,
-  type LayoutChangeEvent,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-  StyleSheet,
-  View,
-} from 'react-native';
+import React from 'react';
 
 import {
   clampDay,
@@ -40,6 +20,14 @@ import {
   type YM,
 } from '../domain';
 import { CalendarGrid } from './CalendarGrid';
+import { PeriodPager, buildPeriodWindow, pageIndex } from './PeriodPager';
+
+export { pageIndex };
+
+/** Build a month window spanning `radius` months either side of `center`. */
+export function buildWindow(center: YM, radius: number): YM[] {
+  return buildPeriodWindow(center, radius, shiftMonth);
+}
 
 interface MonthPagerProps {
   /** The full ledger; each month grid filters it via `monthEntries`. */
@@ -59,25 +47,7 @@ interface MonthPagerProps {
   onMonthChange: (ym: YM) => void;
 }
 
-// Initial window half-width; a settle within WINDOW_EDGE pages of an end grows
-// the window by WINDOW_CHUNK months on that side.
-const WINDOW_RADIUS = 12;
-const WINDOW_EDGE = 3;
-const WINDOW_CHUNK = 12;
-
-/** Build a month window spanning `radius` months either side of `center`. */
-export function buildWindow(center: YM, radius: number): YM[] {
-  const months: YM[] = [];
-  for (let delta = -radius; delta <= radius; delta++) months.push(shiftMonth(center, delta));
-  return months;
-}
-
-/** The page a settled scroll offset lands on, clamped into the window. */
-export function pageIndex(offsetX: number, width: number, pageCount: number): number {
-  return Math.max(0, Math.min(pageCount - 1, Math.round(offsetX / width)));
-}
-
-const sameYM = (a: YM, b: YM) => a.y === b.y && a.m === b.m;
+const monthKey = (ym: YM) => `${ym.y}-${ym.m}`;
 
 export function MonthPager({
   entries,
@@ -91,175 +61,28 @@ export function MonthPager({
   onSelectDay,
   onMonthChange,
 }: MonthPagerProps) {
-  const [width, setWidth] = useState(0);
-  const [months, setMonths] = useState<YM[]>(() => buildWindow({ y, m }, WINDOW_RADIUS));
-  // Remount the list (re-applying `initialScrollIndex`) when the window is
-  // rebuilt around a far-off cursor jump initiated by the host.
-  const [generation, setGeneration] = useState(0);
-
-  const listRef = useRef<FlatList<YM>>(null);
-  const pendingScrollIndex = useRef<number | null>(null);
-  const monthsRef = useRef(months);
-  monthsRef.current = months;
-  // The month this pager currently shows — the last settle it committed or the
-  // last external cursor move it followed.
-  const shownRef = useRef<YM>({ y, m });
-  // iOS can report both `onScrollEndDrag` and `onMomentumScrollEnd` for the
-  // same page. Coalescing that report prevents a second scroll/commit cycle
-  // while the chevron animation is still settling.
-  const lastSettledOffset = useRef<number | null>(null);
-
-  const onLayout = (e: LayoutChangeEvent) => {
-    const w = e.nativeEvent.layout.width;
-    if (w > 0 && w !== width) setWidth(w);
-  };
-
-  // External cursor moves (‹ › chevrons or other host navigation): slide to the new
-  // month, or rebuild the window around it when it falls outside.
-  useEffect(() => {
-    const cur: YM = { y, m };
-    if (sameYM(cur, shownRef.current)) return;
-    shownRef.current = cur;
-    lastSettledOffset.current = null;
-    const index = monthsRef.current.findIndex((ym) => sameYM(ym, cur));
-    if (index === -1) {
-      setMonths(buildWindow(cur, WINDOW_RADIUS));
-      setGeneration((g) => g + 1);
-    } else {
-      pendingScrollIndex.current = index;
-      listRef.current?.scrollToIndex({ index, animated: true });
-    }
-  }, [y, m]);
-
-  // iOS can deliver an external cursor update before the newly mounted list
-  // has calculated its frames. Calling scrollToIndex in that window reports
-  // `onScrollToIndexFailed`; retry after the list has had a layout pass instead
-  // of allowing the native list to abort the date switch.
-  const onScrollToIndexFailed = ({ index }: { index: number }) => {
-    pendingScrollIndex.current = index;
-    requestAnimationFrame(() => {
-      const pending = pendingScrollIndex.current;
-      if (pending == null) return;
-      pendingScrollIndex.current = null;
-      listRef.current?.scrollToIndex({ index: pending, animated: true });
-    });
-  };
-
-  // settle(): map the settled offset to a month, commit it if it moved, and
-  // grow the window when the settle lands near an edge (prepends stay visually
-  // still via maintainVisibleContentPosition).
-  const settle = (offsetX: number) => {
-    if (width <= 0 || !Number.isFinite(offsetX)) return;
-    const page = Math.round(offsetX / width);
-    const settledOffset = page * width;
-    if (lastSettledOffset.current === settledOffset) return;
-    lastSettledOffset.current = settledOffset;
-    const window = monthsRef.current;
-    const index = pageIndex(settledOffset, width, window.length);
-    const ym = window[index];
-    if (!ym) return;
-    if (!sameYM(ym, shownRef.current)) {
-      shownRef.current = ym;
-      onMonthChange(ym);
-    }
-    if (index <= WINDOW_EDGE) {
-      const first = window[0];
-      const prefix = Array.from({ length: WINDOW_CHUNK }, (_, i) =>
-        shiftMonth(first, i - WINDOW_CHUNK),
-      );
-      setMonths([...prefix, ...window]);
-    } else if (index >= window.length - 1 - WINDOW_EDGE) {
-      const last = window[window.length - 1];
-      const suffix = Array.from({ length: WINDOW_CHUNK }, (_, i) => shiftMonth(last, i + 1));
-      setMonths([...window, ...suffix]);
-    }
-  };
-
-  const onMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) =>
-    settle(e.nativeEvent.contentOffset.x);
-
-  // Touch-catch case: stopping the deceleration dead on a page boundary ends
-  // the drag with no momentum phase, so momentum-end never fires.
-  const onScrollEndDrag = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const x = e.nativeEvent.contentOffset.x;
-    if (width > 0 && Math.abs(x / width - Math.round(x / width)) < 0.01) settle(x);
-  };
-
-  // Pre-measurement (and the test path): one static grid, no scroll code.
-  if (width === 0) {
-    return (
-      <View testID="month-pager" onLayout={onLayout}>
+  return (
+    <PeriodPager
+      testID="month-pager"
+      cursor={{ y, m }}
+      shift={shiftMonth}
+      keyOf={monthKey}
+      onCursorChange={onMonthChange}
+      renderPage={(month, isCursor) => (
         <CalendarGrid
-          y={y}
-          m={m}
-          monthEntries={monthEntries(entries, { y, m })}
-          selectedDay={selectedDay}
+          y={month.y}
+          m={month.m}
+          monthEntries={monthEntries(entries, month)}
+          // Neighbours preview the carried-over selection, clamped in-range;
+          // only the committed month's grid takes day taps.
+          selectedDay={clampDay(selectedDay, month.y, month.m)}
           today={today}
           view={view}
-          pulseDay={pulseDay}
-          pulseNonce={pulseNonce}
-          onSelectDay={onSelectDay}
+          pulseDay={isCursor ? pulseDay : undefined}
+          pulseNonce={isCursor ? pulseNonce : undefined}
+          onSelectDay={isCursor ? onSelectDay : () => {}}
         />
-      </View>
-    );
-  }
-
-  const initialIndex = Math.max(
-    0,
-    months.findIndex((ym) => sameYM(ym, shownRef.current)),
-  );
-
-  return (
-    <View testID="month-pager" style={styles.viewport} onLayout={onLayout}>
-      <FlatList
-        ref={listRef}
-        key={`${width}-${generation}`}
-        testID="month-pager-list"
-        data={months}
-        keyExtractor={(ym) => `${ym.y}-${ym.m}`}
-        renderItem={({ item }) => (
-          <View style={{ width }}>
-            <CalendarGrid
-              y={item.y}
-              m={item.m}
-              monthEntries={monthEntries(entries, item)}
-              // Neighbours preview the carried-over selection, clamped in-range;
-              // only the committed month's grid takes day taps.
-              selectedDay={clampDay(selectedDay, item.y, item.m)}
-              today={today}
-              view={view}
-              pulseDay={sameYM(item, { y, m }) ? pulseDay : undefined}
-              pulseNonce={sameYM(item, { y, m }) ? pulseNonce : undefined}
-              onSelectDay={sameYM(item, { y, m }) ? onSelectDay : () => {}}
-            />
-          </View>
-        )}
-        horizontal
-        pagingEnabled
-        disableIntervalMomentum
-        showsHorizontalScrollIndicator={false}
-        getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
-        initialScrollIndex={initialIndex}
-        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
-        onScrollBeginDrag={() => {
-          lastSettledOffset.current = null;
-        }}
-        onMomentumScrollEnd={onMomentumScrollEnd}
-        onScrollEndDrag={onScrollEndDrag}
-        onScrollToIndexFailed={onScrollToIndexFailed}
-        // The calendar tab is mounted during a tab transition. Keep the first
-        // frame cheap: the current month is all that is needed immediately;
-        // neighbours can be filled in after the first paint instead of making
-        // three full grids compete with the entrance animation.
-        initialNumToRender={1}
-        maxToRenderPerBatch={2}
-        windowSize={3}
-      />
-    </View>
+      )}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  // Clip the off-screen neighbour grids to the current month's column.
-  viewport: { overflow: 'hidden' },
-});

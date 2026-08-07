@@ -9,5 +9,6 @@ export { ListRow } from './ListRow';
 export { DayCell } from './DayCell';
 export { CalendarGrid } from './CalendarGrid';
 export { MonthPager } from './MonthPager';
+export { PeriodPager } from './PeriodPager';
 export { SplitBar } from './SplitBar';
 export { CategoryBar } from './CategoryBar';

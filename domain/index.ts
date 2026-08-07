@@ -48,8 +48,16 @@ export {
 export {
   categoryBreakdown,
   splitProportions,
+  SUMMARY_GRANULARITIES,
+  isSummaryGranularity,
+  periodEntries,
+  periodKey,
+  periodLabel,
+  periodMonths,
+  shiftPeriod,
   type CategorySlice,
   type Split,
+  type SummaryGranularity,
 } from './summary';
 export {
   activeRecurrences,

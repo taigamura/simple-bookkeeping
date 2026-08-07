@@ -29,9 +29,11 @@ import {
   entriesForMonth,
   entriesThrough,
   parseZaimCsv,
+  periodMonths,
   promoteCategory,
   pruneBudgets,
   saveLedgerItem,
+  shiftPeriod,
   serializeZaimCsv,
   shiftMonth,
   type Currency,
@@ -52,7 +54,7 @@ import { RepeatsSheet } from '../screens/RepeatsSheet';
 import { SettingsSheet } from '../screens/SettingsSheet';
 import { SummaryScreen } from '../screens/SummaryScreen';
 import type { AppState, UseStore } from '../store';
-import { easings, metrics, useMotion, withAppTiming } from '../theme';
+import { easings, metrics, useMotion, withAppDelay, withAppTiming } from '../theme';
 import { AppShell } from './AppShell';
 import { BottomSheet, SHEET_ANIMATION_DURATION } from './BottomSheet';
 import { TabBar } from './TabBar';
@@ -153,64 +155,170 @@ function chooseRecurringSave(onOne: () => void, onFuture: () => void) {
   ]);
 }
 
-// How far the incoming tab body travels (px) and how long that takes (ms).
-// Originally this used reanimated's built-in `FadeInLeft`/`FadeInRight`
-// (`.duration(durations.base)`), which on web renders as a fixed 25px CSS
-// keyframe — not adjustable independent of duration. Measured directly
-// (sampling computed transform/opacity every animation frame, not just
-// screenshots): it peaked at only ~17% of the screen changing and was fully
-// settled by ~160ms, which reads as a flicker rather than a slide on a
-// mostly-static frame (tab bar and background never move). This is a
-// hand-rolled replacement — the same useSharedValue/useAnimatedStyle pattern
-// CalendarScreen's title block already proves out — so the distance is a
-// number we control. 36px rather than the title's 12px: this swaps the whole
-// screen, a bigger event than a label changing, and needs more travel to
-// register against that much more static chrome around it. The duration is a
-// touch longer than `durations.base` for the same reason.
-const TAB_TRAVEL = 36;
-const TAB_TRANSITION_DURATION = 280;
+// How far a tab body travels (px) and how long the swap takes (ms).
+//
+// This started as reanimated's built-in `FadeInLeft`/`FadeInRight`, which on
+// web renders as a fixed 25px CSS keyframe — not adjustable independent of
+// duration. That was replaced by a hand-rolled entrance (36px / 280ms /
+// `easings.standard`) so the distance was a number we controlled. It still
+// read as a jump on device, for two reasons that the entrance alone could not
+// fix:
+//
+//  1. **There was no exit.** Only the active screen was ever mounted, so the
+//     outgoing screen vanished on the first frame of the swap. An entrance
+//     with no matching exit is a hard cut followed by an arrival, which is
+//     exactly what "jumps in" describes. The old comment justified this on
+//     low-end-phone grounds — holding the month grid and the Summary
+//     aggregation live at once for a quarter-second. That trade was called
+//     wrong: both screens are cheap projections over an already-computed
+//     `visibleEntries`, and the cut is visible on every single tab press.
+//  2. **`easings.standard` is an ease-out expo**, which covers ~85% of its
+//     distance in the first third. Right for a label; at screen scale it means
+//     the incoming body is in place before the eye registers that it moved.
+//     See `easings.screen`, added for this.
+//
+// So the swap is now a shared-axis transition: the outgoing screen accelerates
+// away along the axis and fades, the incoming one decelerates in behind it,
+// overlapping in the middle. `TAB_ENTER_FADE_DELAY` holds the incoming screen's
+// opacity at 0 while the outgoing one clears, so the two never both sit at half
+// opacity over the background — that cross-dissolve is what makes a shared-axis
+// swap read as muddy rather than as one thing replacing another.
+const TAB_TRAVEL = 40;
+const TAB_TRANSITION_DURATION = 320;
+const TAB_ENTER_FADE_DELAY = 90;
+const TAB_EXIT_FADE_DURATION = 150;
+
+/** Which way the body travels: `forward` is calendar → summary along the bar. */
+type TabPhase = 'entering' | 'exiting';
 
 /**
- * Wraps the active tab's screen and slides it in from the direction the user
- * moved along the bar. Mounted fresh per tab (the parent keys it on `tab`), so
- * the entrance is a plain mount-effect rather than reanimated's `entering`
- * animation-builder machinery — nothing here needs to interrupt or reverse.
+ * One tab's screen, animated along the shared axis. Rendered with a stable
+ * `key` per tab so its instance survives the swap — that is what lets `phase`
+ * flip on a *mounted* layer (`entering` → `exiting`, and back again if the user
+ * taps the other tab mid-transition) instead of relying on mount/unmount, which
+ * cannot express an exit for a screen that is being removed from the tree.
+ *
+ * The shared values are read once for the initial phase and then driven by the
+ * effect; an interrupted swap simply retargets them from wherever they are, so
+ * a reversal picks up mid-flight rather than snapping to a start position.
  */
-function TabTransition({
+function TabLayer({
+  phase,
   forward,
-  style,
   children,
 }: {
+  phase: TabPhase;
   forward: boolean;
-  style: StyleProp<ViewStyle>;
   children: React.ReactNode;
 }) {
   const { enabled } = useMotion();
-  const translateX = useSharedValue(enabled ? (forward ? TAB_TRAVEL : -TAB_TRAVEL) : 0);
-  const opacity = useSharedValue(enabled ? 0 : 1);
+  const enterFrom = forward ? TAB_TRAVEL : -TAB_TRAVEL;
+  const exitTo = forward ? -TAB_TRAVEL : TAB_TRAVEL;
+  const translateX = useSharedValue(enabled && phase === 'entering' ? enterFrom : 0);
+  const opacity = useSharedValue(enabled && phase === 'entering' ? 0 : 1);
 
   useEffect(() => {
-    if (!enabled) return;
-    translateX.value = withAppTiming(0, {
-      duration: TAB_TRANSITION_DURATION,
-      easing: easings.standard,
-    });
-    opacity.value = withAppTiming(1, {
-      duration: TAB_TRANSITION_DURATION,
-      easing: easings.standard,
-    });
-    // Runs once, on this mount — the parent already remounts this component
-    // per tab switch (`key={tab}`), so there is no second "which tab" input to
-    // react to here.
+    if (!enabled) {
+      translateX.value = 0;
+      opacity.value = phase === 'entering' ? 1 : 0;
+      return;
+    }
+    if (phase === 'entering') {
+      translateX.value = withAppTiming(0, {
+        duration: TAB_TRANSITION_DURATION,
+        easing: easings.screen,
+      });
+      opacity.value = withAppDelay(
+        TAB_ENTER_FADE_DELAY,
+        withAppTiming(1, {
+          duration: TAB_TRANSITION_DURATION - TAB_ENTER_FADE_DELAY,
+          easing: easings.screen,
+        }),
+      );
+    } else {
+      // Exits accelerate away (`easings.exit`), and the fade finishes well
+      // before the travel does, so the outgoing screen is gone from view while
+      // still visibly moving — it reads as leaving, not as dissolving in place.
+      translateX.value = withAppTiming(exitTo, {
+        duration: TAB_TRANSITION_DURATION,
+        easing: easings.exit,
+      });
+      opacity.value = withAppTiming(0, {
+        duration: TAB_EXIT_FADE_DURATION,
+        easing: easings.exit,
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [phase, enabled]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateX: translateX.value }],
   }));
 
-  return <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>;
+  return (
+    <Animated.View
+      style={[StyleSheet.absoluteFill, animatedStyle]}
+      // The outgoing layer is still on screen for the length of the swap; it
+      // must not eat taps aimed at the screen arriving underneath it.
+      pointerEvents={phase === 'entering' ? 'auto' : 'none'}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+/**
+ * Hosts both tab bodies during a swap. Keeps the previous tab mounted for
+ * `TAB_TRANSITION_DURATION` so it has something to animate out, then drops it.
+ *
+ * `outgoing` is derived during render rather than in an effect: an effect runs
+ * after commit, so the frame on which `tab` changes would paint with the old
+ * screen already unmounted and the new one not yet faded in — reintroducing the
+ * exact cut this replaced, for one frame. Setting state during render of the
+ * same component re-renders before paint, which is what keeps the handoff
+ * seamless.
+ */
+function TabSwitcher({
+  tab,
+  style,
+  render,
+}: {
+  tab: Tab;
+  style: StyleProp<ViewStyle>;
+  render: (tab: Tab) => React.ReactNode;
+}) {
+  const { enabled } = useMotion();
+  const [outgoing, setOutgoing] = useState<Tab | null>(null);
+  // `forward` is the direction of the *current* swap, shared by both layers so
+  // they travel along the same axis rather than toward each other.
+  const [forward, setForward] = useState(true);
+  const shown = useRef(tab);
+
+  if (shown.current !== tab) {
+    setForward(tab === 'summary');
+    setOutgoing(enabled ? shown.current : null);
+    shown.current = tab;
+  }
+
+  useEffect(() => {
+    if (outgoing === null) return;
+    const timer = setTimeout(() => setOutgoing(null), TAB_TRANSITION_DURATION);
+    return () => clearTimeout(timer);
+  }, [outgoing]);
+
+  return (
+    <View style={style}>
+      {outgoing !== null && outgoing !== tab && (
+        <TabLayer key={outgoing} phase="exiting" forward={forward}>
+          {render(outgoing)}
+        </TabLayer>
+      )}
+      <TabLayer key={tab} phase="entering" forward={forward}>
+        {render(tab)}
+      </TabLayer>
+    </View>
+  );
 }
 
 export function Root(props: RootProps) {
@@ -250,11 +358,6 @@ function Shell({
     },
     [],
   );
-  // Tab order, so a switch can animate in the direction the user travelled
-  // along the bar rather than always arriving from the same side.
-  const previousTab = useRef<Tab>(tab);
-  const forward = tab === 'summary' && previousTab.current === 'calendar';
-  previousTab.current = tab;
   // Which entry the Entry sheet is editing (#43); null = create mode.
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [entryContentHeight, setEntryContentHeight] = useState(0);
@@ -283,6 +386,25 @@ function Shell({
         entriesForMonth(ledger, shiftMonth(cursor, offset)),
       ),
     [state.entries, state.recurrenceRules, cursor.y, cursor.m],
+  );
+  // Summary pages by *period*, which is a year wide in annual mode, so it needs
+  // a wider projection than the Calendar's ±1 month — 36 months of it when
+  // annual, to cover the neighbour years its pager can settle on. Recurrence
+  // rules are infinite and only ever materialise on demand, so this has to be
+  // asked for explicitly rather than falling out of the ledger. Kept separate
+  // from `visibleEntries` (rather than widening that) so the Calendar's month
+  // grid never pays for a projection it does not read.
+  const summaryEntries = useMemo(
+    () =>
+      [-1, 0, 1]
+        .flatMap((offset) =>
+          periodMonths(
+            shiftPeriod(cursor, offset, state.summaryGranularity),
+            state.summaryGranularity,
+          ),
+        )
+        .flatMap((month) => entriesForMonth(ledger, month)),
+    [state.entries, state.recurrenceRules, cursor.y, cursor.m, state.summaryGranularity],
   );
 
   // One-time boot notice (#28): fires once per corrupt boot, off
@@ -596,56 +718,59 @@ function Shell({
     );
   };
 
+  // renderTab(): one tab's body. Called by `TabSwitcher` for both the entering
+  // and the exiting layer during a swap, which is why it is a function of the
+  // tab rather than a conditional inline in the tree.
+  const renderTab = (which: Tab) =>
+    which === 'calendar' ? (
+      <CalendarScreen
+        entries={visibleEntries}
+        budgets={state.budgets}
+        budgetMode={state.budgetMode}
+        totalBudget={state.totalBudget}
+        y={cursor.y}
+        m={cursor.m}
+        day={selectedDay}
+        today={todayDate}
+        symbol={symbol}
+        view={state.calendarView}
+        onToggleView={() =>
+          update({ calendarView: state.calendarView === 'dots' ? 'numbers' : 'dots' })
+        }
+        onSelectDay={setSelectedDay}
+        onEditEntry={openEdit}
+        onDeleteEntry={handleDelete}
+        onPrevMonth={() => goMonth(-1)}
+        onNextMonth={() => goMonth(1)}
+        onMonthChange={setMonth}
+        onSettings={openSettings}
+        pulseDay={savedPulse.day}
+        pulseNonce={savedPulse.nonce}
+      />
+    ) : (
+      <SummaryScreen
+        entries={summaryEntries}
+        budgets={state.budgets}
+        budgetMode={state.budgetMode}
+        totalBudget={state.totalBudget}
+        y={cursor.y}
+        m={cursor.m}
+        symbol={symbol}
+        granularity={state.summaryGranularity}
+        onChangeGranularity={(summaryGranularity) => update({ summaryGranularity })}
+        onPeriodChange={setMonth}
+        onSettings={openSettings}
+      />
+    );
+
   return (
     <View style={styles.flex}>
-      {/* Keyed on `tab` so switching tabs remounts the body and replays the
-          entrance. Only the active screen is ever mounted — a true cross-fade
-          would hold both the month grid and the Summary aggregation live for
-          the length of the transition, which is real work on a low-end phone
-          for a quarter-second of overlap nobody asked for. The incoming screen
-          drifts in from the side of the bar the user moved toward, so the
-          direction of travel is legible even though the outgoing screen is
-          simply gone. See `TabTransition` for why this is hand-rolled rather
-          than reanimated's `entering` presets. */}
-      <TabTransition key={tab} forward={forward} style={styles.body}>
-        {tab === 'calendar' ? (
-          <CalendarScreen
-            entries={visibleEntries}
-            budgets={state.budgets}
-            budgetMode={state.budgetMode}
-            totalBudget={state.totalBudget}
-            y={cursor.y}
-            m={cursor.m}
-            day={selectedDay}
-            today={todayDate}
-            symbol={symbol}
-            view={state.calendarView}
-            onToggleView={() =>
-              update({ calendarView: state.calendarView === 'dots' ? 'numbers' : 'dots' })
-            }
-            onSelectDay={setSelectedDay}
-            onEditEntry={openEdit}
-            onDeleteEntry={handleDelete}
-            onPrevMonth={() => goMonth(-1)}
-            onNextMonth={() => goMonth(1)}
-            onMonthChange={setMonth}
-            onSettings={openSettings}
-            pulseDay={savedPulse.day}
-            pulseNonce={savedPulse.nonce}
-          />
-        ) : (
-          <SummaryScreen
-            entries={visibleEntries}
-            budgets={state.budgets}
-            budgetMode={state.budgetMode}
-            totalBudget={state.totalBudget}
-            y={cursor.y}
-            m={cursor.m}
-            symbol={symbol}
-            onSettings={openSettings}
-          />
-        )}
-      </TabTransition>
+      {/* Both tab bodies are mounted for the length of a swap so the outgoing
+          one has something to animate out — see `TabSwitcher`/`TabLayer`. Each
+          body is rendered on demand from `renderTab`, so the layer that is on
+          its way out keeps receiving fresh props (a save that lands on the
+          Calendar while Summary is exiting still shows the right figures). */}
+      <TabSwitcher tab={tab} style={styles.body} render={renderTab} />
 
       <TabBar tab={tab} onSelect={setTab} onAdd={openEntry} />
 
