@@ -13,6 +13,7 @@ import React from 'react';
 import { act, render, screen } from '@testing-library/react-native';
 
 import { signed } from '../domain';
+import { settleInitialRead } from '../test-utils/settleMotion';
 import { MotionProvider, ThemeProvider } from '../theme';
 import { AnimatedNumber } from './AnimatedNumber';
 
@@ -70,13 +71,15 @@ const advance = (ms: number) => {
 const shown = () => screen.getByTestId('figure').props.children;
 
 describe('AnimatedNumber', () => {
-  it('renders the exact value on first paint, before any frame runs', () => {
+  it('renders the exact value on first paint, before any frame runs', async () => {
     renderNumber(-42300, true);
+    await settleInitialRead();
     expect(shown()).toBe('−¥42,300');
   });
 
-  it('can roll in from an explicit starting value', () => {
+  it('can roll in from an explicit starting value', async () => {
     render(tree(100000, true, 0));
+    await settleInitialRead();
     expect(shown()).toBe('+¥0');
     advance(0);
     advance(60);
@@ -84,8 +87,9 @@ describe('AnimatedNumber', () => {
     expect(shown()).not.toBe('+¥100,000');
   });
 
-  it('lands precisely on the new value when the roll finishes', () => {
+  it('lands precisely on the new value when the roll finishes', async () => {
     const view = renderNumber(-42300, true);
+    await settleInitialRead();
     view.rerender(tree(-48900, true));
 
     // Well past `durations.slow` — the roll clamps at t=1 and stops.
@@ -94,8 +98,9 @@ describe('AnimatedNumber', () => {
     expect(shown()).toBe('−¥48,900');
   });
 
-  it('passes through intermediate values rather than cutting straight over', () => {
+  it('passes through intermediate values rather than cutting straight over', async () => {
     const view = renderNumber(0, true);
+    await settleInitialRead();
     view.rerender(tree(100000, true));
 
     advance(0);
@@ -105,10 +110,11 @@ describe('AnimatedNumber', () => {
     expect(mid).not.toBe('+¥100,000');
   });
 
-  it('only ever shows whole currency units mid-roll', () => {
+  it('only ever shows whole currency units mid-roll', async () => {
     // Guards the per-frame Math.round: an unrounded intermediate would render
     // its full float expansion through toLocaleString ("+¥33,333.336").
     const view = renderNumber(0, true);
+    await settleInitialRead();
     view.rerender(tree(100000, true));
 
     advance(0);
@@ -116,8 +122,9 @@ describe('AnimatedNumber', () => {
     expect(shown()).not.toContain('.');
   });
 
-  it('cuts straight to the value under reduced motion, scheduling no frames', () => {
+  it('cuts straight to the value under reduced motion, scheduling no frames', async () => {
     const view = renderNumber(-42300, false);
+    await settleInitialRead();
     view.rerender(tree(-48900, false));
     expect(shown()).toBe('−¥48,900');
     expect(frameCallbacks).toHaveLength(0);

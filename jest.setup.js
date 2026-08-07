@@ -14,3 +14,16 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 // MonthPager — and anything else importing the animation stack — load in tests.
 require('react-native-gesture-handler/jestSetup');
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+
+// `@expo/vector-icons` builds its icon components with `createIconSet`, which
+// loads the glyph font in an async effect and then `setState`s. Under jest that
+// resolves after the test body has returned, so every render of an icon emits an
+// "update was not wrapped in act(...)" warning — noise that buries real warnings
+// (#73). Feather is the only set the app uses; swap it for a synchronous stub
+// that forwards props (testID, accessibilityLabel) so queries still resolve.
+jest.mock('@expo/vector-icons', () => {
+  const { Text } = require('react-native');
+  const React = require('react');
+  const Feather = ({ name, ...props }) => React.createElement(Text, props, name);
+  return { Feather };
+});

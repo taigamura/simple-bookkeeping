@@ -13,6 +13,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 
+import { settleInitialRead } from '../test-utils/settleMotion';
 import { MotionProvider, ThemeProvider, palettes } from '../theme';
 
 const light = palettes.light;
@@ -37,7 +38,7 @@ const cellBg = (day: number) => {
 };
 
 describe('DayCell', () => {
-  it('keeps the same native pressable mounted when selection changes with motion enabled', () => {
+  it('keeps the same native pressable mounted when selection changes with motion enabled', async () => {
     const view = render(
       <MotionProvider initialPreference="full">
         <ThemeProvider>
@@ -45,6 +46,7 @@ describe('DayCell', () => {
         </ThemeProvider>
       </MotionProvider>,
     );
+    await settleInitialRead();
     const selectedHost = screen.getByLabelText('Day 5');
 
     view.rerender(

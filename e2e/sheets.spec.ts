@@ -1,15 +1,15 @@
 /**
- * Sheet-regression suite (#58) — the repo's permanent red-first e2e fixture.
+ * Sheet-regression suite (#58) — the repo's permanent e2e fixture.
  *
- * ── RED-FIRST CONTRACT ──────────────────────────────────────────────────────
- * Tests marked `test.fail()` reproduce real, currently-shipping Build 7 bugs
- * (#60/#61/#62) against main. Playwright inverts them: they keep CI green only
- * while the bug exists, and start failing CI the moment the bug is fixed —
- * forcing the fixing PR (#60 and friends) to flip each marker to a plain
- * passing test. Removing or skipping any test here is treated exactly like
- * deleting the unit suite. A marked test that "passes unexpectedly" means the
- * bug stopped reproducing: either the fix landed (flip the marker) or the
- * scenario drifted off the real bug (rewrite it — do not delete it).
+ * ── HISTORY: THE RED-FIRST CONTRACT ─────────────────────────────────────────
+ * These scenarios were written against real, shipping Build 7 bugs
+ * (#60/#61/#62) and marked `test.fail()`, so they kept CI green only while the
+ * bug existed and went red the moment it was fixed — forcing the fixing PR to
+ * flip each marker to a plain passing test. All three are fixed and closed, so
+ * every marker is now flipped and the suite passes on its own terms. That is a
+ * release gate: no `test.fail()` or `test.skip()` may reappear here without the
+ * open bug to justify it. Removing a test is treated exactly like deleting the
+ * unit suite — if a scenario drifts off the behaviour it guards, rewrite it.
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Scenarios (PRD #57 → issue #58):

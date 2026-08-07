@@ -8,6 +8,7 @@ import { Animated, AppState, Text } from 'react-native';
 import { act, render, screen, fireEvent } from '@testing-library/react-native';
 
 import { ThemeProvider, useTheme } from './ThemeProvider';
+import { settleInitialRead } from '../test-utils/settleMotion';
 import { MotionProvider } from './MotionProvider';
 import { palettes, type ThemePreference } from './tokens';
 
@@ -99,7 +100,7 @@ describe('ThemeProvider', () => {
     expect(text('mode')).toBe('dark');
   });
 
-  it('commits at the fade-through midpoint and lets the latest rapid toggle win', () => {
+  it('commits at the fade-through midpoint and lets the latest rapid toggle win', async () => {
     jest.useFakeTimers();
     const currentState = Object.getOwnPropertyDescriptor(AppState, 'currentState');
     Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active' });
@@ -121,6 +122,7 @@ describe('ThemeProvider', () => {
         </ThemeProvider>
       </MotionProvider>,
     );
+    await settleInitialRead();
 
     fireEvent.press(screen.getByTestId('pick-dark'));
     expect(text('target-mode')).toBe('dark');
