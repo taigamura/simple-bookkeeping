@@ -24,9 +24,22 @@ const DEEP = '#1E2499'; // light-mode hero / the mark's second bar
 const BLUE_DARK = '#6B72FF'; // dark-mode accent
 const DEEP_DARK = '#3A42D8';
 const TILE = '#FFFFFF';
-// Lift only the iOS home-screen tile. The splash and in-app dark ground stay
-// near-black so launch still hands off seamlessly to the rendered app.
-const ICON_DARK_TILE = '#2C2C2E';
+// Apple's standard backdrop for a dark home-screen icon: a vertical gradient
+// from #313131 to #141414. The HIG asks for the dark variant to ship with a
+// *transparent* background so the system composites this gradient itself, but
+// Expo's icon pipeline still documents "no transparent pixels" for iOS icons,
+// so the same gradient is baked in here instead — visually identical on the
+// Home Screen, and it cannot be silently flattened to black by prebuild.
+//
+// This replaces a flat #2C2C2E tile. Flat was the whole problem: #2C2C2E is
+// brighter than the midpoint of Apple's gradient and much brighter than its
+// bottom, with no falloff at all, so the icon read conspicuously bright in a
+// grid of apps that all share the system backdrop.
+//
+// Only the iOS home-screen tile uses this. The splash and in-app dark ground
+// stay near-black so launch still hands off seamlessly to the rendered app.
+const ICON_DARK_TOP = '#313131';
+const ICON_DARK_BOTTOM = '#141414';
 const GROUND_LIGHT = '#F2F2F0';
 const GROUND_DARK = '#0F0F13';
 
@@ -37,15 +50,27 @@ const MARK = { x: 6, y: 9, w: 30, h: 23 };
  * An SVG of `size`², with the mark centred and scaled so its widest dimension
  * covers `fraction` of the canvas.
  *
- * @param {{size:number, fraction:number, bar:string, bar2:string, bg?:string}} opts
+ * `bg` is a flat fill; `bgGradient` is a `{from, to}` pair painted top-to-bottom
+ * instead. Pass at most one.
+ *
+ * @param {{size:number, fraction:number, bar:string, bar2:string, bg?:string,
+ *          bgGradient?:{from:string, to:string}}} opts
  */
-function markSvg({ size, fraction, bar, bar2, bg }) {
+function markSvg({ size, fraction, bar, bar2, bg, bgGradient }) {
   const scale = (fraction * size) / MARK.w;
   const dx = (size - MARK.w * scale) / 2 - MARK.x * scale;
   const dy = (size - MARK.h * scale) / 2 - MARK.y * scale;
+  const gradientDef = bgGradient
+    ? `<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">` +
+      `<stop offset="0" stop-color="${bgGradient.from}"/>` +
+      `<stop offset="1" stop-color="${bgGradient.to}"/>` +
+      `</linearGradient></defs>`
+    : '';
+  const fill = bgGradient ? 'url(#bg)' : bg;
   return Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
-      (bg ? `<rect width="${size}" height="${size}" fill="${bg}"/>` : '') +
+      gradientDef +
+      (fill ? `<rect width="${size}" height="${size}" fill="${fill}"/>` : '') +
       `<g transform="translate(${dx} ${dy}) scale(${scale})">` +
       `<rect x="6" y="9" width="30" height="9" rx="4.5" fill="${bar}"/>` +
       `<rect x="6" y="23" width="18" height="9" rx="4.5" fill="${bar2}"/>` +
@@ -71,7 +96,7 @@ const TARGETS = [
   },
   {
     file: 'icon-dark.png',
-    note: 'iOS dark home-screen icon — opaque dark tile with lifted brand blues',
+    note: "iOS dark home-screen icon — Apple's dark backdrop gradient, lifted brand blues",
     build: () =>
       opaque(
         markSvg({
@@ -79,9 +104,9 @@ const TARGETS = [
           fraction: 0.56,
           bar: BLUE_DARK,
           bar2: DEEP_DARK,
-          bg: ICON_DARK_TILE,
+          bgGradient: { from: ICON_DARK_TOP, to: ICON_DARK_BOTTOM },
         }),
-        ICON_DARK_TILE,
+        ICON_DARK_BOTTOM,
       ),
   },
   {

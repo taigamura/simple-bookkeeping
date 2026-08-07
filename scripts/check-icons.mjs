@@ -45,11 +45,24 @@ assert.notDeepEqual(
   'light and dark iOS icons must be visually distinct assets',
 );
 
-const darkCorner = await sharp(buffers.get('dark')).raw().toBuffer();
+// The dark tile must carry Apple's standard backdrop gradient (#313131 ->
+// #141414), not a flat fill: a flat tile is what made this icon read brighter
+// than every other app on the Home Screen. Sampling both ends pins the colours
+// *and* proves there is a falloff between them.
+const darkPixels = await sharp(buffers.get('dark')).raw().toBuffer();
+const pixelAt = (x, y) => {
+  const offset = (y * 1024 + x) * 3;
+  return [...darkPixels.subarray(offset, offset + 3)];
+};
 assert.deepEqual(
-  [...darkCorner.subarray(0, 3)],
-  [44, 44, 46],
-  'dark iOS icon tile must use the approved #2C2C2E gray',
+  pixelAt(0, 0),
+  [49, 49, 49],
+  "dark iOS icon must start at Apple's #313131 backdrop gradient top",
+);
+assert.deepEqual(
+  pixelAt(1023, 1023),
+  [20, 20, 20],
+  "dark iOS icon must end at Apple's #141414 backdrop gradient bottom",
 );
 
 console.log('iOS light/dark icon configuration and assets are valid.');
