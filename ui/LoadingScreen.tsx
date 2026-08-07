@@ -27,8 +27,57 @@ const LOWER_WIDTH = 18 * MARK_SCALE;
 const DOT_SIZE = 9 * MARK_SCALE;
 
 /** Time for all three pieces to land; the exit is a separate short crossfade. */
-export const ASSEMBLY_DURATION = 900;
+export const ASSEMBLY_DURATION = 950;
 export const EXIT_DURATION = 160;
+
+/**
+ * When each piece begins, measured from the start of the assembly (ms).
+ *
+ * These are gathered here because the one thing that matters about them is
+ * their relationship to `HANDOFF_HOLD + HANDOFF_FADE` — the moment the native
+ * splash raster finishes clearing. That raster is an opaque picture of the
+ * *finished* mark, so any piece that animates before it clears is animating
+ * underneath a copy of itself, at its own destination, and cannot be seen to
+ * move at all.
+ *
+ * The top bar used to start at 60ms, and that is precisely what made it look
+ * like it jumped in rather than travelled. Measured against the real curves:
+ * by 180ms it had already covered 95% of its 18px (ease-out expo spends ~85%
+ * of its distance in the first third) while the raster was still 48% opaque;
+ * by the time the raster cleared at 240ms it sat 0.1px from home. There was
+ * nothing left to watch, so the eye could only register it as appearing.
+ *
+ * The lower bar and the dot never had this problem — they started at 250ms and
+ * 500ms, both after the raster was gone, which is why those two read correctly
+ * and the first one did not. So the fix is to give the top bar the same
+ * courtesy and then re-space the other two to keep an even cadence.
+ *
+ * The top bar's fade-in still overlaps the raster's tail (it starts while that
+ * is ~33% opaque) so the stage is never momentarily empty; it is only the
+ * *travel* that has to outlast the raster. `easings.screen` rather than
+ * `easings.standard` for the same reason it exists on the tab swap: a curve
+ * that front-loads its distance turns a slide into an appearance.
+ */
+const HANDOFF_HOLD = 60;
+const HANDOFF_FADE = 180;
+const TOP_START = 200;
+const TOP_TRAVEL = 340;
+const LOWER_START = 430;
+const LOWER_TRAVEL = 290;
+const DOT_START = 660;
+
+/**
+ * The assembly timeline, exported so the raster-occlusion invariant above can
+ * be asserted rather than left as a comment that drifts. `handoffClear` is the
+ * moment the splash raster stops hiding the stage; every piece's *travel* has
+ * to outlast it by enough to be worth watching.
+ */
+export const TIMELINE = {
+  handoffClear: HANDOFF_HOLD + HANDOFF_FADE,
+  top: { start: TOP_START, travel: TOP_TRAVEL },
+  lower: { start: LOWER_START, travel: LOWER_TRAVEL },
+  dot: { start: DOT_START },
+} as const;
 
 interface LoadingScreenProps {
   /** The Calendar is mounted behind this screen and can safely be revealed. */
@@ -46,6 +95,11 @@ interface LoadingScreenProps {
  * the punched dot with one restrained spring. Once the app is genuinely ready,
  * this overlay fades to the already-mounted Calendar. Reduced Motion renders
  * the complete raster and reveals Calendar without scheduling any animation.
+ *
+ * The handoff raster is the constraint that shapes the whole assembly: it is a
+ * picture of the mark already built, so nothing can be seen to arrive until it
+ * has gone. See `TOP_START` for the timing that follows from that, and for the
+ * bug it fixes.
  */
 export function LoadingScreen({ ready, onFinished }: LoadingScreenProps) {
   const { colors, mode } = useTheme();
@@ -98,31 +152,34 @@ export function LoadingScreen({ ready, onFinished }: LoadingScreenProps) {
 
     // The first short hold guarantees iOS paints one matching handoff frame.
     handoffOpacity.value = withAppSequence(
-      withAppTiming(1, { duration: 60 }),
-      withAppTiming(0, { duration: 180, easing: easings.exit }),
+      withAppTiming(1, { duration: HANDOFF_HOLD }),
+      withAppTiming(0, { duration: HANDOFF_FADE, easing: easings.exit }),
     );
+    // Travel is deliberately longer than the other two pieces and runs on the
+    // decelerate curve: it starts while the raster is still ~a third visible,
+    // so most of its distance has to remain unspent until that has cleared.
     topX.value = withAppSequence(
-      withAppTiming(-18, { duration: 60 }),
-      withAppTiming(0, { duration: 260, easing: easings.standard }),
+      withAppTiming(-18, { duration: TOP_START }),
+      withAppTiming(0, { duration: TOP_TRAVEL, easing: easings.screen }),
     );
     topOpacity.value = withAppSequence(
-      withAppTiming(0, { duration: 60 }),
-      withAppTiming(1, { duration: 160, easing: easings.standard }),
+      withAppTiming(0, { duration: TOP_START }),
+      withAppTiming(1, { duration: 200, easing: easings.standard }),
     );
     lowerY.value = withAppSequence(
-      withAppTiming(18, { duration: 250 }),
-      withAppTiming(0, { duration: 290, easing: easings.standard }),
+      withAppTiming(18, { duration: LOWER_START }),
+      withAppTiming(0, { duration: LOWER_TRAVEL, easing: easings.standard }),
     );
     lowerOpacity.value = withAppSequence(
-      withAppTiming(0, { duration: 250 }),
+      withAppTiming(0, { duration: LOWER_START }),
       withAppTiming(1, { duration: 170, easing: easings.standard }),
     );
     dotOpacity.value = withAppSequence(
-      withAppTiming(0, { duration: 500 }),
+      withAppTiming(0, { duration: DOT_START }),
       withAppTiming(1, { duration: 130, easing: easings.standard }),
     );
     dotScale.value = withAppSequence(
-      withAppTiming(0.25, { duration: 500 }),
+      withAppTiming(0.25, { duration: DOT_START }),
       withAppSpring(1, springs.snap),
     );
 

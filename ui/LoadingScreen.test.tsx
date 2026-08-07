@@ -7,7 +7,7 @@ let mockMotionEnabled = true;
 let mockMotionResolved = true;
 
 jest.mock('../theme', () => ({
-  easings: { standard: jest.fn(), exit: jest.fn() },
+  easings: { standard: jest.fn(), exit: jest.fn(), screen: jest.fn() },
   metrics: { screenPadX: 20 },
   springs: { snap: {} },
   useMotion: () => ({ enabled: mockMotionEnabled, resolved: mockMotionResolved }),
@@ -31,6 +31,7 @@ import {
   ASSEMBLY_DURATION,
   EXIT_DURATION,
   LoadingScreen,
+  TIMELINE,
 } from './LoadingScreen';
 
 const {
@@ -130,5 +131,48 @@ describe('LoadingScreen opening', () => {
     view.rerender(<LoadingScreen ready onFinished={onFinished} />);
     await act(async () => jest.advanceTimersByTime(EXIT_DURATION));
     expect(onFinished).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * The splash raster is an opaque picture of the *finished* mark, so a piece
+ * that finishes travelling before that raster clears has done its whole
+ * journey underneath a copy of itself and can only read as popping into
+ * existence. That is the bug these pin: the top bar used to start its 260ms
+ * travel at 60ms, so it was 95% home while the raster was still 48% opaque and
+ * 0.1px from home by the time it cleared at 240ms.
+ *
+ * Durations, not pixels, because the curve is a taste call but "is there any
+ * travel left to watch once the stage is visible" is not.
+ */
+describe('mark assembly vs. the splash handoff', () => {
+  const pieces = [
+    ['top bar', TIMELINE.top],
+    ['lower bar', TIMELINE.lower],
+  ] as const;
+
+  it.each(pieces)('%s is still travelling well after the raster clears', (_name, piece) => {
+    const remaining = piece.start + piece.travel - TIMELINE.handoffClear;
+    // Comfortably more than a couple of frames of visible movement.
+    expect(remaining).toBeGreaterThan(150);
+  });
+
+  it('starts no piece so early that it lands before the stage is visible', () => {
+    for (const [, piece] of pieces) {
+      expect(piece.start + piece.travel).toBeGreaterThan(TIMELINE.handoffClear);
+    }
+    expect(TIMELINE.dot.start).toBeGreaterThan(TIMELINE.handoffClear);
+  });
+
+  it('keeps the three pieces in order and evenly spaced', () => {
+    expect(TIMELINE.top.start).toBeLessThan(TIMELINE.lower.start);
+    expect(TIMELINE.lower.start).toBeLessThan(TIMELINE.dot.start);
+    const first = TIMELINE.lower.start - TIMELINE.top.start;
+    const second = TIMELINE.dot.start - TIMELINE.lower.start;
+    expect(Math.abs(first - second)).toBeLessThanOrEqual(40);
+  });
+
+  it('leaves room for the last piece to land inside the assembly window', () => {
+    expect(TIMELINE.dot.start).toBeLessThan(ASSEMBLY_DURATION);
   });
 });
