@@ -166,16 +166,22 @@ Standard
 ### Device Classes and Locales
 
 **Required App Store device classes:**
-1. iPhone 6.7" (iPhone 14/15 Pro Max and later)
-2. iPhone 6.1" (iPhone 14/15 Pro)
-3. iPhone 5.8" (iPhone 12 mini and later small models)
-4. iPad 12.9" (if Finance category includes iPad; confirm current App Store requirements)
+1. iPhone 6.9" (iPhone 16 Pro Max and later)
+2. iPhone 6.5" (iPhone 11 Pro Max / XS Max generation)
+
+App Store Connect upscales the remaining iPhone sizes from these two, so no
+other iPhone set needs capturing.
+
+**No iPad set is required.** V1 ships iPhone-only: `app.json` sets
+`ios.supportsTablet: false`, which both drops the iPad screenshot requirement
+and keeps App Review off a form factor the release was never tested on. Adding
+iPad support is a later-release decision, not a V1 gate.
 
 **Locales:**
 - English (US locale)
 - Japanese
 
-**Total screenshots required:** 4 device classes × 2 locales = 8 screenshots (minimum 2 per locale recommended; up to 10 total per locale)
+**Total screenshots required:** 2 device classes × 2 locales = 4 sets (minimum 2 shots per locale; up to 10 per locale)
 
 ### Screenshot Sequence and Captions
 

@@ -11,7 +11,7 @@
         "light": "./assets/icon.png",
         "dark": "./assets/icon-dark.png"
       },
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.taigamura.kaji",
       "buildNumber": "1",
       "config": { "usesNonExemptEncryption": false }
