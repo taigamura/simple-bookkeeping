@@ -177,6 +177,7 @@ describe('createStore', () => {
       totalBudget: _totalBudget,
       calendarView: _calendarView,
       motion: _motion,
+      summaryGranularity: _summaryGranularity,
       ...legacyState
     } = stateWith({ entries: [sampleEntry], theme: 'light' });
     const blob = JSON.stringify({ version: SCHEMA_VERSION, state: legacyState });
@@ -194,6 +195,29 @@ describe('createStore', () => {
     expect(loaded.calendarView).toBe('dots');
     // Likewise for motion: pre-ADR-0003 blobs follow the OS reduce-motion flag.
     expect(loaded.motion).toBe('system');
+    // Blobs written before the Summary granularity toggle shipped open monthly.
+    expect(loaded.summaryGranularity).toBe('monthly');
+  });
+
+  it('round-trips a chosen summary granularity', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: stateWith({ summaryGranularity: 'annual' }),
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    await expect(store.load()).resolves.toMatchObject({ summaryGranularity: 'annual' });
+  });
+
+  it('stashes an unrecognised summary granularity before using defaults', async () => {
+    const blob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: { ...stateWith(), summaryGranularity: 'quarterly' },
+    });
+    const store = createStore(createMemoryPersistence(blob));
+
+    await expect(store.load()).resolves.toEqual(DEFAULT_STATE);
+    expect(await store.readCorruptStash()).toBe(blob);
   });
 
   it('round-trips a chosen motion preference', async () => {

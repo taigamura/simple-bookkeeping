@@ -15,6 +15,7 @@ import {
   DEFAULT_CURRENCY,
   daysInMonth,
   isCalendarView,
+  isSummaryGranularity,
 } from '../domain';
 import type {
   Budgets,
@@ -23,6 +24,7 @@ import type {
   RecurrenceDate,
   RecurrenceRule,
   Repeat,
+  SummaryGranularity,
   Transaction,
   TxType,
   WeekendShift,
@@ -59,6 +61,11 @@ export interface AppState {
   /** Motion preference; `system` follows the OS reduce-motion setting.
    *  Added after v1 blobs shipped — merge-by-known-keys load fills with the default. */
   motion: MotionPreference;
+  /** Whether the Summary screen aggregates a month or a calendar year; the
+   *  screen's Monthly/Annual toggle sets it. Persisted rather than session-only
+   *  because it is a way of looking at your money, not a transient view state.
+   *  Added after v1 blobs shipped — merge-by-known-keys load fills the default. */
+  summaryGranularity: SummaryGranularity;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -73,6 +80,7 @@ export const DEFAULT_STATE: AppState = {
   totalBudget: 0,
   calendarView: 'dots',
   motion: 'system',
+  summaryGranularity: 'monthly',
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */
@@ -92,6 +100,7 @@ const additiveStateKeys: StateKey[] = [
   'totalBudget',
   'calendarView',
   'motion',
+  'summaryGranularity',
 ];
 const txTypes: TxType[] = ['income', 'expense'];
 const repeats: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
@@ -274,6 +283,8 @@ function validateField(key: StateKey, value: unknown): boolean {
       return isCalendarView(value);
     case 'motion':
       return isMotionPreference(value);
+    case 'summaryGranularity':
+      return isSummaryGranularity(value);
   }
 }
 

@@ -3,7 +3,16 @@
  * breakdown (sorting + bar widths scaled to the max, mode-aware budget display)
  * and the in/out split proportions.
  */
-import { categoryBreakdown, splitProportions } from './summary';
+import {
+  categoryBreakdown,
+  isSummaryGranularity,
+  periodEntries,
+  periodKey,
+  periodLabel,
+  periodMonths,
+  shiftPeriod,
+  splitProportions,
+} from './summary';
 import type { Transaction } from './types';
 
 const tx = (over: Partial<Transaction>): Transaction => ({
@@ -142,5 +151,66 @@ describe('splitProportions', () => {
       incomeFraction: 0,
       expenseFraction: 0,
     });
+  });
+});
+
+describe('summary granularity (Monthly/Annual)', () => {
+  const entries = [
+    tx({ id: 'a', y: 2026, m: 6, amount: 100 }),
+    tx({ id: 'b', y: 2026, m: 10, amount: 200 }),
+    tx({ id: 'c', y: 2025, m: 6, amount: 400 }),
+  ];
+
+  it('periodEntries narrows to the cursor month when monthly', () => {
+    expect(periodEntries(entries, { y: 2026, m: 6 }, 'monthly').map((e) => e.id)).toEqual(['a']);
+  });
+
+  it('periodEntries takes the whole calendar year when annual, ignoring the month', () => {
+    expect(periodEntries(entries, { y: 2026, m: 6 }, 'annual').map((e) => e.id)).toEqual([
+      'a',
+      'b',
+    ]);
+    // The cursor's month is carried along but must not narrow an annual period.
+    expect(periodEntries(entries, { y: 2026, m: 0 }, 'annual').map((e) => e.id)).toEqual([
+      'a',
+      'b',
+    ]);
+  });
+
+  it('shiftPeriod steps a month when monthly, wrapping the year', () => {
+    expect(shiftPeriod({ y: 2026, m: 11 }, 1, 'monthly')).toEqual({ y: 2027, m: 0 });
+    expect(shiftPeriod({ y: 2026, m: 0 }, -1, 'monthly')).toEqual({ y: 2025, m: 11 });
+  });
+
+  it('shiftPeriod steps a year when annual and preserves the month', () => {
+    // Preserving `m` is what lets Annual -> Monthly land back on the month the
+    // user left, and keeps the shared Calendar cursor where they left it.
+    expect(shiftPeriod({ y: 2026, m: 6 }, 1, 'annual')).toEqual({ y: 2027, m: 6 });
+    expect(shiftPeriod({ y: 2026, m: 6 }, -2, 'annual')).toEqual({ y: 2024, m: 6 });
+  });
+
+  it('periodMonths covers one month or a full Jan-Dec year', () => {
+    expect(periodMonths({ y: 2026, m: 6 }, 'monthly')).toEqual([{ y: 2026, m: 6 }]);
+    const year = periodMonths({ y: 2026, m: 6 }, 'annual');
+    expect(year).toHaveLength(12);
+    expect(year[0]).toEqual({ y: 2026, m: 0 });
+    expect(year[11]).toEqual({ y: 2026, m: 11 });
+  });
+
+  it('labels and keys a period by its granularity', () => {
+    expect(periodLabel({ y: 2026, m: 6 }, 'monthly')).toBe('July 2026');
+    expect(periodLabel({ y: 2026, m: 6 }, 'annual')).toBe('2026');
+    expect(periodKey({ y: 2026, m: 6 }, 'monthly')).toBe('2026-6');
+    // Every month of a year keys to the same annual page, so the pager cannot
+    // treat a month-only cursor move as a period change.
+    expect(periodKey({ y: 2026, m: 6 }, 'annual')).toBe('2026');
+    expect(periodKey({ y: 2026, m: 0 }, 'annual')).toBe('2026');
+  });
+
+  it('isSummaryGranularity rejects anything else, so a stale blob cannot set it', () => {
+    expect(isSummaryGranularity('monthly')).toBe(true);
+    expect(isSummaryGranularity('annual')).toBe(true);
+    expect(isSummaryGranularity('yearly')).toBe(false);
+    expect(isSummaryGranularity(undefined)).toBe(false);
   });
 });

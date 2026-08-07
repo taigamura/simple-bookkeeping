@@ -1,5 +1,5 @@
 /**
- * SummaryScreen — a month's cash-flow at a glance (slice #5). The net figure
+ * SummaryScreen — a period's cash-flow at a glance (slice #5). The net figure
  * lives on the saturated `deep` hero block (large mono net + in/out SplitBar +
  * legend), over the ranked spending-by-category bars (expenses, highest-first,
  * scaled to the max). Reads the same store
@@ -7,22 +7,52 @@
  * budget-left line (same Σ budgets − expenses formula as the Calendar strip)
  * and budgeted category bars show spent / budget, red when over.
  *
+ * ## Period and granularity
+ *
+ * The period is the shared nav cursor plus a `granularity` (Monthly | Annual,
+ * persisted; see `domain/summary.ts`). Annual is the calendar year Jan–Dec.
+ * Both the swipe and the toggle move the *same* cursor the Calendar tab uses,
+ * so there is one "where am I" in the app rather than two that can disagree —
+ * and because a granularity flip leaves the cursor's month untouched, flipping
+ * Annual → Monthly lands back on the month you left.
+ *
+ * Budgets are deliberately hidden in Annual mode. They are stored as monthly
+ * amounts, so any annual reading of them has to either multiply by twelve —
+ * which claims a full year of allowance eight months into an in-progress year,
+ * reading as wildly under budget — or multiply by elapsed months, which is
+ * accurate but invisible unless spelled out. Annual is a pure cash-flow view
+ * instead: net, in/out, ranked spending, nothing that can lie.
+ *
  * ## Motion
  *
  * Every headline figure here — the hero net, the two Legend values, the
  * budget-left line — is a mono variant, which is the one precondition
- * `AnimatedNumber` needs to roll safely (see its header): a month swap or a
+ * `AnimatedNumber` needs to roll safely (see its header): a period swap or a
  * new entry now reads as that number *moving* to its new value rather than
- * being replaced by an unrelated one. `Legend` used to take a preformatted
+ * being replaced by an unrelated one.  `Legend` used to take a preformatted
  * string; it now takes the raw number plus the same formatter the caller
  * would have used, so it can hand both to `AnimatedNumber` instead of
  * pre-baking the string this screen can no longer see the animation of.
+ *
+ * That number-roll is why the hero card sits *outside* the pager and only the
+ * category list pages under the finger. It mirrors the Calendar exactly, where
+ * the title and In/Out/Net strip are fixed and roll at the settle while the
+ * month grid is the paged element. Putting the hero inside the pager would give
+ * each page its own card and its own `AnimatedNumber` instance, so the headline
+ * figure would hard-cut per page — the one number on the screen most worth
+ * animating, and the only one Calendar animates in the same position.
+ *
+ * The period subtitle slides `TITLE_TRAVEL` and cross-fades in the direction
+ * the period moved, the same hand-rolled treatment (and the same reason for it
+ * being hand-rolled) as `CalendarScreen`'s title block: the subtitle never
+ * unmounts, so there is nothing for an `entering` preset to attach to, and the
+ * direction has to be derived from which way the cursor moved.
  *
  * The category list gets a staggered entrance — each bar fades and rises in,
  * delayed by `staggerDelay(index)` — because on first load the whole list
  * appears at once regardless of how many categories exist; a stagger reads it
  * as a ranked list being *drawn*, not a static block of rows. `LinearTransition`
- * rides along so that if the ranking changes between months (a category
+ * rides along so that if the ranking changes between periods (a category
  * overtakes another), the rows slide to their new position instead of
  * repainting in place. Both are handed to `Animated.View` only when
  * `useMotion().enabled` is true — passing `undefined` for `entering`/`layout`
@@ -41,27 +71,49 @@
  * every non-layout animation in this app, and why `.reduceMotion(Never)` is
  * the fix, not a redundant safety net.
  */
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 
 import {
-  MONTH_NAMES,
   categoryBreakdown,
   getRemainingBudget,
   isBudgetActive,
-  monthEntries,
-  net as monthNet,
+  net as periodNet,
+  periodEntries,
+  periodKey,
+  periodLabel,
+  shiftPeriod,
   splitProportions,
   signed,
   yen,
   type Budgets,
+  type SummaryGranularity,
   type Transaction,
+  type YM,
 } from '../domain';
 import { strings } from '../i18n';
-import { CategoryBar, SplitBar, AnimatedNumber } from '../ui';
-import { useTheme, useMotion, metrics, staggerDelay, ReduceMotion, Txt } from '../theme';
+import { CategoryBar, SplitBar, AnimatedNumber, PeriodPager, SegmentedToggle } from '../ui';
+import {
+  useTheme,
+  useMotion,
+  durations,
+  easings,
+  metrics,
+  staggerDelay,
+  withAppTiming,
+  ReduceMotion,
+  Txt,
+} from '../theme';
 import { IconButton, ThemeToggleButton } from '../nav/IconButton';
+
+/** How far the period subtitle travels on a period swap, in either direction. */
+const TITLE_TRAVEL = 12;
 
 interface SummaryScreenProps {
   entries: Transaction[];
@@ -73,6 +125,11 @@ interface SummaryScreenProps {
   y: number;
   m: number;
   symbol: string;
+  /** Monthly or annual aggregation; persisted by the host. */
+  granularity: SummaryGranularity;
+  onChangeGranularity: (granularity: SummaryGranularity) => void;
+  /** Commit the absolute period a swipe settled on — moves the shared cursor. */
+  onPeriodChange: (ym: YM) => void;
   onSettings: () => void;
 }
 
@@ -84,32 +141,87 @@ export function SummaryScreen({
   y,
   m,
   symbol,
+  granularity,
+  onChangeGranularity,
+  onPeriodChange,
   onSettings,
 }: SummaryScreenProps) {
   const { colors } = useTheme();
   const { enabled: motionEnabled } = useMotion();
-  const month = monthEntries(entries, { y, m });
-  const total = monthNet(month);
-  const split = splitProportions(month);
-  // In total mode, category rows show spend only; in category mode, show per-category budgets.
-  const breakdown = categoryBreakdown(month, budgets, budgetMode);
-  // Mode-aware budget logic: check if any budget is active and calculate remaining.
-  const budgetActive = isBudgetActive(budgetMode, budgets, totalBudget);
-  const remaining = getRemainingBudget(budgetMode, budgets, totalBudget, month);
+  const annual = granularity === 'annual';
+  const cursor: YM = { y, m };
+  const period = periodEntries(entries, cursor, granularity);
+  const total = periodNet(period);
+  const split = splitProportions(period);
+  // Mode-aware budget logic: check if any budget is active and calculate
+  // remaining. Never in annual mode — see the file header.
+  const budgetActive = !annual && isBudgetActive(budgetMode, budgets, totalBudget);
+  const remaining = getRemainingBudget(budgetMode, budgets, totalBudget, period);
+
+  // Subtitle direction cue: which way the period moved. Compared on the
+  // absolute month index (y*12+m) so the December -> January turn still reads
+  // as forward rather than as a jump backwards.
+  const titleTranslate = useSharedValue(0);
+  const titleOpacity = useSharedValue(1);
+  const prevIndex = useRef(y * 12 + m);
+
+  useEffect(() => {
+    const index = y * 12 + m;
+    if (!motionEnabled) {
+      titleTranslate.value = 0;
+      titleOpacity.value = 1;
+      prevIndex.current = index;
+      return;
+    }
+    if (index === prevIndex.current) return;
+    const forward = index > prevIndex.current;
+    titleTranslate.value = forward ? TITLE_TRAVEL : -TITLE_TRAVEL;
+    titleOpacity.value = 0;
+    titleTranslate.value = withAppTiming(0, {
+      duration: durations.base,
+      easing: easings.standard,
+    });
+    titleOpacity.value = withAppTiming(1, {
+      duration: durations.base,
+      easing: easings.standard,
+    });
+    prevIndex.current = index;
+    // titleTranslate/titleOpacity/prevIndex are shared values and a ref, not
+    // reactive inputs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [y, m, motionEnabled]);
+
+  const titleAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: titleOpacity.value,
+    transform: [{ translateX: titleTranslate.value }],
+  }));
 
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
         <View>
           <Txt variant="screenTitle">{strings.nav.summary}</Txt>
-          <Txt variant="secondary" tone="muted" style={styles.subtitle}>
-            {MONTH_NAMES[m]} {y}
-          </Txt>
+          <Animated.View style={titleAnimatedStyle}>
+            <Txt variant="secondary" tone="muted" style={styles.subtitle}>
+              {periodLabel(cursor, granularity)}
+            </Txt>
+          </Animated.View>
         </View>
         <View style={styles.headerActions}>
           <ThemeToggleButton />
           <IconButton name="settings" accessibilityLabel={strings.nav.settings} onPress={onSettings} />
         </View>
+      </View>
+
+      <View style={styles.granularity}>
+        <SegmentedToggle
+          options={[
+            { value: 'monthly', label: strings.summary.monthly },
+            { value: 'annual', label: strings.summary.annual },
+          ]}
+          value={granularity}
+          onChange={onChangeGranularity}
+        />
       </View>
 
       <ScrollView
@@ -118,10 +230,11 @@ export function SummaryScreen({
         showsVerticalScrollIndicator={false}
       >
         {/* The `deep` hero block — Kippu's one saturated surface, and the only
-            place the headline number lives. Everything inside reads on-deep. */}
+            place the headline number lives. Everything inside reads on-deep.
+            Fixed, outside the pager, so its figures roll on a period swap. */}
         <View style={[styles.card, { backgroundColor: colors.deep }]}>
           <Txt variant="microLabel" tone="onDeepMuted">
-            {strings.summary.netThisMonth}
+            {annual ? strings.summary.netThisYear : strings.summary.netThisMonth}
           </Txt>
           <AnimatedNumber
             value={total}
@@ -176,34 +289,94 @@ export function SummaryScreen({
           {strings.summary.spendingByCategory}
         </Txt>
 
-        {breakdown.length === 0 ? (
-          <Txt variant="secondary" tone="dim" style={styles.empty}>
-            {strings.summary.noSpending}
-          </Txt>
-        ) : (
-          breakdown.map((slice, index) => (
-            <Animated.View
-              key={slice.category}
-              entering={
-                motionEnabled
-                  ? FadeInDown.delay(staggerDelay(index)).reduceMotion(ReduceMotion.Never)
-                  : undefined
-              }
-              layout={
-                motionEnabled ? LinearTransition.reduceMotion(ReduceMotion.Never) : undefined
-              }
-            >
-              <CategoryBar
-                category={slice.category}
-                total={slice.total}
-                fraction={slice.fraction}
-                budget={slice.budget}
-                symbol={symbol}
-              />
-            </Animated.View>
-          ))
-        )}
+        {/* Remounted on a granularity flip: the pager builds its period window
+            once from `shift`, and a month-stepping window cannot be reused as a
+            year-stepping one. */}
+        <PeriodPager
+          key={granularity}
+          testID="summary-pager"
+          cursor={cursor}
+          shift={(ym, delta) => shiftPeriod(ym, delta, granularity)}
+          keyOf={(ym) => periodKey(ym, granularity)}
+          onCursorChange={onPeriodChange}
+          renderPage={(page) => (
+            <CategoryList
+              entries={entries}
+              period={page}
+              granularity={granularity}
+              budgets={budgets}
+              budgetMode={budgetMode}
+              symbol={symbol}
+              motionEnabled={motionEnabled}
+            />
+          )}
+        />
       </ScrollView>
+    </View>
+  );
+}
+
+/**
+ * One period's ranked expense bars — the paged unit. Takes the *whole* visible
+ * ledger and slices it to its own period rather than receiving pre-sliced
+ * entries, so a neighbour page renders its own month/year without the host
+ * having to compute three breakdowns eagerly on every render.
+ */
+function CategoryList({
+  entries,
+  period,
+  granularity,
+  budgets,
+  budgetMode,
+  symbol,
+  motionEnabled,
+}: {
+  entries: Transaction[];
+  period: YM;
+  granularity: SummaryGranularity;
+  budgets: Budgets;
+  budgetMode: 'category' | 'total';
+  symbol: string;
+  motionEnabled: boolean;
+}) {
+  const annual = granularity === 'annual';
+  // In total mode, category rows show spend only; in category mode, show
+  // per-category budgets. Annual shows neither — see the file header.
+  const breakdown = categoryBreakdown(
+    periodEntries(entries, period, granularity),
+    annual ? {} : budgets,
+    budgetMode,
+  );
+
+  if (breakdown.length === 0) {
+    return (
+      <Txt variant="secondary" tone="dim" style={styles.empty}>
+        {annual ? strings.summary.noSpendingThisYear : strings.summary.noSpending}
+      </Txt>
+    );
+  }
+
+  return (
+    <View>
+      {breakdown.map((slice, index) => (
+        <Animated.View
+          key={slice.category}
+          entering={
+            motionEnabled
+              ? FadeInDown.delay(staggerDelay(index)).reduceMotion(ReduceMotion.Never)
+              : undefined
+          }
+          layout={motionEnabled ? LinearTransition.reduceMotion(ReduceMotion.Never) : undefined}
+        >
+          <CategoryBar
+            category={slice.category}
+            total={slice.total}
+            fraction={slice.fraction}
+            budget={slice.budget}
+            symbol={symbol}
+          />
+        </Animated.View>
+      ))}
     </View>
   );
 }
@@ -262,6 +435,7 @@ const styles = StyleSheet.create({
   },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   subtitle: { marginTop: 2 },
+  granularity: { marginBottom: 20 },
   scroll: { flex: 1 },
   body: { paddingBottom: 8 },
   card: {
