@@ -5,15 +5,17 @@
  * e2e/.web-build) served by the zero-dependency static server in
  * e2e/serve.mjs. `npm run e2e` does export + test in one step.
  *
- * RED-FIRST CONTRACT: parts of e2e/sheets.spec.ts are marked `test.fail()`
- * because they reproduce real, currently-shipping Build 7 bugs (#60/#61/#62).
- * They keep CI green *only while the bug exists*; the fix flips each marker to
- * a plain passing test. Removing or skipping these tests is treated like
- * deleting the unit suite — never do it. See e2e/sheets.spec.ts.
+ * The suite began under a red-first contract: scenarios reproducing real,
+ * shipping Build 7 bugs (#60/#61/#62) were marked `test.fail()` so CI stayed
+ * green only while the bug existed. Those three are fixed and closed, so every
+ * marker has been flipped to a plain passing test and no `test.fail()`,
+ * `test.skip()`, or probe-only spec remains — the release gate requires the
+ * whole suite to pass on its own terms. Deleting or skipping these tests is
+ * treated like deleting the unit suite: never do it. See e2e/sheets.spec.ts.
  *
- * `retries` stays 0 on purpose: the Build 7 failures are probabilistic, and a
- * retry pass would let a genuinely-red scenario flicker into "expected to fail
- * but passed". The specs make failures deterministic by repetition instead.
+ * `retries` stays 0 on purpose: sheet-open failures are probabilistic, and a
+ * retry pass would let a genuinely-red scenario flicker into green. The specs
+ * make failures deterministic by repetition instead.
  */
 import { defineConfig, devices } from '@playwright/test';
 

@@ -44,6 +44,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
+import { settleInitialRead } from './test-utils/settleMotion';
 import App from './App';
 
 describe('App opening handoff', () => {
@@ -52,8 +53,9 @@ describe('App opening handoff', () => {
     mockStoreReady = true;
   });
 
-  it('mounts the ready Calendar behind the opening until its exit finishes', () => {
+  it('mounts the ready Calendar behind the opening until its exit finishes', async () => {
     render(<App />);
+    await settleInitialRead();
 
     expect(screen.getByText('Opening Kaji')).toBeTruthy();
     expect(screen.getByText('App ready')).toBeTruthy();
@@ -64,7 +66,7 @@ describe('App opening handoff', () => {
     expect(screen.queryByText('Opening Kaji')).toBeNull();
   });
 
-  it('keeps the native splash up and providers unmounted until hydration', () => {
+  it('keeps the native splash up and providers unmounted until hydration', async () => {
     mockStoreReady = false;
     const view = render(<App />);
 
@@ -74,6 +76,7 @@ describe('App opening handoff', () => {
 
     mockStoreReady = true;
     view.rerender(<App />);
+    await settleInitialRead();
 
     expect(screen.getByText('Opening Kaji')).toBeTruthy();
     expect(screen.getByText('App ready')).toBeTruthy();

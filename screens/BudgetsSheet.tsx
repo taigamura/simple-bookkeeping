@@ -266,10 +266,16 @@ function TotalBudgetRow({
 }
 
 const styles = StyleSheet.create({
-  // flexShrink + minHeight:0 let this body cap to the sheet host's maxHeight
-  // (#63) so the scroll region below the header bounds and scrolls, instead of
-  // the whole sheet growing to full content height and running off-screen.
-  container: { gap: 4, flexShrink: 1, minHeight: 0 },
+  // flex:1 + minHeight:0 let this body fill the sheet host and cap at its
+  // maxHeight (#63), so the scroll region below the header bounds and scrolls
+  // instead of the whole sheet growing to content height and running off-screen.
+  // `flexShrink: 1` alone (what this was) is not enough since Root's `SheetBody`
+  // gained an explicit `height: '100%'`: under a fixed-height parent, a child
+  // that only shrinks sizes to its *content*, and the only content-bearing child
+  // here is the header — the ScrollContainer is `flex: 1`, so its flex basis is
+  // 0 and it contributes nothing to that measurement. The body collapsed to the
+  // header and the sheet opened blank. Matches SettingsSheet.
+  container: { gap: 4, flex: 1, minHeight: 0 },
   header: {
     flexDirection: 'row',
     justifyContent: 'flex-start',

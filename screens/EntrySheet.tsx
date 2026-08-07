@@ -620,7 +620,8 @@ function CycleRow({
 }
 
 const styles = StyleSheet.create({
-  // Fills the sheet's content box so the footer below can pin to its bottom.
+  // Fills the sheet's content box so the footer below can pin to its bottom
+  // (see `footer`, which does the pinning with an auto top margin).
   host: { flex: 1 },
   // `flexShrink` (not `flex: 1`): the body takes only the room it needs on a
   // tall screen — keeping the footer directly under the keypad rather than
@@ -696,7 +697,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  footer: {},
+  // `marginTop: 'auto'` is what actually pins the footer to the bottom of the
+  // host. `host` is `flex: 1` and `bodyScroll` deliberately sizes to its content
+  // (`flexGrow: 0`), so on a tall sheet the leftover space used to collect
+  // *below* the footer — Entry always opens at the max detent
+  // (`defaultHeightRatio={1}` in Root), so that slack stranded the CTA ~100px
+  // above the sheet's bottom edge instead of a 28px breath. An auto top margin
+  // absorbs the slack above the footer instead, and resolves to 0 once the body
+  // fills the sheet, so the too-short case still yields room to the footer first.
+  footer: { marginTop: 'auto' },
   deleteRow: {
     minHeight: 44,
     marginBottom: 8,

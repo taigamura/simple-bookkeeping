@@ -48,13 +48,14 @@ currency conversion.
 
 ### 1. Trustworthy automated quality gate
 
-- [ ] Resolve the open P0 bottom-sheet regression tracked in GitHub issue #63.
+- [x] Resolve the open P0 bottom-sheet regression tracked in GitHub issue #63.
 - [ ] Make every canonical Playwright scenario pass in CI without expected
       failures, retries, skips, debug-only probes, or weakened assertions.
-- [ ] Decide whether diagnostic probe specs become stable assertions or move
-      outside the default release suite.
-- [ ] Remove React `act(...)` warning noise from the Jest run so new warnings
-      are visible.
+- [x] Decide whether diagnostic probe specs become stable assertions or move
+      outside the default release suite. No probe spec remains; #60/#61/#62 are
+      closed and every `test.fail()` marker is flipped to a plain passing test.
+- [x] Remove React `act(...)` warning noise from the Jest run so new warnings
+      are visible. 429 tests across 36 suites now run with zero console output.
 - [ ] Keep strict TypeScript, all Jest suites, the web export, and Playwright
       green on the release commit.
 

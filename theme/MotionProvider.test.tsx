@@ -13,6 +13,7 @@ import React from 'react';
 import { AccessibilityInfo, Text } from 'react-native';
 import { act, render, screen, fireEvent } from '@testing-library/react-native';
 
+import { settleInitialRead } from '../test-utils/settleMotion';
 import { MotionProvider, useMotion } from './MotionProvider';
 import type { MotionPreference } from './motion';
 
@@ -68,13 +69,6 @@ const renderMotion = (
   );
 
 const text = (id: string) => screen.getByTestId(id).props.children;
-
-/** Let the provider's async initial read of the OS flag resolve. */
-const settleInitialRead = async () => {
-  await act(async () => {
-    await Promise.resolve();
-  });
-};
 
 beforeEach(() => {
   mockReduceMotion = false;
