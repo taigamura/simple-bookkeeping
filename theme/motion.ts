@@ -68,6 +68,7 @@
 import {
   Easing,
   ReduceMotion,
+  withDelay,
   withSequence,
   withSpring,
   withTiming,
@@ -144,6 +145,17 @@ export const springs = {
 export const easings = {
   /** Ease-out expo. The default — entrances, settles, number rolls. */
   standard: Easing.bezier(0.22, 1, 0.36, 1),
+  /**
+   * Decelerate, for travel at whole-screen scale (the tab swap). `standard` is
+   * deliberately extreme — ~85% of the distance is covered in the first third —
+   * which is right for a label or a number, where the point is that the change
+   * has already happened by the time the eye arrives. At screen scale that same
+   * curve is the bug: the incoming screen is essentially in place before it has
+   * been perceived as moving, so a slide reads as a cut. This reaches ~85% at
+   * roughly the halfway mark instead, so the travel is actually seen, while
+   * still settling rather than easing symmetrically into place.
+   */
+  screen: Easing.bezier(0.2, 0, 0, 1),
   /** Ease-in. Exits only: things leaving should accelerate away. */
   exit: Easing.bezier(0.4, 0, 1, 1),
   /** Symmetric ease-in-out, for a value that moves and comes back. */
@@ -225,4 +237,15 @@ export function withAppSpring<T extends AnimatableValue>(
  */
 export function withAppSequence<T extends AnimatableValue>(...animations: T[]): T {
   return withSequence(ReduceMotion.Never, ...animations);
+}
+
+/**
+ * `withDelay`, forced to ignore Reanimated's own OS-level reduce-motion check —
+ * which it carries independently of the animation it wraps, exactly like
+ * `withSequence`. See "`withAppTiming`/`withAppSpring`" above; use this instead
+ * of importing `withDelay` directly. The wrapped animation still needs to be a
+ * `withApp*` call itself; this only covers the delay's own gate.
+ */
+export function withAppDelay<T extends AnimatableValue>(delayMs: number, animation: T): T {
+  return withDelay(delayMs, animation, ReduceMotion.Never);
 }
