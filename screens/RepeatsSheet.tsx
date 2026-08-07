@@ -110,7 +110,12 @@ export function RepeatsSheet({
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 4, flexShrink: 1, minHeight: 0 },
+  // flex:1, not flexShrink:1 — Root's `SheetBody` has an explicit
+  // `height: '100%'`, and a shrink-only child under a fixed-height parent sizes
+  // to its content, which here is the header alone (the ScrollContainer is
+  // `flex: 1`, so it measures as 0). That collapsed this sheet to a bare header.
+  // See the same note in BudgetsSheet/SettingsSheet.
+  container: { gap: 4, flex: 1, minHeight: 0 },
   header: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
