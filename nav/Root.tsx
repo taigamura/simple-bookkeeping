@@ -793,6 +793,7 @@ function Shell({
       <BottomSheet
         visible={sheet !== null}
         onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
+        enableContentPanningGesture={sheet === 'entry' || sheet === 'repeat-entry'}
         // Entry is a focused calculator, so start it at the largest available
         // detent. The form still compacts its controls to avoid making the
         // bottom keypad rows a scroll target on short iPhones.
