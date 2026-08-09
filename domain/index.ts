@@ -155,6 +155,7 @@ export {
   type SetTotalBudgetOperation,
   type SetCurrencyOperation,
   type HouseholdConfigOperation,
+  type HouseholdConfigHistoryEntry,
   type ConfigApplyResult,
   type AddRecurrenceRuleOperation,
   type EditRecurrenceRuleOperation,

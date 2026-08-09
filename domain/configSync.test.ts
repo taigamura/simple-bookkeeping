@@ -63,4 +63,53 @@ describe('household configuration sync', () => {
     expect(result.budgets).toEqual({});
     expect(result.deletedCategories.food).toBeDefined();
   });
+
+  it('lets causally later writes replace earlier values on the same device', () => {
+    let state = addLocalCategory(createHouseholdConfigState('home'), 'phone-a', food).state;
+    state = renameLocalCategory(state, 'phone-a', 'food', 'Groceries').state;
+    state = renameLocalCategory(state, 'phone-a', 'food', 'Dining').state;
+    state = setLocalCategoryBudget(state, 'phone-a', 'food', 1000).state;
+    state = setLocalCategoryBudget(state, 'phone-a', 'food', 2000).state;
+    state = setLocalTotalBudget(state, 'phone-a', 10000).state;
+    state = setLocalTotalBudget(state, 'phone-a', 20000).state;
+    state = setLocalCurrency(state, 'phone-a', { symbol: '$', code: 'USD' }).state;
+    state = setLocalCurrency(state, 'phone-a', { symbol: '€', code: 'EUR' }).state;
+
+    expect(state.categories[0].label).toBe('Dining');
+    expect(state.budgets.food).toBe(2000);
+    expect(state.totalBudget).toBe(20000);
+    expect(state.currency.code).toBe('EUR');
+  });
+
+  it('converges when rename is delivered before add and when the same ID is added concurrently', () => {
+    const empty = createHouseholdConfigState('home');
+    const addA = addLocalCategory(empty, 'phone-b', food);
+    const rename = renameLocalCategory(addA.state, 'phone-a', 'food', 'Groceries');
+    const addB = addLocalCategory(empty, 'phone-c', { ...food, label: 'Dining' });
+    const operations = [rename.operation, addA.operation, addB.operation];
+
+    const forward = applyHouseholdConfigOperations(empty, operations).state;
+    const reverse = applyHouseholdConfigOperations(empty, [...operations].reverse()).state;
+    expect(forward).toEqual(reverse);
+    expect(forward.categories).toEqual([{ ...food, label: 'Groceries' }]);
+  });
+
+  it('removes an existing budget with its category and rejects zero as a persisted budget', () => {
+    let state = addLocalCategory(createHouseholdConfigState('home'), 'phone-a', food).state;
+    state = setLocalCategoryBudget(state, 'phone-a', 'food', 1000).state;
+    state = deleteLocalCategory(state, 'phone-a', 'food').state;
+    expect(state.budgets).toEqual({});
+    expect(() => setLocalCategoryBudget(state, 'phone-a', 'food', 0)).toThrow();
+  });
+
+  it('canonicalizes concurrent histories and retains operation-bearing recovery data', () => {
+    const base = createHouseholdConfigState('home');
+    const a = setLocalTotalBudget(base, 'phone-a', 100);
+    const b = setLocalTotalBudget(base, 'phone-b', 200);
+    const left = applyHouseholdConfigOperation(a.state, b.operation).state;
+    const right = applyHouseholdConfigOperation(b.state, a.operation).state;
+
+    expect(left).toEqual(right);
+    expect(left.history.map((entry) => entry.operationId)).toEqual(['phone-a:1', 'phone-b:1']);
+  });
 });

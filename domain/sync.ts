@@ -44,6 +44,9 @@ export interface SharedCategory {
 
 export interface HouseholdConfigState {
   householdId: HouseholdId;
+  /** Immutable seed values used when the accepted operation set is re-reduced. */
+  baseCategories: SharedCategory[];
+  baseCurrency: Currency;
   categories: SharedCategory[];
   budgets: Record<string, number>;
   totalBudget: number;
@@ -56,6 +59,10 @@ export interface HouseholdConfigState {
   currencyHistory: Currency[];
   deletedCategories: Record<string, string>;
   fieldOperations: Record<string, string>;
+  /** Accepted operations are retained so materialization is delivery-order independent. */
+  operations: HouseholdConfigOperation[];
+  /** Operation-bearing audit history used to recover prior household values. */
+  history: HouseholdConfigHistoryEntry[];
 }
 
 export interface AddCategoryOperation {
@@ -79,6 +86,16 @@ export interface SetCurrencyOperation extends Omit<AddCategoryOperation, 'kind' 
 }
 export type HouseholdConfigOperation = AddCategoryOperation | RenameCategoryOperation | DeleteCategoryOperation
   | SetCategoryBudgetOperation | SetTotalBudgetOperation | SetCurrencyOperation;
+
+export interface HouseholdConfigHistoryEntry {
+  operationId: string;
+  actorId: ActorId;
+  sequence: number;
+  version: VersionVector;
+  kind: HouseholdConfigOperation['kind'];
+  field: string;
+  value: SharedCategory | string | number | Currency | null;
+}
 
 export interface ConfigApplyResult { state: HouseholdConfigState; accepted: boolean; error?: SyncValidationError; }
 
@@ -308,24 +325,38 @@ export function createHouseholdConfigState(
   categories: SharedCategory[] = [],
   currency: Currency = CURRENCIES[0],
 ): HouseholdConfigState {
-  if (!isId(householdId) || !categories.every((category) => isId(category.id)
+  if (!isId(householdId) || new Set(categories.map((category) => category.id)).size !== categories.length
+    || !categories.every((category) => isId(category.id)
     && typeof category.label === 'string' && category.label.length > 0
     && (category.type === 'income' || category.type === 'expense')) || !isCurrency(currency)) {
     throw new Error('Invalid household configuration');
   }
+  const baseCategories = [...categories].sort((a, b) => a.id.localeCompare(b.id));
   return {
-    householdId, categories: [...categories], budgets: {}, totalBudget: 0, currency,
+    householdId, baseCategories, baseCurrency: currency, categories: [...baseCategories], budgets: {}, totalBudget: 0, currency,
     versionVector: {}, appliedOperations: [], categoryHistory: {}, budgetHistory: {},
     totalBudgetHistory: [], currencyHistory: [currency], deletedCategories: {}, fieldOperations: {},
+    operations: [], history: [],
   };
 }
 
 function validConfigState(state: HouseholdConfigState): boolean {
-  return isId(state.householdId) && Array.isArray(state.categories)
-    && state.categories.every((category) => isId(category.id) && typeof category.label === 'string'
-      && category.label.length > 0 && (category.type === 'income' || category.type === 'expense'))
+  const validCategory = (category: SharedCategory) => isId(category.id) && typeof category.label === 'string'
+    && category.label.length > 0 && (category.type === 'income' || category.type === 'expense');
+  return isId(state.householdId) && Array.isArray(state.baseCategories)
+    && new Set(state.baseCategories.map((category) => category.id)).size === state.baseCategories.length
+    && state.baseCategories.every(validCategory) && isCurrency(state.baseCurrency)
+    && Array.isArray(state.categories) && state.categories.every(validCategory)
+    && new Set(state.categories.map((category) => category.id)).size === state.categories.length
     && isCurrency(state.currency) && isVersionVector(state.versionVector)
-    && Array.isArray(state.appliedOperations) && state.appliedOperations.every(isId);
+    && isRecord(state.budgets) && Object.entries(state.budgets).every(([id, amount]) => isId(id) && isInteger(amount) && amount > 0)
+    && isInteger(state.totalBudget) && state.totalBudget >= 0
+    && Array.isArray(state.appliedOperations) && state.appliedOperations.every(isId)
+    && isRecord(state.categoryHistory) && isRecord(state.budgetHistory)
+    && Array.isArray(state.totalBudgetHistory) && Array.isArray(state.currencyHistory)
+    && isRecord(state.deletedCategories) && isRecord(state.fieldOperations)
+    && Array.isArray(state.operations) && state.operations.every((operation) => validateConfigOperation(operation, state.householdId) === null)
+    && Array.isArray(state.history);
 }
 
 function configField(operation: HouseholdConfigOperation): string {
@@ -358,18 +389,122 @@ function validateConfigOperation(operation: unknown, householdId: HouseholdId): 
   }
   if (kind === 'rename-category' && (typeof operation.label !== 'string' || operation.label.trim().length === 0)) return 'invalid-operation';
   if (kind === 'set-category-budget' && operation.amount !== null
-    && (!isInteger(operation.amount) || operation.amount < 0)) return 'invalid-operation';
+    && (!isInteger(operation.amount) || operation.amount <= 0)) return 'invalid-operation';
   if (kind === 'set-total-budget' && (!isInteger(operation.amount) || operation.amount < 0)) return 'invalid-operation';
   if (kind === 'set-currency' && !isCurrency(operation.currency)) return 'invalid-operation';
   return null;
 }
 
-function configWins(state: HouseholdConfigState, field: string, incoming: HouseholdConfigOperation): boolean {
-  const priorId = state.fieldOperations[field];
-  if (!priorId) return true;
-  // The operation ID is a stable lexical tie-breaker for concurrent writes.
-  // Deletions are handled separately as monotonic remove-wins facts.
-  return incoming.operationId < priorId;
+function configOperationWins(incoming: HouseholdConfigOperation, prior?: HouseholdConfigOperation): boolean {
+  if (!prior) return true;
+  if (vectorDominates(incoming.version, prior.version)) return true;
+  if (vectorDominates(prior.version, incoming.version)) return false;
+  return incoming.operationId < prior.operationId;
+}
+
+function configHistoryEntry(operation: HouseholdConfigOperation): HouseholdConfigHistoryEntry {
+  let value: HouseholdConfigHistoryEntry['value'];
+  switch (operation.kind) {
+    case 'add-category': value = operation.category; break;
+    case 'rename-category': value = operation.label.trim(); break;
+    case 'delete-category': value = null; break;
+    case 'set-category-budget': value = operation.amount; break;
+    case 'set-total-budget': value = operation.amount; break;
+    case 'set-currency': value = operation.currency; break;
+  }
+  return {
+    operationId: operation.operationId,
+    actorId: operation.actorId,
+    sequence: operation.sequence,
+    version: cloneVector(operation.version),
+    kind: operation.kind,
+    field: configField(operation),
+    value,
+  };
+}
+
+function materializeHouseholdConfig(state: HouseholdConfigState, operations: HouseholdConfigOperation[]): HouseholdConfigState {
+  const ordered = [...operations].sort((a, b) => a.operationId.localeCompare(b.operationId));
+  const winner = (matching: HouseholdConfigOperation[]) => matching.reduce<HouseholdConfigOperation | undefined>(
+    (current, candidate) => configOperationWins(candidate, current) ? candidate : current,
+    undefined,
+  );
+  const categoryIds = new Set(state.baseCategories.map((category) => category.id));
+  for (const operation of ordered) {
+    if (operation.kind === 'add-category') categoryIds.add(operation.category.id);
+    else if ('categoryId' in operation) categoryIds.add(operation.categoryId);
+  }
+  const categories: SharedCategory[] = [];
+  const budgets: Record<string, number> = {};
+  const deletedCategories: Record<string, string> = {};
+  const fieldOperations: Record<string, string> = {};
+  const categoryHistory: Record<string, SharedCategory[]> = {};
+  const budgetHistory: Record<string, number[]> = {};
+
+  for (const categoryId of categoryIds) {
+    const base = state.baseCategories.find((category) => category.id === categoryId);
+    const adds = ordered.filter((operation): operation is AddCategoryOperation => operation.kind === 'add-category' && operation.category.id === categoryId);
+    const addWinner = winner(adds) as AddCategoryOperation | undefined;
+    const seed = addWinner?.category ?? base;
+    const deletes = ordered.filter((operation): operation is DeleteCategoryOperation => operation.kind === 'delete-category' && operation.categoryId === categoryId);
+    const deleteWinner = winner(deletes) as DeleteCategoryOperation | undefined;
+    const renames = ordered.filter((operation): operation is RenameCategoryOperation => operation.kind === 'rename-category' && operation.categoryId === categoryId);
+    const renameWinner = winner(renames) as RenameCategoryOperation | undefined;
+    const budgetOperations = ordered.filter((operation): operation is SetCategoryBudgetOperation => operation.kind === 'set-category-budget' && operation.categoryId === categoryId);
+    const budgetWinner = winner(budgetOperations) as SetCategoryBudgetOperation | undefined;
+
+    const history = [
+      ...(base ? [base] : []),
+      ...adds.map((operation) => operation.category),
+      ...(seed ? renames.map((operation) => ({ ...seed, label: operation.label.trim() })) : []),
+    ].sort((a, b) => a.label.localeCompare(b.label) || a.id.localeCompare(b.id));
+    if (history.length > 0) categoryHistory[categoryId] = history;
+    const budgetValues = budgetOperations.flatMap((operation) => operation.amount === null ? [] : [operation.amount]);
+    if (budgetValues.length > 0) budgetHistory[categoryId] = budgetValues.sort((a, b) => a - b);
+
+    if (deleteWinner) {
+      deletedCategories[categoryId] = deleteWinner.operationId;
+      fieldOperations[configField(deleteWinner)] = deleteWinner.operationId;
+      continue;
+    }
+    if (seed) {
+      categories.push(renameWinner ? { ...seed, label: renameWinner.label.trim() } : seed);
+      if (addWinner) fieldOperations[configField(addWinner)] = addWinner.operationId;
+      if (renameWinner) fieldOperations[configField(renameWinner)] = renameWinner.operationId;
+      if (budgetWinner) {
+        fieldOperations[configField(budgetWinner)] = budgetWinner.operationId;
+        if (budgetWinner.amount !== null) budgets[categoryId] = budgetWinner.amount;
+      }
+    }
+  }
+
+  const totalBudgetOperations = ordered.filter((operation): operation is SetTotalBudgetOperation => operation.kind === 'set-total-budget');
+  const totalBudgetWinner = winner(totalBudgetOperations) as SetTotalBudgetOperation | undefined;
+  const currencyOperations = ordered.filter((operation): operation is SetCurrencyOperation => operation.kind === 'set-currency');
+  const currencyWinner = winner(currencyOperations) as SetCurrencyOperation | undefined;
+  if (totalBudgetWinner) fieldOperations['total-budget'] = totalBudgetWinner.operationId;
+  if (currencyWinner) fieldOperations.currency = currencyWinner.operationId;
+  const versionVector: VersionVector = {};
+  for (const operation of ordered) {
+    for (const [actor, sequence] of Object.entries(operation.version)) versionVector[actor] = Math.max(versionVector[actor] ?? 0, sequence);
+  }
+  return {
+    ...state,
+    categories: categories.sort((a, b) => a.id.localeCompare(b.id)),
+    budgets,
+    totalBudget: totalBudgetWinner?.amount ?? 0,
+    currency: currencyWinner?.currency ?? state.baseCurrency,
+    versionVector,
+    appliedOperations: ordered.map((operation) => operation.operationId),
+    categoryHistory,
+    budgetHistory,
+    totalBudgetHistory: totalBudgetOperations.map((operation) => operation.amount),
+    currencyHistory: [state.baseCurrency, ...currencyOperations.map((operation) => operation.currency)],
+    deletedCategories,
+    fieldOperations,
+    operations: ordered,
+    history: ordered.map(configHistoryEntry),
+  };
 }
 
 /** Apply shared configuration operations. Device-local preferences never enter this merge. */
@@ -379,53 +514,7 @@ export function applyHouseholdConfigOperation(state: HouseholdConfigState, opera
   if (error) return { state, accepted: false, error };
   const incoming = operation as HouseholdConfigOperation;
   if (state.appliedOperations.includes(incoming.operationId)) return { state, accepted: false };
-  const next: HouseholdConfigState = {
-    ...state, categories: [...state.categories], budgets: { ...state.budgets },
-    versionVector: { ...state.versionVector }, appliedOperations: [...state.appliedOperations, incoming.operationId].sort(),
-    categoryHistory: { ...state.categoryHistory }, budgetHistory: { ...state.budgetHistory },
-    totalBudgetHistory: [...state.totalBudgetHistory], currencyHistory: [...state.currencyHistory],
-    deletedCategories: { ...state.deletedCategories }, fieldOperations: { ...state.fieldOperations },
-  };
-  for (const [actor, sequence] of Object.entries(incoming.version)) next.versionVector[actor] = Math.max(next.versionVector[actor] ?? 0, sequence);
-  const record = (key: string, value: number | Currency | SharedCategory) => {
-    if (typeof value === 'number') next.budgetHistory[key] = [...(next.budgetHistory[key] ?? []), value];
-    else if ('code' in value) next.currencyHistory.push(value);
-    else next.categoryHistory[key] = [...(next.categoryHistory[key] ?? []), value];
-  };
-  if (incoming.kind === 'add-category') {
-    if (!next.categories.some((category) => category.id === incoming.category.id) && !next.deletedCategories[incoming.category.id]) next.categories.push(incoming.category);
-    record(incoming.category.id, incoming.category);
-  } else if (incoming.kind === 'delete-category') {
-    const priorDelete = next.deletedCategories[incoming.categoryId];
-    next.deletedCategories[incoming.categoryId] = priorDelete && priorDelete < incoming.operationId ? priorDelete : incoming.operationId;
-    next.categories = next.categories.filter((category) => category.id !== incoming.categoryId);
-    next.fieldOperations[configField(incoming)] = next.deletedCategories[incoming.categoryId];
-  } else if (incoming.kind === 'rename-category') {
-    if (!next.deletedCategories[incoming.categoryId] && configWins(next, configField(incoming), incoming)) {
-      next.categories = next.categories.map((category) => category.id === incoming.categoryId ? { ...category, label: incoming.label.trim() } : category);
-      next.fieldOperations[configField(incoming)] = incoming.operationId;
-    }
-    const category = next.categories.find((item) => item.id === incoming.categoryId)
-      ?? [...(next.categoryHistory[incoming.categoryId] ?? [])].pop();
-    if (category) record(incoming.categoryId, { ...category, label: incoming.label.trim() });
-  } else if (incoming.kind === 'set-category-budget') {
-    if (!next.deletedCategories[incoming.categoryId] && configWins(next, configField(incoming), incoming)) {
-      if (incoming.amount === null) delete next.budgets[incoming.categoryId]; else next.budgets[incoming.categoryId] = incoming.amount;
-      next.fieldOperations[configField(incoming)] = incoming.operationId;
-    }
-    if (incoming.amount !== null) record(incoming.categoryId, incoming.amount);
-  } else if (incoming.kind === 'set-total-budget') {
-    if (configWins(next, 'total-budget', incoming)) { next.totalBudget = incoming.amount; next.fieldOperations['total-budget'] = incoming.operationId; }
-    next.totalBudgetHistory.push(incoming.amount);
-  } else if (incoming.kind === 'set-currency') {
-    if (configWins(next, 'currency', incoming)) { next.currency = incoming.currency; next.fieldOperations.currency = incoming.operationId; }
-    next.currencyHistory.push(incoming.currency);
-  }
-  for (const history of Object.values(next.categoryHistory)) history.sort((a, b) => a.label.localeCompare(b.label));
-  for (const history of Object.values(next.budgetHistory)) history.sort((a, b) => a - b);
-  next.currencyHistory.sort((a, b) => `${a.code}:${a.symbol}`.localeCompare(`${b.code}:${b.symbol}`));
-  next.categories.sort((a, b) => a.id.localeCompare(b.id));
-  return { state: next, accepted: true };
+  return { state: materializeHouseholdConfig(state, [...state.operations, incoming]), accepted: true };
 }
 
 function makeConfigOperation<T extends HouseholdConfigOperation>(state: HouseholdConfigState, actorId: ActorId, operation: Omit<T, 'operationId' | 'sequence' | 'version' | 'householdId' | 'actorId'>): { operation: T; state: HouseholdConfigState } {
