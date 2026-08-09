@@ -105,6 +105,23 @@ export {
   type FinancialRowValidation,
 } from './financialRow';
 export {
+  createSyncState,
+  addLocalTransaction,
+  applySyncOperation,
+  applySyncOperations,
+  validateSyncOperation,
+  isSyncActorId,
+  isSyncHouseholdId,
+  type ActorId,
+  type HouseholdId,
+  type VersionVector,
+  type AddTransactionOperation,
+  type SyncOperation,
+  type SyncState,
+  type SyncApplyResult,
+  type SyncValidationError,
+} from './sync';
+export {
   pressKey,
   amountValue,
   AMOUNT_MAX_DIGITS,
