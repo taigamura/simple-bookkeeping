@@ -8,6 +8,9 @@ import {
   restoreLocalTransaction,
   rollbackLocalTransaction,
   validateSyncOperation,
+  stageSyncOperations,
+  createSyncStateTransfer,
+  applySyncStateTransfer,
 } from './sync';
 import type { Transaction } from './types';
 
@@ -107,6 +110,49 @@ describe('household sync tracer bullet', () => {
     expect(restored.state.entries).toEqual([restored.transaction]);
     expect(restored.state.tombstones.gone).toBeDefined();
     expect(restored.state.attribution[restored.transaction.id]).toMatchObject({ createdBy: 'phone-a', lastEditedBy: 'phone-a' });
+  });
+
+  it('restores the specifically selected historical version, not merely the latest one', () => {
+    const added = addLocalTransaction(createSyncState('home'), 'phone-a', transaction('selected'));
+    const edited = editLocalTransaction(added.state, 'phone-a', { ...transaction('selected'), amount: 2400, note: 'second' });
+    const deleted = deleteLocalTransaction(edited.state, 'phone-a', 'selected');
+
+    const restored = restoreLocalTransaction(deleted.state, 'phone-b', 'selected', 'phone-a:1');
+    expect(restored.transaction.amount).toBe(1200);
+    expect(restored.transaction.note).toBe('selected');
+    expect(restored.transaction.id).not.toBe('selected');
+    expect(restored.state.tombstones.selected).toEqual(deleted.state.tombstones.selected);
+    expect(restored.state.entries.map((entry) => entry.id)).toEqual([restored.transaction.id]);
+  });
+
+  it('stages a material preview and commits a batch atomically with a byte-identical backup', () => {
+    const added = addLocalTransaction(createSyncState('home'), 'phone-a', transaction('batch'));
+    const edited = { ...editLocalTransaction(added.state, 'phone-b', { ...transaction('batch'), amount: 3300 }).operation };
+    const invalid = { ...edited, operationId: 'phone-b:2', sequence: 2, version: { 'phone-b': 2 }, transaction: { ...edited.transaction, amount: 1.5 } };
+    const before = JSON.stringify(added.state);
+
+    const failed = stageSyncOperations(added.state, [edited, invalid]);
+    expect(failed.state).toBe(added.state);
+    expect(failed.accepted).toBe(false);
+    expect(failed.failedOperationId).toBe('phone-b:2');
+
+    const staged = stageSyncOperations(added.state, [edited]);
+    expect(staged.preview).toEqual({ operationIds: ['phone-b:1'], added: [], edited: ['batch'], deleted: [] });
+    expect(staged.rollback?.preMergeState).toBe(before);
+    expect(JSON.stringify(added.state)).toBe(before);
+    expect(staged.state.entries[0].amount).toBe(3300);
+  });
+
+  it('transfers retained history to a replacement replica without dropping tombstones', () => {
+    const added = addLocalTransaction(createSyncState('home'), 'phone-a', transaction('kept'));
+    const deleted = deleteLocalTransaction(added.state, 'phone-a', 'kept');
+    const transfer = createSyncStateTransfer(deleted.state);
+    const replacement = applySyncStateTransfer(createSyncState('home'), transfer);
+
+    expect(replacement.state.entries).toEqual([]);
+    expect(replacement.state.tombstones.kept).toEqual(deleted.state.tombstones.kept);
+    expect(replacement.state.history.kept).toEqual(deleted.state.history.kept);
+    expect(replacement.state.appliedOperations).toEqual(deleted.state.appliedOperations);
   });
 
   it('rolls a live record back through a new attributed edit', () => {

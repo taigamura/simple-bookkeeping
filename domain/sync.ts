@@ -138,6 +138,20 @@ export interface SyncState {
   attribution: Record<string, TransactionAttribution>;
 }
 
+export interface SyncBatchPreview {
+  operationIds: string[];
+  added: string[];
+  edited: string[];
+  deleted: string[];
+}
+
+/** Metadata retained by the caller so a committed merge can be recovered byte-for-byte. */
+export interface SyncRollbackMetadata {
+  preMergeState: string;
+  operationIds: string[];
+  preview: SyncBatchPreview;
+}
+
 export type SyncValidationError =
   | 'invalid-state'
   | 'invalid-operation'
@@ -195,6 +209,9 @@ export interface SyncApplyResult {
   state: SyncState;
   accepted: boolean;
   error?: SyncValidationError;
+  failedOperationId?: string;
+  rollback?: SyncRollbackMetadata;
+  preview?: SyncBatchPreview;
 }
 
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
@@ -691,12 +708,22 @@ export function deleteLocalTransaction(state: SyncState, actorId: ActorId, trans
 }
 
 /** Recover the latest prior value under a new ID, leaving the tombstone intact. */
-export function restoreLocalTransaction(state: SyncState, actorId: ActorId, transactionId: string): { operation: AddTransactionOperation; state: SyncState; transaction: Transaction } {
+export function restoreLocalTransaction(
+  state: SyncState,
+  actorId: ActorId,
+  transactionId: string,
+  historyOperationId?: string,
+): { operation: AddTransactionOperation; state: SyncState; transaction: Transaction } {
   const tombstone = state.tombstones[transactionId];
   const causallyBeforeDelete = (entry: SyncHistoryEntry) => tombstone
     && Object.entries(entry.version).every(([actor, sequence]) => sequence <= (tombstone.version[actor] ?? 0));
-  const prior = [...(state.history[transactionId] ?? [])].reverse().find((entry) => entry.transaction && causallyBeforeDelete(entry))
-    ?? [...(state.history[transactionId] ?? [])].reverse().find((entry) => entry.transaction);
+  const selected = historyOperationId
+    ? state.history[transactionId]?.find((entry) => entry.operationId === historyOperationId)
+    : undefined;
+  const prior = selected?.transaction
+    ? selected
+    : [...(state.history[transactionId] ?? [])].reverse().find((entry) => entry.transaction && causallyBeforeDelete(entry))
+      ?? [...(state.history[transactionId] ?? [])].reverse().find((entry) => entry.transaction);
   if (!prior?.transaction) throw new Error('No recoverable transaction history');
   const sequence = (state.versionVector[actorId] ?? 0) + 1;
   const transaction = { ...prior.transaction, id: `${transactionId}:restore:${actorId}:${sequence}` };
@@ -717,16 +744,79 @@ export function rollbackLocalTransaction(
   return editLocalTransaction(state, actorId, prior.transaction);
 }
 
-/** Apply a transport batch in arrival order; each operation remains replay-safe. */
-export function applySyncOperations(state: SyncState, operations: readonly unknown[]): SyncApplyResult {
+function transactionChangePreview(before: SyncState, after: SyncState, operationIds: string[]): SyncBatchPreview {
+  const beforeIds = new Set(before.entries.map((entry) => entry.id));
+  const afterIds = new Set(after.entries.map((entry) => entry.id));
+  const beforeById = new Map(before.entries.map((entry) => [entry.id, entry]));
+  const afterById = new Map(after.entries.map((entry) => [entry.id, entry]));
+  return {
+    operationIds: [...operationIds],
+    added: [...afterIds].filter((id) => !beforeIds.has(id)).sort(),
+    edited: [...afterIds].filter((id) => beforeIds.has(id) && JSON.stringify(beforeById.get(id)) !== JSON.stringify(afterById.get(id))).sort(),
+    deleted: [...beforeIds].filter((id) => !afterIds.has(id)).sort(),
+  };
+}
+
+/** Validate and materialize a complete incoming batch without changing the live state. */
+export function stageSyncOperations(state: SyncState, operations: readonly unknown[]): SyncApplyResult {
+  if (!validState(state)) return { state, accepted: false, error: 'invalid-state' };
   let current = state;
-  let accepted = false;
+  const operationIds: string[] = [];
   for (const operation of operations) {
+    const error = validateSyncOperation(operation, state.householdId);
+    const id = typeof operation === 'object' && operation !== null && 'operationId' in operation
+      && typeof operation.operationId === 'string' ? operation.operationId : undefined;
+    if (error) return { state, accepted: false, error, ...(id ? { failedOperationId: id } : {}) };
+    operationIds.push((operation as SyncOperation).operationId);
     const result = applySyncOperation(current, operation);
     current = result.state;
-    accepted ||= result.accepted;
   }
-  return { state: current, accepted };
+  const preview = transactionChangePreview(state, current, operationIds);
+  return {
+    state: current,
+    accepted: current !== state,
+    preview,
+    rollback: { preMergeState: JSON.stringify(state), operationIds, preview },
+  };
+}
+
+/** Apply a transport batch atomically. A malformed member leaves the exact input object untouched. */
+export function applySyncOperations(state: SyncState, operations: readonly unknown[]): SyncApplyResult {
+  const staged = stageSyncOperations(state, operations);
+  if (staged.error) return staged;
+  return staged;
+}
+
+/**
+ * Build the authenticated operation stream a replacement phone needs. The
+ * stream is derived from retained audit history, so a replacement receives
+ * tombstones and losing versions as well as the current materialized ledger.
+ */
+export function createSyncStateTransfer(state: SyncState): SyncOperation[] {
+  if (!validState(state)) throw new Error('Invalid sync state');
+  return Object.entries(state.history)
+    .flatMap(([transactionId, entries]) => entries.map((entry) => entry.kind === 'add-transaction'
+      ? {
+        kind: 'add-transaction' as const, operationId: entry.operationId, householdId: state.householdId,
+        actorId: entry.actorId, sequence: entry.sequence, version: cloneVector(entry.version),
+        transaction: entry.transaction!,
+      }
+      : entry.kind === 'edit-transaction'
+        ? {
+          kind: 'edit-transaction' as const, operationId: entry.operationId, householdId: state.householdId,
+          actorId: entry.actorId, sequence: entry.sequence, version: cloneVector(entry.version),
+          transactionId, transaction: entry.transaction!,
+        }
+        : {
+          kind: 'delete-transaction' as const, operationId: entry.operationId, householdId: state.householdId,
+          actorId: entry.actorId, sequence: entry.sequence, version: cloneVector(entry.version), transactionId,
+        }))
+    .sort((left, right) => left.operationId.localeCompare(right.operationId));
+}
+
+/** Merge a replacement's authenticated history atomically into the surviving ledger. */
+export function applySyncStateTransfer(state: SyncState, operations: readonly unknown[]): SyncApplyResult {
+  return stageSyncOperations(state, operations);
 }
 
 export function isSyncActorId(value: unknown): value is ActorId { return isId(value); }

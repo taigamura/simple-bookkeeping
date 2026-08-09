@@ -105,12 +105,22 @@ export interface NearbySyncCoordinatorOptions {
   transport: NearbyTransport;
   /** Resolve applied only after the state and replay fence are durably committed. */
   applyOperation: (operation: unknown) => NearbyApplyResult | Promise<NearbyApplyResult>;
+  /** Preferred atomic seam for receiving a complete operation batch. */
+  applyOperations?: (operations: readonly unknown[]) => boolean | Promise<boolean>;
   queueStore: NearbyQueueStore;
   onError?: (error: Error) => void;
+  onSyncSuccess?: (timestamp: string) => void;
+}
+
+export interface NearbySyncContext {
+  state: HouseholdPairingState;
+  householdKey: string;
+  deviceId: string;
 }
 
 export class NearbySyncCoordinator {
   private readonly options: NearbySyncCoordinatorOptions;
+  private context: NearbySyncContext;
   private readonly seenMessageIds = new Set<string>();
   private pending: unknown[] = [];
   private inFlight: NearbyInFlightBatch | null = null;
@@ -122,9 +132,11 @@ export class NearbySyncCoordinator {
   private loading: Promise<void> | null = null;
   private flushing = false;
   private lifecycle: Promise<void> = Promise.resolve();
+  private lastSyncedAt?: string;
 
   constructor(options: NearbySyncCoordinatorOptions) {
     this.options = options;
+    this.context = { state: options.state, householdKey: options.householdKey, deviceId: options.deviceId };
   }
 
   get queuedOperationIds(): string[] {
@@ -132,6 +144,39 @@ export class NearbySyncCoordinator {
   }
 
   get isForeground(): boolean { return this.foreground; }
+  get lastSyncTimestamp(): string | undefined { return this.lastSyncedAt; }
+
+  /** Rebind live membership and key material after revocation or rotation. */
+  reconfigure(context: NearbySyncContext): Promise<void> {
+    this.context = context;
+    this.lifecycle = this.lifecycle.then(async () => {
+      this.peer = null;
+      this.discoveryTag = '';
+      this.inFlight = null;
+      if (this.started) {
+        this.started = false;
+        try { await this.options.transport.stop(); } catch (error) { this.report(asError(error)); }
+      }
+      if (!this.isLocalDeviceAuthorized()) {
+        this.pending = [];
+        await this.ensureLoaded();
+        await this.persist();
+      }
+      if (this.foreground) await this.applyForeground(true);
+    });
+    return this.lifecycle;
+  }
+
+  /** Safe manual action. A missing peer is reported without changing ledger state. */
+  syncNow(): Promise<'sent' | 'partner-absent' | 'not-authorized'> {
+    this.lifecycle = this.lifecycle.then(async () => {
+      if (!this.isLocalDeviceAuthorized()) return;
+      await this.ensureLoaded();
+      await this.flush();
+    });
+    return this.lifecycle.then(() => !this.isLocalDeviceAuthorized()
+      ? 'not-authorized' : this.peer && this.started ? 'sent' : 'partner-absent');
+  }
 
   setForeground(foreground: boolean): Promise<void> {
     this.foreground = foreground;
@@ -172,10 +217,10 @@ export class NearbySyncCoordinator {
     await this.ensureLoaded();
     if (this.started) return;
     try {
-      this.discoveryTag = await nearbyDiscoveryTag(this.options.householdKey);
+      this.discoveryTag = await nearbyDiscoveryTag(this.context.householdKey);
       await this.options.transport.start({
         serviceType: NEARBY_SERVICE_TYPE,
-        deviceId: this.options.deviceId,
+        deviceId: this.context.deviceId,
         discoveryInfo: nearbyDiscoveryInfo(this.discoveryTag),
         handlers: {
           onPeer: (peer) => void this.handlePeer(peer),
@@ -204,18 +249,24 @@ export class NearbySyncCoordinator {
       if (this.seenMessageIds.has(envelope.messageId)) throw new PairingError('replayed-message');
       const payload = await openAuthenticatedEnvelope<NearbyPayload>(
         envelope,
-        this.options.householdKey,
-        this.options.state,
+        this.context.householdKey,
+        this.context.state,
         { validate: isNearbyPayload },
       );
       if (payload.kind === 'operations') {
-        const acceptedIds: string[] = [];
-        for (const operation of payload.operations) {
-          const id = operationId(operation);
-          if (id === null) continue;
-          const result = await this.options.applyOperation(operation);
-          if (result === 'applied' || result === 'duplicate') acceptedIds.push(id);
-          else this.report(new Error(`Rejected nearby operation ${id}`));
+        let acceptedIds: string[] = [];
+        if (this.options.applyOperations) {
+          if (await this.options.applyOperations(payload.operations)) {
+            acceptedIds = payload.operations.map(operationId).filter((id): id is string => id !== null);
+          }
+        } else {
+          for (const operation of payload.operations) {
+            const id = operationId(operation);
+            if (id === null) continue;
+            const result = await this.options.applyOperation(operation);
+            if (result === 'applied' || result === 'duplicate') acceptedIds.push(id);
+            else this.report(new Error(`Rejected nearby operation ${id}`));
+          }
         }
         if (acceptedIds.length > 0) {
           await this.send(peer, {
@@ -224,6 +275,7 @@ export class NearbySyncCoordinator {
             batchId: payload.batchId,
             operationIds: acceptedIds,
           });
+          this.markSyncSuccessful();
         }
       } else {
         this.applyAcknowledgement(peer, payload);
@@ -249,6 +301,7 @@ export class NearbySyncCoordinator {
     });
     const remaining = this.inFlight.operationIds.filter((id) => !acknowledged.has(id));
     this.inFlight = remaining.length > 0 ? { ...this.inFlight, operationIds: remaining } : null;
+    if (!this.inFlight) this.markSyncSuccessful();
   }
 
   private async flush(): Promise<void> {
@@ -282,28 +335,33 @@ export class NearbySyncCoordinator {
   private async send(peer: NearbyPeer, payload: NearbyPayload): Promise<void> {
     const envelope = await createAuthenticatedEnvelope(
       payload,
-      this.options.householdKey,
-      this.options.state,
-      this.options.deviceId,
+      this.context.householdKey,
+      this.context.state,
+      this.context.deviceId,
     );
     await this.options.transport.send(peer, envelope);
   }
 
   private isAuthorizedPeer(peer: NearbyPeer): boolean {
-    return peer.deviceId !== this.options.deviceId
+    return peer.deviceId !== this.context.deviceId
       && peer.discoveryInfo.protocolVersion === NEARBY_PROTOCOL_VERSION
       && peer.discoveryInfo.householdTag === this.discoveryTag
-      && this.options.state.devices.some((device) => device.deviceId === peer.deviceId && device.revokedAt === undefined);
+      && this.context.state.devices.some((device) => device.deviceId === peer.deviceId && device.revokedAt === undefined);
   }
 
   private isLocalDeviceAuthorized(): boolean {
-    return this.options.state.devices.some(
-      (device) => device.deviceId === this.options.deviceId && device.revokedAt === undefined,
+    return this.context.state.devices.some(
+      (device) => device.deviceId === this.context.deviceId && device.revokedAt === undefined,
     );
   }
 
   private report(error: Error): void {
     this.options.onError?.(error);
+  }
+
+  private markSyncSuccessful(): void {
+    this.lastSyncedAt = new Date().toISOString();
+    this.options.onSyncSuccess?.(this.lastSyncedAt);
   }
 
   private async ensureLoaded(): Promise<void> {

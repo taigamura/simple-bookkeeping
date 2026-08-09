@@ -62,6 +62,74 @@ function queueStore(initial: NearbyQueueSnapshot = { pending: [], seenMessageIds
 }
 
 describe('foreground nearby sync', () => {
+  it('offers a safe manual sync result when the paired phone is absent', async () => {
+    const owner = createHousehold('owner', 1);
+    const doubled = transportDouble();
+    const coordinator = new NearbySyncCoordinator({
+      state: owner.state,
+      householdKey: owner.householdKey,
+      deviceId: 'owner',
+      transport: doubled.transport,
+      applyOperation: () => 'applied',
+      queueStore: queueStore(),
+    });
+    await coordinator.setForeground(true);
+    await expect(coordinator.syncNow()).resolves.toBe('partner-absent');
+    expect(doubled.sent).toHaveLength(0);
+  });
+
+  it('uses a live reconfigured membership and key context before reconnecting', async () => {
+    const owner = createHousehold('owner', 1);
+    const invitation = await createInvitation(owner.state, owner.householdKey, 'owner', 1);
+    const joined = await joinHousehold(invitation.state, invitation.qrPayload, invitation.invitation.matchingCode, 'partner', 2);
+    const revoked = revokeDevice(joined.state, 'owner', 'partner', 3);
+    const doubled = transportDouble();
+    const coordinator = new NearbySyncCoordinator({
+      state: joined.state,
+      householdKey: joined.householdKey,
+      deviceId: 'owner',
+      transport: doubled.transport,
+      applyOperation: () => 'applied',
+      queueStore: queueStore(),
+    });
+    await coordinator.setForeground(true);
+    await coordinator.reconfigure({ state: revoked.state, householdKey: revoked.householdKey, deviceId: 'owner' });
+    doubled.handlers()!.onPeer(peer(await nearbyDiscoveryTag(revoked.householdKey)));
+    expect(doubled.sent).toHaveLength(0);
+  });
+
+  it('supports an atomic incoming batch and reports success only after commit', async () => {
+    const owner = createHousehold('owner', 1);
+    const invitation = await createInvitation(owner.state, owner.householdKey, 'owner', 1);
+    const joined = await joinHousehold(invitation.state, invitation.qrPayload, invitation.invitation.matchingCode, 'partner', 2);
+    const doubled = transportDouble();
+    const commits: unknown[][] = [];
+    const successes: string[] = [];
+    const coordinator = new NearbySyncCoordinator({
+      state: joined.state,
+      householdKey: joined.householdKey,
+      deviceId: 'owner',
+      transport: doubled.transport,
+      applyOperation: () => 'rejected',
+      applyOperations: async (operations) => { commits.push([...operations]); return true; },
+      onSyncSuccess: (timestamp) => successes.push(timestamp),
+      queueStore: queueStore(),
+    });
+    await coordinator.setForeground(true);
+    const remote = peer(await nearbyDiscoveryTag(joined.householdKey));
+    doubled.handlers()!.onPeer(remote);
+    const batch = await createAuthenticatedEnvelope(
+      { v: 1, kind: 'operations', batchId: 'remote-batch', operations: [{ operationId: 'good' }, { operationId: 'bad' }] },
+      joined.householdKey, joined.state, 'partner', 'batch-atomic',
+    );
+    doubled.handlers()!.onMessage(remote, batch);
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(commits).toHaveLength(1);
+    expect(commits[0]).toHaveLength(2);
+    expect(successes).toHaveLength(1);
+    expect(coordinator.lastSyncTimestamp).toBe(successes[0]);
+  });
+
   it('fences a revoked phone queue before it can reconnect or replay work', async () => {
     const owner = createHousehold('owner', 1);
     const invitation = await createInvitation(owner.state, owner.householdKey, 'owner', 1);
@@ -228,7 +296,7 @@ describe('foreground nearby sync', () => {
     const active = coordinator.setForeground(true);
     const inactive = coordinator.setForeground(false);
     const activeAgain = coordinator.setForeground(true);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    while (!releaseFirstStart) await new Promise((resolve) => setTimeout(resolve, 0));
     releaseFirstStart?.();
     await Promise.all([active, inactive, activeAgain]);
     expect(transitions).toEqual(['start', 'stop', 'start']);
