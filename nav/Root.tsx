@@ -95,6 +95,11 @@ function skipSummary(skipped: ZaimSkipTally): string {
   if (skipped.transfer > 0) parts.push(skip.transfer(skipped.transfer));
   if (skipped.balanceAdjustment > 0) parts.push(skip.balanceAdjustment(skipped.balanceAdjustment));
   if (skipped.malformed > 0) parts.push(skip.malformedRow(skipped.malformed));
+  if (skipped.invalidDate > 0) parts.push(skip.invalidDate(skipped.invalidDate));
+  if (skipped.invalidAmount > 0) parts.push(skip.invalidAmount(skipped.invalidAmount));
+  if (skipped.emptyCategory > 0) parts.push(skip.emptyCategory(skipped.emptyCategory));
+  if (skipped.unsupportedType > 0) parts.push(skip.unsupportedType(skipped.unsupportedType));
+  if (skipped.outOfRange > 0) parts.push(skip.outOfRange(skipped.outOfRange));
   if (skipped.duplicate > 0) parts.push(skip.duplicate(skipped.duplicate));
   return parts.length > 0 ? ` — ${parts.join(', ')}` : '';
 }

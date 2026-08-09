@@ -12,6 +12,11 @@ export interface ZaimSkipStrings {
   transfer: (n: number) => string;
   balanceAdjustment: (n: number) => string;
   malformedRow: (n: number) => string;
+  invalidDate: (n: number) => string;
+  invalidAmount: (n: number) => string;
+  emptyCategory: (n: number) => string;
+  unsupportedType: (n: number) => string;
+  outOfRange: (n: number) => string;
   duplicate: (n: number) => string;
 }
 
@@ -365,6 +370,11 @@ export const en: Strings = {
       transfer: (n) => `${n} transfer${n === 1 ? '' : 's'} skipped`,
       balanceAdjustment: (n) => `${n} balance adjustment${n === 1 ? '' : 's'} skipped`,
       malformedRow: (n) => `${n} malformed row${n === 1 ? '' : 's'} skipped`,
+      invalidDate: (n) => `${n} invalid date${n === 1 ? '' : 's'} skipped`,
+      invalidAmount: (n) => `${n} invalid amount${n === 1 ? '' : 's'} skipped`,
+      emptyCategory: (n) => `${n} empty categor${n === 1 ? 'y' : 'ies'} skipped`,
+      unsupportedType: (n) => `${n} unsupported type${n === 1 ? '' : 's'} skipped`,
+      outOfRange: (n) => `${n} out-of-range value${n === 1 ? '' : 's'} skipped`,
       duplicate: (n) => `${n} duplicate${n === 1 ? '' : 's'} skipped`,
     },
   },
@@ -542,6 +552,11 @@ export const ja: Strings = {
       transfer: (n) => `振替${n}件をスキップしました`,
       balanceAdjustment: (n) => `残高調整${n}件をスキップしました`,
       malformedRow: (n) => `不正な行${n}件をスキップしました`,
+      invalidDate: (n) => `不正な日付${n}件をスキップしました`,
+      invalidAmount: (n) => `不正な金額${n}件をスキップしました`,
+      emptyCategory: (n) => `カテゴリなし${n}件をスキップしました`,
+      unsupportedType: (n) => `未対応の種類${n}件をスキップしました`,
+      outOfRange: (n) => `範囲外の値${n}件をスキップしました`,
       duplicate: (n) => `重複${n}件をスキップしました`,
     },
   },

@@ -96,6 +96,12 @@ export {
   type ZaimSkipTally,
 } from './zaim';
 export {
+  validateFinancialRow,
+  type FinancialRow,
+  type FinancialRowInvalidReason,
+  type FinancialRowValidation,
+} from './financialRow';
+export {
   pressKey,
   amountValue,
   AMOUNT_MAX_DIGITS,
