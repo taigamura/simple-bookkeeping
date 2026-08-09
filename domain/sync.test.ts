@@ -3,6 +3,10 @@ import {
   applySyncOperation,
   applySyncOperations,
   createSyncState,
+  deleteLocalTransaction,
+  editLocalTransaction,
+  restoreLocalTransaction,
+  rollbackLocalTransaction,
   validateSyncOperation,
 } from './sync';
 import type { Transaction } from './types';
@@ -59,5 +63,60 @@ describe('household sync tracer bullet', () => {
     expect(result.entries).toHaveLength(1);
     expect(result.entries[0].id).toBe('same');
     expect(result.appliedOperations).toEqual(['phone-a:1', 'phone-b:1']);
+  });
+
+  it('converges concurrent edits, keeps the losing version, and attributes the winner', () => {
+    const base = createSyncState('home');
+    const added = addLocalTransaction(base, 'phone-a', transaction('same'));
+    const aEdit = editLocalTransaction(added.state, 'phone-a', { ...transaction('same'), amount: 2000, note: 'a edit' });
+    const bEdit = editLocalTransaction(added.state, 'phone-b', { ...transaction('same'), amount: 3000, note: 'b edit' });
+
+    const aAfter = applySyncOperation(aEdit.state, bEdit.operation).state;
+    const bAfter = applySyncOperation(bEdit.state, aEdit.operation).state;
+    expect(aAfter).toEqual(bAfter);
+    expect(aAfter.entries).toEqual([{ ...transaction('same'), amount: 2000, note: 'a edit' }]);
+    expect(aAfter.attribution.same).toMatchObject({ createdBy: 'phone-a', lastEditedBy: 'phone-a' });
+    expect(aAfter.history.same.map((entry) => entry.operationId)).toEqual(['phone-a:1', 'phone-a:2', 'phone-b:1']);
+    expect(aAfter.history.same.map((entry) => entry.transaction?.note)).toEqual(['same', 'a edit', 'b edit']);
+  });
+
+  it('makes delete remove-wins against stale and concurrent edits', () => {
+    const added = addLocalTransaction(createSyncState('home'), 'phone-a', transaction('gone'));
+    const edit = editLocalTransaction(added.state, 'phone-b', { ...transaction('gone'), amount: 9999 });
+    const deleted = deleteLocalTransaction(added.state, 'phone-a', 'gone');
+
+    const aAfter = applySyncOperation(deleted.state, edit.operation).state;
+    const bAfter = applySyncOperation(edit.state, deleted.operation).state;
+    expect(aAfter).toEqual(bAfter);
+    expect(aAfter.entries).toEqual([]);
+    expect(aAfter.tombstones.gone.operationId).toBe('phone-a:2');
+    expect(aAfter.history.gone).toHaveLength(3);
+    expect(aAfter.attribution.gone.lastEditedBy).toBe('phone-a');
+  });
+
+  it('does not resurrect a tombstone and restores history as a new transaction', () => {
+    const added = addLocalTransaction(createSyncState('home'), 'phone-a', transaction('gone'));
+    const deleted = deleteLocalTransaction(added.state, 'phone-a', 'gone');
+    const delayedEdit = { ...editLocalTransaction(added.state, 'phone-b', { ...transaction('gone'), amount: 8000 }).operation };
+    const afterDelayed = applySyncOperation(deleted.state, delayedEdit).state;
+    expect(afterDelayed.entries).toEqual([]);
+
+    const restored = restoreLocalTransaction(afterDelayed, 'phone-a', 'gone');
+    expect(restored.transaction.id).not.toBe('gone');
+    expect(restored.transaction.amount).toBe(1200);
+    expect(restored.state.entries).toEqual([restored.transaction]);
+    expect(restored.state.tombstones.gone).toBeDefined();
+    expect(restored.state.attribution[restored.transaction.id]).toMatchObject({ createdBy: 'phone-a', lastEditedBy: 'phone-a' });
+  });
+
+  it('rolls a live record back through a new attributed edit', () => {
+    const added = addLocalTransaction(createSyncState('home'), 'phone-a', transaction('live'));
+    const edited = editLocalTransaction(added.state, 'phone-a', { ...transaction('live'), amount: 4500, note: 'changed' });
+    const rolledBack = rollbackLocalTransaction(edited.state, 'phone-b', 'live', 'phone-a:1');
+
+    expect(rolledBack.state.entries[0]).toEqual(transaction('live'));
+    expect(rolledBack.operation.kind).toBe('edit-transaction');
+    expect(rolledBack.state.history.live).toHaveLength(3);
+    expect(rolledBack.state.attribution.live.lastEditedBy).toBe('phone-b');
   });
 });

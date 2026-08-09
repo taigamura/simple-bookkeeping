@@ -22,7 +22,41 @@ export interface AddTransactionOperation {
   transaction: Transaction;
 }
 
-export type SyncOperation = AddTransactionOperation;
+export interface EditTransactionOperation extends Omit<AddTransactionOperation, 'kind'> {
+  kind: 'edit-transaction';
+  transactionId: string;
+  transaction: Transaction;
+}
+
+export interface DeleteTransactionOperation extends Omit<AddTransactionOperation, 'kind' | 'transaction'> {
+  kind: 'delete-transaction';
+  transactionId: string;
+}
+
+export type SyncOperation = AddTransactionOperation | EditTransactionOperation | DeleteTransactionOperation;
+
+export interface TransactionAttribution {
+  createdBy: ActorId;
+  lastEditedBy: ActorId;
+  createdOperationId: string;
+  lastOperationId: string;
+}
+
+export interface SyncHistoryEntry {
+  operationId: string;
+  kind: SyncOperation['kind'];
+  actorId: ActorId;
+  sequence: number;
+  version: VersionVector;
+  transaction?: Transaction;
+}
+
+export interface Tombstone {
+  operationId: string;
+  actorId: ActorId;
+  sequence: number;
+  version: VersionVector;
+}
 
 export interface SyncState {
   householdId: HouseholdId;
@@ -32,6 +66,12 @@ export interface SyncState {
   appliedOperations: string[];
   /** Stable transaction identity → the operation that currently wins conflicts. */
   transactionOperations: Record<string, string>;
+  /** All accepted versions, including losing edits and deletes, for audit/replay. */
+  history: Record<string, SyncHistoryEntry[]>;
+  /** A transaction ID present here is permanently removed from the live ledger. */
+  tombstones: Record<string, Tombstone>;
+  /** Creator and current editor attribution for each transaction identity. */
+  attribution: Record<string, TransactionAttribution>;
 }
 
 export type SyncValidationError =
@@ -81,6 +121,10 @@ function isTransaction(value: unknown): value is Transaction {
     || value.repeat === 'monthly' || value.repeat === 'yearly';
 }
 
+function transactionIdForOperation(operation: SyncOperation): string {
+  return operation.kind === 'add-transaction' ? operation.transaction.id : operation.transactionId;
+}
+
 function isTimestamp(value: unknown): value is string {
   if (typeof value !== 'string') return false;
   const parsed = new Date(value);
@@ -95,6 +139,18 @@ function cloneVector(vector: VersionVector): VersionVector {
   return { ...vector };
 }
 
+function vectorDominates(left: VersionVector, right: VersionVector): boolean {
+  const actors = new Set([...Object.keys(left), ...Object.keys(right)]);
+  let strictlyGreater = false;
+  for (const actor of actors) {
+    const leftValue = left[actor] ?? 0;
+    const rightValue = right[actor] ?? 0;
+    if (leftValue < rightValue) return false;
+    strictlyGreater ||= leftValue > rightValue;
+  }
+  return strictlyGreater;
+}
+
 function validState(state: SyncState): boolean {
   return isId(state.householdId)
     && Array.isArray(state.entries)
@@ -103,7 +159,13 @@ function validState(state: SyncState): boolean {
     && Array.isArray(state.appliedOperations)
     && state.appliedOperations.every(isId)
     && isRecord(state.transactionOperations)
-    && Object.entries(state.transactionOperations).every(([transactionId, operationId]) => isId(transactionId) && isId(operationId));
+    && Object.entries(state.transactionOperations).every(([transactionId, operationId]) => isId(transactionId) && isId(operationId))
+    && isRecord(state.history)
+    && Object.entries(state.history).every(([transactionId, entries]) => isId(transactionId) && Array.isArray(entries))
+    && isRecord(state.tombstones)
+    && Object.entries(state.tombstones).every(([transactionId, tombstone]) => isId(transactionId) && isRecord(tombstone))
+    && isRecord(state.attribution)
+    && Object.entries(state.attribution).every(([transactionId, attribution]) => isId(transactionId) && isRecord(attribution));
 }
 
 /** Validate an operation before it is allowed to affect a live replica. */
@@ -111,14 +173,23 @@ export function validateSyncOperation(
   operation: unknown,
   householdId?: HouseholdId,
 ): SyncValidationError | null {
-  if (!isRecord(operation) || operation.kind !== 'add-transaction') return 'invalid-operation';
+  if (!isRecord(operation)
+    || (operation.kind !== 'add-transaction' && operation.kind !== 'edit-transaction' && operation.kind !== 'delete-transaction')) {
+    return 'invalid-operation';
+  }
   if (householdId !== undefined && operation.householdId !== householdId) return 'wrong-household';
   if (!isId(operation.householdId) || !isId(operation.actorId)) return 'invalid-actor';
   if (!isInteger(operation.sequence) || operation.sequence < 1) return 'invalid-sequence';
   if (!isVersionVector(operation.version)
     || operation.version[operation.actorId] !== operation.sequence) return 'invalid-version';
   if (operation.operationId !== operationId(operation.actorId, operation.sequence)) return 'invalid-operation';
-  if (!isTransaction(operation.transaction)) return 'invalid-transaction';
+  if (operation.kind === 'add-transaction') {
+    if (!isTransaction(operation.transaction)) return 'invalid-transaction';
+  } else {
+    if (!isId(operation.transactionId)) return 'invalid-operation';
+    if (operation.kind === 'edit-transaction'
+      && (!isTransaction(operation.transaction) || operation.transaction.id !== operation.transactionId)) return 'invalid-transaction';
+  }
   return null;
 }
 
@@ -130,6 +201,9 @@ export function createSyncState(householdId: HouseholdId, entries: Transaction[]
     versionVector: {},
     appliedOperations: [],
     transactionOperations: {},
+    history: {},
+    tombstones: {},
+    attribution: {},
   };
 }
 
@@ -139,7 +213,7 @@ export function addLocalTransaction(
   actorId: ActorId,
   transaction: Transaction,
 ): { operation: AddTransactionOperation; state: SyncState } {
-  if (!validState(state) || !isId(actorId) || !isTransaction(transaction)) throw new Error('Invalid local transaction');
+  if (!validState(state) || !isId(actorId) || !isTransaction(transaction) || state.tombstones[transaction.id]) throw new Error('Invalid local transaction');
   const sequence = (state.versionVector[actorId] ?? 0) + 1;
   const operation: AddTransactionOperation = {
     kind: 'add-transaction',
@@ -160,21 +234,89 @@ export function applySyncOperation(state: SyncState, operation: unknown): SyncAp
   if (!validState(state)) return { state, accepted: false, error: 'invalid-state' };
   const error = validateSyncOperation(operation, state.householdId);
   if (error) return { state, accepted: false, error };
-  const acceptedOperation = operation as AddTransactionOperation;
+  const acceptedOperation = operation as SyncOperation;
   if (state.appliedOperations.includes(acceptedOperation.operationId)) return { state, accepted: false };
 
-  const existing = state.entries.find((entry) => entry.id === acceptedOperation.transaction.id);
-  const priorOperation = state.transactionOperations[acceptedOperation.transaction.id];
-  const incomingWins = !priorOperation || acceptedOperation.operationId < priorOperation;
-  const entries = existing
-    ? (incomingWins
-      ? state.entries.map((entry) => entry.id === existing.id ? acceptedOperation.transaction : entry)
-      : state.entries)
-    : [...state.entries, acceptedOperation.transaction];
+  const transactionId = transactionIdForOperation(acceptedOperation);
+  const existing = state.entries.find((entry) => entry.id === transactionId);
+  const tombstone = state.tombstones[transactionId];
+  const priorOperation = state.transactionOperations[transactionId];
+  const priorVersion = state.history[transactionId]?.find((entry) => entry.operationId === priorOperation)?.version;
+  const incomingAfterPrior = Boolean(priorVersion && vectorDominates(acceptedOperation.version, priorVersion));
+  const priorAfterIncoming = Boolean(priorVersion && vectorDominates(priorVersion, acceptedOperation.version));
+  // Causality beats the tie-breaker: an actor's later edit must replace its
+  // own earlier value. Only concurrent versions use a stable lexical order.
+  const incomingWins = !priorOperation || incomingAfterPrior
+    || (!priorAfterIncoming && acceptedOperation.operationId < priorOperation);
+  const isDelete = acceptedOperation.kind === 'delete-transaction';
+  const isAddOrEdit = acceptedOperation.kind !== 'delete-transaction';
+  // Deletion is a monotonic fact. Once observed, no delayed edit or add can
+  // recreate the record; restore must use a new transaction identity.
+  const deleted = Boolean(tombstone) || isDelete;
+  let entries = state.entries;
+  if (!deleted && isAddOrEdit) {
+    entries = existing
+      ? (incomingWins
+        ? state.entries.map((entry) => entry.id === transactionId ? acceptedOperation.transaction : entry)
+        : state.entries)
+      : [...state.entries, acceptedOperation.transaction];
+  } else if (isDelete && existing) {
+    entries = state.entries.filter((entry) => entry.id !== transactionId);
+  }
   const versionVector = cloneVector(state.versionVector);
   for (const [actor, sequence] of Object.entries(acceptedOperation.version)) {
     versionVector[actor] = Math.max(versionVector[actor] ?? 0, sequence);
   }
+  const historyEntry: SyncHistoryEntry = {
+    operationId: acceptedOperation.operationId,
+    kind: acceptedOperation.kind,
+    actorId: acceptedOperation.actorId,
+    sequence: acceptedOperation.sequence,
+    version: cloneVector(acceptedOperation.version),
+    ...(acceptedOperation.kind !== 'delete-transaction'
+      ? { transaction: acceptedOperation.transaction }
+      : (() => {
+        const prior = [...(state.history[transactionId] ?? [])].reverse().find((entry) => entry.transaction
+          && Object.entries(entry.version).every(([actor, sequence]) => sequence <= (acceptedOperation.version[actor] ?? 0)));
+        return prior?.transaction ? { transaction: prior.transaction } : existing ? { transaction: existing } : {};
+      })()),
+  };
+  const history = {
+    ...state.history,
+    [transactionId]: [...(state.history[transactionId] ?? []), historyEntry]
+      .sort((a, b) => a.operationId.localeCompare(b.operationId)),
+  };
+  const nextTombstones = { ...state.tombstones };
+  if (isDelete && (!tombstone || acceptedOperation.operationId < tombstone.operationId)) {
+    nextTombstones[transactionId] = {
+      operationId: acceptedOperation.operationId,
+      actorId: acceptedOperation.actorId,
+      sequence: acceptedOperation.sequence,
+      version: cloneVector(acceptedOperation.version),
+    };
+  }
+  const priorAttribution = state.attribution[transactionId];
+  const attribution = { ...state.attribution };
+  if (acceptedOperation.kind === 'add-transaction' && !priorAttribution) {
+    attribution[transactionId] = {
+      createdBy: acceptedOperation.actorId,
+      lastEditedBy: acceptedOperation.actorId,
+      createdOperationId: acceptedOperation.operationId,
+      lastOperationId: acceptedOperation.operationId,
+    };
+  } else if (isDelete || (!tombstone && incomingWins)) {
+    attribution[transactionId] = {
+      ...(priorAttribution ?? { createdBy: acceptedOperation.actorId, createdOperationId: acceptedOperation.operationId }),
+      lastEditedBy: acceptedOperation.actorId,
+      lastOperationId: acceptedOperation.operationId,
+    };
+  }
+  const transactionOperations = {
+    ...state.transactionOperations,
+    ...(isDelete
+      ? { [transactionId]: nextTombstones[transactionId].operationId }
+      : (!tombstone && incomingWins ? { [transactionId]: acceptedOperation.operationId } : {})),
+  };
   return {
     accepted: true,
     state: {
@@ -182,12 +324,65 @@ export function applySyncOperation(state: SyncState, operation: unknown): SyncAp
       entries: [...entries].sort((a, b) => a.id.localeCompare(b.id)),
       versionVector,
       appliedOperations: [...state.appliedOperations, acceptedOperation.operationId].sort(),
-      transactionOperations: {
-        ...state.transactionOperations,
-        ...(incomingWins ? { [acceptedOperation.transaction.id]: acceptedOperation.operationId } : {}),
-      },
+      transactionOperations,
+      history,
+      tombstones: nextTombstones,
+      attribution,
     },
   };
+}
+
+function makeLocalOperation<T extends SyncOperation>(state: SyncState, actorId: ActorId, operation: Omit<T, 'operationId' | 'sequence' | 'version' | 'householdId' | 'actorId'>): { operation: T; state: SyncState } {
+  if (!validState(state) || !isId(actorId)) throw new Error('Invalid local sync operation');
+  const sequence = (state.versionVector[actorId] ?? 0) + 1;
+  const full = {
+    ...operation,
+    operationId: operationId(actorId, sequence),
+    householdId: state.householdId,
+    actorId,
+    sequence,
+    version: { ...state.versionVector, [actorId]: sequence },
+  } as T;
+  const result = applySyncOperation(state, full);
+  if (!result.accepted) throw new Error(result.error ?? 'Unable to apply local sync operation');
+  return { operation: full, state: result.state };
+}
+
+export function editLocalTransaction(state: SyncState, actorId: ActorId, transaction: Transaction): { operation: EditTransactionOperation; state: SyncState } {
+  if (!state.entries.some((entry) => entry.id === transaction.id) || state.tombstones[transaction.id]) throw new Error('Cannot edit a missing or deleted transaction');
+  return makeLocalOperation<EditTransactionOperation>(state, actorId, { kind: 'edit-transaction', transactionId: transaction.id, transaction });
+}
+
+export function deleteLocalTransaction(state: SyncState, actorId: ActorId, transactionId: string): { operation: DeleteTransactionOperation; state: SyncState } {
+  if (!state.entries.some((entry) => entry.id === transactionId) || state.tombstones[transactionId]) throw new Error('Cannot delete a missing or deleted transaction');
+  return makeLocalOperation<DeleteTransactionOperation>(state, actorId, { kind: 'delete-transaction', transactionId });
+}
+
+/** Recover the latest prior value under a new ID, leaving the tombstone intact. */
+export function restoreLocalTransaction(state: SyncState, actorId: ActorId, transactionId: string): { operation: AddTransactionOperation; state: SyncState; transaction: Transaction } {
+  const tombstone = state.tombstones[transactionId];
+  const causallyBeforeDelete = (entry: SyncHistoryEntry) => tombstone
+    && Object.entries(entry.version).every(([actor, sequence]) => sequence <= (tombstone.version[actor] ?? 0));
+  const prior = [...(state.history[transactionId] ?? [])].reverse().find((entry) => entry.transaction && causallyBeforeDelete(entry))
+    ?? [...(state.history[transactionId] ?? [])].reverse().find((entry) => entry.transaction);
+  if (!prior?.transaction) throw new Error('No recoverable transaction history');
+  const sequence = (state.versionVector[actorId] ?? 0) + 1;
+  const transaction = { ...prior.transaction, id: `${transactionId}:restore:${actorId}:${sequence}` };
+  const result = addLocalTransaction(state, actorId, transaction);
+  return { ...result, transaction };
+}
+
+/** Roll a live transaction back by emitting a new edit, preserving the audit trail. */
+export function rollbackLocalTransaction(
+  state: SyncState,
+  actorId: ActorId,
+  transactionId: string,
+  historyOperationId: string,
+): { operation: EditTransactionOperation; state: SyncState } {
+  if (!state.entries.some((entry) => entry.id === transactionId)) throw new Error('Cannot roll back a missing or deleted transaction');
+  const prior = state.history[transactionId]?.find((entry) => entry.operationId === historyOperationId);
+  if (!prior?.transaction) throw new Error('No recoverable transaction history');
+  return editLocalTransaction(state, actorId, prior.transaction);
 }
 
 /** Apply a transport batch in arrival order; each operation remains replay-safe. */
