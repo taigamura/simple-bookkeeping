@@ -56,7 +56,8 @@ import { RepeatsSheet } from '../screens/RepeatsSheet';
 import { SettingsSheet } from '../screens/SettingsSheet';
 import { SummaryScreen } from '../screens/SummaryScreen';
 import type { AppState, UseStore } from '../store';
-import { easings, metrics, useMotion, withAppDelay, withAppTiming } from '../theme';
+import { easings, metrics, useMotion, useTheme, withAppDelay, withAppTiming } from '../theme';
+import { SaveWave } from '../ui';
 import { AppShell } from './AppShell';
 import { BottomSheet, SHEET_ANIMATION_DURATION } from './BottomSheet';
 import { TabBar } from './TabBar';
@@ -64,7 +65,8 @@ import type { Sheet, Tab } from './types';
 
 interface RootProps {
   state: AppState;
-  update: (patch: Partial<AppState>) => void;
+  /** Resolves true only after the patch is durably persisted. */
+  update: (patch: Partial<AppState>) => Promise<boolean> | void;
   /** True for this session if boot's load() stashed an unreadable blob (#28). */
   showCorruptNotice: boolean;
   /** Whether a corrupt-stash blob exists — gates the Settings recovery row. */
@@ -347,6 +349,7 @@ function Shell({
   const [tab, setTab] = useState<Tab>('calendar');
   const [sheet, setSheet] = useState<Sheet>(null);
   const { enabled: motionEnabled } = useMotion();
+  const { colors } = useTheme();
   // Which day just received a saved entry, and a bump counter so two saves onto
   // the *same* day still each play the landing pulse. The Calendar screen
   // forwards this to the matching day cell; nothing else reads it.
@@ -354,6 +357,7 @@ function Shell({
     day: 0,
     nonce: 0,
   });
+  const [saveWaveNonce, setSaveWaveNonce] = useState(0);
   // Fires the pulse after the sheet's own dismiss animation clears the screen
   // (see `handleSubmit`) rather than the instant a save happens. Dropped on
   // unmount so a save right before navigating away can't set state on a torn
@@ -574,25 +578,28 @@ function Shell({
   // projected occurrence splits its rule so past history remains unchanged —
   // `commit` does the actual persistence once a scope is settled; the check
   // below decides whether that scope needs asking for at all.
-  const handleSubmit = (draft: EntryDraft, weekendShift: WeekendShift) => {
+  const handleSubmit = async (draft: EntryDraft, weekendShift: WeekendShift): Promise<boolean> => {
     const categories = categoryEntities(state.expCats, state.incCats, state.household.categories);
     const identityDraft: EntryDraft = {
       ...draft,
       categoryId: categoryIdFor(draft.category, draft.type, categories),
     };
-    const commit = (scope: 'one' | 'future') => {
+    const commit = async (scope: 'one' | 'future'): Promise<boolean> => {
       const next = saveLedgerItem(ledger, identityDraft, weekendShift, editing ?? undefined, scope);
-      if (next === ledger) return;
-      entrySaved();
-      update({
+      if (next === ledger) return false;
+      const persisted = update({
         ...next,
         ...(draft.type === 'expense'
           ? { expCats: promoteCategory(state.expCats, draft.category) }
           : { incCats: promoteCategory(state.incCats, draft.category) }),
       });
+      if (persisted !== undefined && !(await persisted)) return false;
+
+      entrySaved();
+      setSaveWaveNonce((nonce) => nonce + 1);
       if (sheet === 'repeat-entry') {
         setSheet('repeats');
-        return;
+        return true;
       }
       let landing = { y: draft.y, m: draft.m, day: draft.day };
       // A `scope: 'one'` save doesn't necessarily land on `draft`'s own date:
@@ -659,6 +666,7 @@ function Shell({
       } else {
         fireLandingPulse();
       }
+      return true;
     };
 
     // Editing a specific occurrence of a still-repeating series is ambiguous
@@ -670,13 +678,10 @@ function Shell({
     // edit sets Repeat to Never, since ending a series has no "just this
     // occurrence" reading — it can only mean "and future".
     if (sheet !== 'repeat-entry' && editing?.occurrence && draft.repeat && draft.repeat !== 'never') {
-      chooseRecurringSave(
-        () => commit('one'),
-        () => commit('future'),
-      );
-      return;
+      chooseRecurringSave(() => void commit('one'), () => void commit('future'));
+      return false;
     }
-    commit('future');
+    return commit('future');
   };
 
   // handleDelete(): one-time entries use the existing destructive confirm;
@@ -869,6 +874,7 @@ function Shell({
           }
         />
       </BottomSheet>
+      <SaveWave nonce={saveWaveNonce} color={colors.positive} testID="save-wave-overlay" />
     </View>
   );
 }

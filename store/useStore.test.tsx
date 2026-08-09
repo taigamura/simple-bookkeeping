@@ -17,10 +17,12 @@ describe('useStore persistence notices', () => {
     const { result } = renderHook(() => useStore(store));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    act(() => {
-      result.current.update({ theme: 'light' });
+    let persisted = true;
+    await act(async () => {
+      persisted = await result.current.update({ theme: 'light' });
     });
 
+    expect(persisted).toBe(false);
     await waitFor(() => expect(result.current.persistenceNotice).toBe('save-failed'));
     expect(result.current.state).toEqual({ ...DEFAULT_STATE, theme: 'light' });
   });

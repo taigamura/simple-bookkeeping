@@ -7,7 +7,7 @@
  * `ready` is false until the initial load resolves, so the root can hold render
  * (alongside the font gate) and avoid a dark→persisted-theme flash.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { DEFAULT_STATE, withIdentitySlices, type AppState } from './schema';
 import { createStore, type LoadIssue, type Store } from './store';
@@ -17,7 +17,8 @@ const defaultStore = createStore();
 export interface UseStore {
   ready: boolean;
   state: AppState;
-  update: (patch: Partial<AppState>) => void;
+  /** Resolves true after the patch is durably written, false on write failure. */
+  update: (patch: Partial<AppState>) => Promise<boolean>;
   /** True for the rest of this session if boot's load() stashed an unreadable
    *  blob (#28) — the root shows a one-time notice off this, not off
    *  `hasCorruptStash` (which stays true across later, healthy boots too). */
@@ -35,6 +36,7 @@ export interface UseStore {
 export function useStore(store: Store = defaultStore): UseStore {
   const [ready, setReady] = useState(false);
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
+  const stateRef = useRef(state);
   const [showCorruptNotice, setShowCorruptNotice] = useState(false);
   const [hasCorruptStash, setHasCorruptStash] = useState(false);
   const [persistenceNotice, setPersistenceNotice] = useState<UseStore['persistenceNotice']>(null);
@@ -52,6 +54,7 @@ export function useStore(store: Store = defaultStore): UseStore {
         stashReadFailed = true;
       }
       if (!alive) return;
+      stateRef.current = loaded;
       setState(loaded);
       setShowCorruptNotice(corrupt);
       setHasCorruptStash(stashed);
@@ -70,28 +73,32 @@ export function useStore(store: Store = defaultStore): UseStore {
   }, [store]);
 
   const update = useCallback(
-    (patch: Partial<AppState>) => {
-      setState((prev) => {
-        const next = { ...prev, ...patch };
-        const durableDevice = {
-          ...prev.device,
-          ...(patch.theme !== undefined ? { theme: patch.theme } : {}),
-          ...(patch.budgetMode !== undefined ? { budgetMode: patch.budgetMode } : {}),
-          ...(patch.totalBudget !== undefined ? { totalBudget: patch.totalBudget } : {}),
-          ...(patch.calendarView !== undefined ? { calendarView: patch.calendarView } : {}),
-          ...(patch.motion !== undefined ? { motion: patch.motion } : {}),
-          ...(patch.summaryGranularity !== undefined ? { summaryGranularity: patch.summaryGranularity } : {}),
-        };
-        const durableState = withIdentitySlices({ ...next, device: durableDevice }, false, true);
-        void store.save(durableState).then(
-          () => {
-            setState((current) => ({ ...current, household: durableState.household, device: durableDevice }));
-            setPersistenceNotice((current) => (current === 'save-failed' ? null : current));
-          },
-          () => setPersistenceNotice('save-failed'),
-        );
-        return next;
-      });
+    (patch: Partial<AppState>): Promise<boolean> => {
+      const prev = stateRef.current;
+      const next = { ...prev, ...patch };
+      const durableDevice = {
+        ...prev.device,
+        ...(patch.theme !== undefined ? { theme: patch.theme } : {}),
+        ...(patch.budgetMode !== undefined ? { budgetMode: patch.budgetMode } : {}),
+        ...(patch.totalBudget !== undefined ? { totalBudget: patch.totalBudget } : {}),
+        ...(patch.calendarView !== undefined ? { calendarView: patch.calendarView } : {}),
+        ...(patch.motion !== undefined ? { motion: patch.motion } : {}),
+        ...(patch.summaryGranularity !== undefined ? { summaryGranularity: patch.summaryGranularity } : {}),
+      };
+      const durableState = withIdentitySlices({ ...next, device: durableDevice }, false, true);
+      stateRef.current = next;
+      setState(next);
+      return store.save(durableState).then(
+        () => {
+          setState((current) => ({ ...current, household: durableState.household, device: durableDevice }));
+          setPersistenceNotice((current) => (current === 'save-failed' ? null : current));
+          return true;
+        },
+        () => {
+          setPersistenceNotice('save-failed');
+          return false;
+        },
+      );
     },
     [store],
   );

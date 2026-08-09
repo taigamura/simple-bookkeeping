@@ -12,7 +12,7 @@
  * Presentational state only — the parent owns persistence and where the entries
  * land (it passes the target `y`/`m`/`day`).
  */
-import React, { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import React, { useRef, useState, type ComponentType, type ReactNode } from 'react';
 import {
   Platform,
   Pressable,
@@ -38,9 +38,8 @@ import {
   type WeekendShift,
 } from '../domain';
 import { strings } from '../i18n';
-import { CategoryChips, Keypad, PressScale, SaveWave, SegmentedToggle } from '../ui';
+import { CategoryChips, Keypad, PressScale, SegmentedToggle } from '../ui';
 import {
-  useMotion,
   useTheme,
   metrics,
   glowFor,
@@ -109,37 +108,6 @@ const SHIFT_LABEL: Record<WeekendShift, string> = strings.entry.weekendLabels;
 
 const next = <T,>(order: T[], value: T): T =>
   order[(order.indexOf(value) + 1) % order.length];
-
-/**
- * How long the save bloom plays before the sheet is told to close (ms).
- *
- * Originally 170ms, on the theory that added latency past ~200ms starts
- * reading as lag. In practice that made the wave imperceptible: `SaveWave`'s
- * spread reaches full size at 70% of `durations.wave` (≈434ms), so at 170ms it
- * had barely started — the sheet's own 200ms dismiss (see
- * `SHEET_ANIMATION_DURATION`) then began sliding over a bloom that was ~13%
- * grown, and by the time the sheet cleared the screen there was nothing left
- * to see. Measured directly (sampling computed styles at every animation
- * frame, not just screenshots) rather than assumed.
- *
- * The "~200ms lag" rule is the right instinct for latency with *nothing* to
- * show for it — a frozen screen. It doesn't apply here: for the whole lead the
- * user is watching the bloom actively expand from the button they just
- * pressed, which is itself the feedback that the tap registered. So the lead
- * is now tuned to the animation instead of to the lag threshold: long enough
- * for the spread to finish and the fade to be clearly underway before the
- * sheet starts covering it, so a real "grow then fade" reads as one complete
- * gesture rather than a truncated blip.
- */
-const WAVE_LEAD = 380;
-
-/**
- * Vertical space the Delete action occupies below the CTA in edit mode: its own
- * 44px min height plus its 8px bottom margin. The pinned footer stacks its two
- * children directly with no gap between them, so there is nothing else to add.
- * Kept in step with `styles.deleteRow` below.
- */
-const DELETE_ROW_BLOCK = 44 + 8;
 
 /**
  * Intrinsic height of the form at full size, measured on a tall screen. Used
@@ -268,12 +236,6 @@ export function EntrySheet({
   // keypad keys do — below that a tap row stops being a comfortable target.
   const gap = Math.max(8, Math.round(14 * scale));
   const rowHeight = Math.max(40, Math.round(46 * scale));
-  const { enabled: motionEnabled } = useMotion();
-  // Bloom fire counter, and the latch that keeps the CTA from re-firing during
-  // the lead. Both are local: the host knows nothing about the animation.
-  const [wave, setWave] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isEditing = editing != null;
   const catsFor = (t: TxType) => (t === 'income' ? incCats : expCats);
   const [txType, setTxType] = useState<TxType>(editing?.type ?? 'expense');
@@ -293,17 +255,7 @@ export function EntrySheet({
 
   const value = amountValue(amountStr);
   const enteredDate = parseDate(dateText);
-  // Where the bloom starts: the middle of the CTA, measured up from the bottom
-  // of the form. In edit mode the CTA is not the last row — the Delete action
-  // and the container's row gap sit below it — so the origin has to clear both,
-  // or the wave would appear to launch from the destructive button.
-  // Where the bloom starts: the middle of the CTA, measured up from the bottom
-  // of the sheet. The CTA now sits in the pinned footer, so this is a fixed
-  // offset rather than something that moves with the body's height — but in
-  // edit mode the Delete action still sits below it and has to be cleared, or
-  // the wave would appear to launch from the destructive button.
   const showDelete = isEditing && onDelete != null;
-  const waveOrigin = (showDelete ? DELETE_ROW_BLOCK : 0) + metrics.ctaHeight / 2;
   const categoryIsCurrent = catsFor(txType).includes(category);
   const canSave =
     value > 0 &&
@@ -338,44 +290,11 @@ export function EntrySheet({
     if (!catsFor(nextType).includes(category)) setCategory(catsFor(nextType)[0]);
   };
 
-  // Save is deliberately not instantaneous when motion is on (#motion): the
-  // bloom is fired first and `onSave` — which dismisses this sheet — follows a
-  // beat later, so the wave plays inside the sheet it came from rather than
-  // being cut off the moment the sheet unmounts. The host's dismissal then runs
-  // *through* the tail of the bloom, which is what makes the two read as one
-  // gesture rather than two events.
-  //
-  // WAVE_LEAD is the whole added latency of a save. It is short enough to stay
-  // under the ~200ms threshold where a delay starts reading as lag, and the
-  // wave itself covers the wait, so nothing appears frozen.
   const save = () => {
-    if (!enteredDate || saving) return;
+    if (!enteredDate) return;
     const draft = { type: txType, amountStr, category, note, ...enteredDate, repeat };
-
-    if (!motionEnabled) {
-      onSave(draft, weekendShift);
-      return;
-    }
-
-    // Latch immediately so a double-tap during the lead cannot save twice —
-    // the CTA is still on screen and still under the finger for that window.
-    setSaving(true);
-    setWave((n) => n + 1);
-    saveTimer.current = setTimeout(() => {
-      saveTimer.current = null;
-      onSave(draft, weekendShift);
-    }, WAVE_LEAD);
+    onSave(draft, weekendShift);
   };
-
-  // The sheet host unmounts this content on dismiss, which can land before the
-  // lead elapses if the user pans the sheet down mid-save. Dropping the timer
-  // on unmount keeps that from firing `onSave` into a torn-down tree.
-  useEffect(
-    () => () => {
-      if (saveTimer.current !== null) clearTimeout(saveTimer.current);
-    },
-    [],
-  );
 
   return (
     <View style={styles.host}>
@@ -537,12 +456,9 @@ export function EntrySheet({
         <PressScale
           scale="surface"
           onPress={save}
-          disabled={!canSave || saving}
+          disabled={!canSave}
           accessibilityRole="button"
           accessibilityLabel={ctaLabel}
-          // Reports only the *form's* validity, not the mid-save latch: a screen
-          // reader announcing "dimmed" for 170ms after a successful save would be
-          // describing an animation, which is not information.
           accessibilityState={{ disabled: !canSave }}
           style={[
             styles.cta,
@@ -570,10 +486,6 @@ export function EntrySheet({
         )}
       </View>
 
-      {/* Last child so the bloom paints over the whole form, body and footer
-          alike. It is out of flow (absolutely positioned), so it neither shifts
-          the layout nor inflates the height reported for the sheet's detent. */}
-      <SaveWave nonce={wave} color={colors.positive} originFromBottom={waveOrigin} />
     </View>
   );
 }

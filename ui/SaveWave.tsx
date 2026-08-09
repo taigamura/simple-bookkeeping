@@ -7,16 +7,16 @@
  * only thing this app is *for*: every other interaction is navigation, and
  * navigation should be silent.
  *
- * ## Why it is contained rather than full-screen
+ * ## Why it is scoped to the app canvas
  *
  * The obvious version of this effect (Strava's) covers the whole display. That
  * reads beautifully once. At thirty saves a day it is thirty half-second
  * blackouts of the interface, and the thing being obscured is the ledger the
- * user is trying to check. So the bloom is scoped to the sheet it was launched
- * from: it fills the surface the user was already looking at, and the *arrival*
- * is signalled somewhere else entirely — a pulse on the day cell the entry
- * landed on (see `DayCell`'s `pulse` prop). Together they say "this went there"
- * without ever hiding the destination.
+ * user is trying to check. The bloom therefore lives in the app shell's visual
+ * canvas, not the sheet that launched it. It can finish while the sheet is
+ * dismissing and remains mounted after the sheet unmounts. The *arrival* is
+ * signalled somewhere else entirely — a pulse on the day cell the entry landed
+ * on (see `DayCell`'s `pulse` prop).
  *
  * ## Why two independent tracks
  *
@@ -102,12 +102,14 @@ interface SaveWaveProps {
    * where every current caller launches it from.
    */
   originFromBottom?: number;
+  testID?: string;
 }
 
 export function SaveWave({
   nonce,
   color,
   originFromBottom = metrics.ctaHeight / 2,
+  testID,
 }: SaveWaveProps) {
   const { enabled } = useMotion();
   const [box, setBox] = useState({ width: 0, height: 0 });
@@ -164,6 +166,7 @@ export function SaveWave({
       // Never intercepts touches: the CTA underneath stays reachable, and the
       // sheet's own dismissal gestures keep working through the bloom.
       pointerEvents="none"
+      testID={testID}
       onLayout={onLayout}
       style={styles.host}
     >
@@ -177,9 +180,8 @@ export function SaveWave({
 }
 
 const styles = StyleSheet.create({
-  // Fills the parent without contributing to its measured height — the Entry
-  // sheet reports its intrinsic content height to size the sheet, and an
-  // in-flow overlay would inflate that measurement.
+  // Fills the app canvas without claiming the OS-owned status-bar or home-
+  // indicator regions. The host is inside AppShell's safe-area canvas.
   host: {
     position: 'absolute',
     top: 0,
@@ -187,5 +189,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     overflow: 'hidden',
+    zIndex: 1000,
+    elevation: 1000,
   },
 });
