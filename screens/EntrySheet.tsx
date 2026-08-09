@@ -12,7 +12,7 @@
  * Presentational state only — the parent owns persistence and where the entries
  * land (it passes the target `y`/`m`/`day`).
  */
-import React, { useRef, useState, type ComponentType, type ReactNode } from 'react';
+import React, { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import {
   Platform,
   Pressable,
@@ -67,6 +67,7 @@ interface EntrySheetProps {
    */
   editing?: Transaction;
   initialDraft?: EntryDraft;
+  onInitialDraftInstalled?: (draft: EntryDraft) => void;
   /** Settings management route: recurring cadences only and explicit stop copy. */
   repeatManagement?: boolean;
   /** Collects the draft on save; the host stores or splits the corresponding ledger item. */
@@ -215,6 +216,7 @@ export function EntrySheet({
   symbol,
   editing,
   initialDraft,
+  onInitialDraftInstalled,
   repeatManagement = false,
   onSave,
   onDelete,
@@ -222,6 +224,9 @@ export function EntrySheet({
   onContentHeightChange,
   ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
 }: EntrySheetProps) {
+  useEffect(() => {
+    if (initialDraft) onInitialDraftInstalled?.(initialDraft);
+  }, []);
   const { colors } = useTheme();
   const scale = useCompactScale();
   // Body and footer are measured separately and summed: the body is the part

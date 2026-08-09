@@ -88,7 +88,13 @@ describe('generated quick-entry native configuration', () => {
     const extensionInfo = fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension-Info.plist'), 'utf8');
     expect(extensionInfo).toContain('com.apple.widgetkit-extension');
     expect(extensionInfo).not.toContain('NSExtensionPrincipalClass');
-    expect(fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension.swift'), 'utf8')).toMatch(/import SwiftUI[\s\S]*import WidgetKit[\s\S]*WidgetBundle/);
+    expect(extensionInfo).not.toContain('WKCompanionAppBundleIdentifier');
+    const extensionSource = fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension.swift'), 'utf8');
+    expect(extensionSource).toContain('Text("Quick Entry")');
+    expect(extensionSource).not.toContain('Text("Kaji")');
+    expect(extensionSource).not.toContain('configurationDisplayName("Kaji');
+    expect(extensionSource).not.toContain('description("Open Kaji');
+    expect(extensionSource).toMatch(/import SwiftUI[\s\S]*import WidgetKit[\s\S]*WidgetBundle/);
     expect(fs.readFileSync(path.join(temp, 'ios/Kaji/Info.plist'), 'utf8')).toContain('kaji-quick-entry');
   }, 30_000);
 });

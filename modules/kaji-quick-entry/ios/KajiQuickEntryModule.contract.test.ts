@@ -30,4 +30,11 @@ describe('shipped Swift bridge contracts', () => {
     expect(source).toContain('NSNull()');
     expect(source).toContain('validSnapshot');
   });
+
+  it('bounds snapshot bytes and every persisted string before JSON parsing', () => {
+    expect(source).toContain('maxSnapshotBytes');
+    expect(source).toContain('maxSnapshotStringLength');
+    expect(source).toContain('data.count <= maxSnapshotBytes');
+    expect(source).toContain('$0.count <= maxSnapshotStringLength');
+  });
 });

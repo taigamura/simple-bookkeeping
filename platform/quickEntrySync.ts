@@ -1,7 +1,7 @@
 import { validateQuickEntryCommand } from '../domain';
 import type { Store } from '../store/store';
 import { quickEntryBridge, type QuickEntryNativeBridge } from './quickEntryBridge';
-import { makeQuickEntrySnapshot } from './quickEntryConfig';
+import { isQuickEntrySnapshot, makeQuickEntrySnapshot } from './quickEntryConfig';
 import type { AppState } from '../store/schema';
 import { categoryIdFor } from '../domain/identity';
 import { parseQuickEntryUrl } from './quickEntryLinks';
@@ -49,10 +49,12 @@ export async function reconcileNativeQuickEntries(
 export async function publishQuickEntrySnapshot(state: AppState, bridge: QuickEntryNativeBridge | null = quickEntryBridge): Promise<void> {
   if (!bridge) return;
   const categoryIds = state.expCats.map((name) => categoryIdFor(name, 'expense', state.household.categories));
-  await bridge.writeSnapshotAsync(JSON.stringify(makeQuickEntrySnapshot(
+  const snapshot = makeQuickEntrySnapshot(
     state.expCats,
     state.currency,
     categoryIds,
     state.device.expenseCategoryOrder.length ? state.device.expenseCategoryOrder : categoryIds,
-  )));
+  );
+  if (!isQuickEntrySnapshot(snapshot)) throw new Error('Invalid quick-entry snapshot');
+  await bridge.writeSnapshotAsync(JSON.stringify(snapshot));
 }

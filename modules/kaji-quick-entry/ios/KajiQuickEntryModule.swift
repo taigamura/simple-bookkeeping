@@ -7,6 +7,8 @@ public final class KajiQuickEntryModule: Module {
   private let quarantine = "quick-entry-quarantine"
   private let deepLinkInbox = "quick-entry-deep-links"
   private let snapshot = "quick-entry-snapshot.json"
+  private let maxSnapshotBytes = 24 * 1024
+  private let maxSnapshotStringLength = 128
 
   public func definition() -> ModuleDefinition {
     Name("KajiQuickEntry")
@@ -121,6 +123,7 @@ public final class KajiQuickEntryModule: Module {
 
   private func validSnapshot(_ contents: String) -> Bool {
       guard let data = contents.data(using: .utf8),
+            data.count <= maxSnapshotBytes,
             let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             object["version"] as? Int == 2,
             let categories = object["categories"] as? [[String: Any]],
@@ -132,11 +135,11 @@ public final class KajiQuickEntryModule: Module {
             let defaults = object["defaults"] as? [String: Any],
             let categoryIDs = categories.compactMap({ $0["id"] as? String }),
             categoryIDs.count == categories.count,
-            categoryIDs.allSatisfy({ !$0.isEmpty }),
+            categoryIDs.allSatisfy({ !$0.isEmpty && $0.count <= maxSnapshotStringLength }),
             Set(categoryIDs).count == categories.count,
             let categoryNames = categories.compactMap({ $0["name"] as? String }),
             categoryNames.count == categories.count,
-            categoryNames.allSatisfy({ !$0.isEmpty }),
+            categoryNames.allSatisfy({ !$0.isEmpty && $0.count <= maxSnapshotStringLength }),
             (defaults["categoryId"] is NSNull || (defaults["categoryId"] as? String) != nil),
             let recentCategoryIDs = defaults["recentCategoryIds"] as? [String],
             recentCategoryIDs.count <= 3,

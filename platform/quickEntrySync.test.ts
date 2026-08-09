@@ -61,6 +61,29 @@ describe('native quick-entry reconciliation seam', () => {
     expect(native.deepLinkAcks).toEqual(['link-1']);
   });
 
+  it('processes different queued links in order and waits for each exact handoff before acking', async () => {
+    const native = bridge([], [
+      'kaji-quick-entry://new?amount=100&category=Food&date=2026-08-10',
+      'kaji-quick-entry://new?amount=200&category=Rent&date=2026-08-11',
+    ]);
+    const drafts: EntryDraft[] = [];
+    let releaseFirst!: () => void;
+    const firstConsumed = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const run = reconcileNativeQuickEntries(createStore(createMemoryPersistence()), native, async (draft) => {
+      drafts.push(draft);
+      if (drafts.length === 1) await firstConsumed;
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(drafts.map((draft) => draft.category)).toEqual(['Food']);
+    expect(native.deepLinkAcks).toEqual([]);
+    releaseFirst();
+    await run;
+
+    expect(drafts.map((draft) => draft.category)).toEqual(['Food', 'Rent']);
+    expect(native.deepLinkAcks).toEqual(['link-1', 'link-2']);
+  });
+
   it('quarantines malformed URLs without touching the ledger', async () => {
     const native = bridge([], ['kaji-quick-entry://new?amount=0&category=Food&date=2026-08-10']);
     const store = createStore(createMemoryPersistence());

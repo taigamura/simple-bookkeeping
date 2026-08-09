@@ -88,4 +88,15 @@ describe('quick-entry App Group inbox', () => {
     expect(isQuickEntrySnapshot({ ...good, defaults: { ...good.defaults, recentCategoryIds: ['food-id', 'food-id'] } })).toBe(false);
     expect(isQuickEntrySnapshot({ ...good, categories: Array.from({ length: 101 }, (_, i) => ({ id: `id-${i}`, name: `C${i}` })) })).toBe(false);
   });
+
+  it('rejects oversized snapshot bytes and individual strings at the boundary', () => {
+    const good = makeQuickEntrySnapshot(['Food'], { symbol: '¥', code: 'JPY' }, ['food-id'], ['food-id']);
+    expect(isQuickEntrySnapshot({ ...good, categories: [{ id: 'x'.repeat(129), name: 'Food' }] })).toBe(false);
+    expect(isQuickEntrySnapshot({ ...good, categories: [{ id: 'food-id', name: 'x'.repeat(129) }] })).toBe(false);
+    expect(isQuickEntrySnapshot({
+      ...good,
+      categories: Array.from({ length: 100 }, (_, i) => ({ id: `${String(i).padStart(3, '0')}${'i'.repeat(125)}`, name: 'x'.repeat(128) })),
+      defaults: { categoryId: 'id-0', recentCategoryIds: ['id-0'] },
+    })).toBe(false);
+  });
 });

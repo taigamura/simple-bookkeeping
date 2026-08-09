@@ -8,6 +8,12 @@ export const QUICK_ENTRY_INBOX_DIRECTORY = 'quick-entry-inbox' as const;
 export const QUICK_ENTRY_QUARANTINE_DIRECTORY = 'quick-entry-quarantine' as const;
 export const QUICK_ENTRY_DEEP_LINK_QUEUE_KEY = 'kaji:quick-entry:v1:deep-links' as const;
 export const QUICK_ENTRY_SNAPSHOT_FILE = 'quick-entry-snapshot.json' as const;
+export const QUICK_ENTRY_SNAPSHOT_MAX_BYTES = 24 * 1024;
+export const QUICK_ENTRY_SNAPSHOT_MAX_STRING_LENGTH = 128;
+
+function utf8ByteLength(value: string): number {
+  return (encodeURIComponent(value).match(/%[0-9A-F]{2}|./g) ?? []).length;
+}
 
 export interface QuickEntrySnapshot {
   readonly version: 2;
@@ -23,9 +29,12 @@ export function isQuickEntrySnapshot(value: unknown): value is QuickEntrySnapsho
   const currency = snapshot.currency;
   const defaults = snapshot.defaults;
   if (!Array.isArray(categories) || !currency || !defaults || !Array.isArray(defaults.recentCategoryIds)) return false;
-  return snapshot.version === 2
+  let serialized: string;
+  try { serialized = JSON.stringify(value); } catch { return false; }
+  return utf8ByteLength(serialized) <= QUICK_ENTRY_SNAPSHOT_MAX_BYTES
+    && snapshot.version === 2
     && categories.length > 0 && categories.length <= 100
-    && categories.every((category) => Boolean(category) && typeof category.id === 'string' && category.id.length > 0 && typeof category.name === 'string' && category.name.length > 0)
+    && categories.every((category) => Boolean(category) && typeof category.id === 'string' && category.id.length > 0 && category.id.length <= QUICK_ENTRY_SNAPSHOT_MAX_STRING_LENGTH && typeof category.name === 'string' && category.name.length > 0 && category.name.length <= QUICK_ENTRY_SNAPSHOT_MAX_STRING_LENGTH)
     && new Set(categories.map((category) => category.id)).size === categories.length
     && [['¥', 'JPY'], ['$', 'USD'], ['€', 'EUR'], ['£', 'GBP']].some(([symbol, code]) => currency.symbol === symbol && currency.code === code)
     && (defaults.categoryId === null || (typeof defaults.categoryId === 'string' && categories.some((category) => category.id === defaults.categoryId)))

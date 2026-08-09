@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -39,6 +39,7 @@ export default function App() {
     hasCorruptStash,
     readCorruptStash,
     persistenceNotice,
+    retryQuickEntrySnapshot,
     reconcileQuickEntries,
   } = useStore();
   const appReady = fontsLoaded && ready;
@@ -50,37 +51,54 @@ export default function App() {
     if (appReady) SplashScreen.hideAsync();
   }, [appReady]);
 
-  const handoffDraft = useCallback(async (draft: EntryDraft) => {
+  const pendingDraft = useRef<{ draft: EntryDraft; resolve: () => void } | null>(null);
+  const readyRef = useRef(ready);
+  const reconcileRef = useRef(reconcileQuickEntries);
+  const handoffRef = useRef<((draft: EntryDraft) => Promise<void>) | undefined>(undefined);
+  readyRef.current = ready;
+  reconcileRef.current = reconcileQuickEntries;
+  const handoffDraft = useCallback((draft: EntryDraft) => new Promise<void>((resolve) => {
+    pendingDraft.current = { draft, resolve };
     setQuickEntryDraft(draft);
+  }), []);
+  handoffRef.current = handoffDraft;
+  const consumeDraft = useCallback((draft: EntryDraft) => {
+    if (pendingDraft.current?.draft !== draft) return;
+    pendingDraft.current.resolve();
+    pendingDraft.current = null;
+    setQuickEntryDraft((current) => current === draft ? null : current);
   }, []);
 
   const receiveUrl = useCallback(async (url: string | null) => {
     if (!url) return;
     if (quickEntryBridge) {
       await quickEntryBridge.enqueueDeepLinkAsync(url);
-      if (ready) await reconcileQuickEntries(handoffDraft);
+      if (readyRef.current) await reconcileRef.current(handoffRef.current);
       return;
     }
-    if (ready) {
+    if (readyRef.current) {
       const draft = parseQuickEntryUrl(url);
-      if (draft) handoffDraft(draft);
+      const handoff = handoffRef.current;
+      if (draft && handoff) await handoff(draft);
     }
-  }, [handoffDraft, ready, reconcileQuickEntries]);
+  }, []);
 
   useEffect(() => {
     const subscription = Linking.addEventListener('url', ({ url }) => { void receiveUrl(url).catch(() => {}); });
-    void Linking.getInitialURL().then(receiveUrl).catch(() => {});
-    return () => subscription.remove();
+    void Promise.resolve(Linking.getInitialURL()).then(receiveUrl).catch(() => {});
+    return () => subscription?.remove?.();
   }, [receiveUrl]);
 
   useEffect(() => {
     if (!appReady) return;
-    void Promise.resolve(reconcileQuickEntries(handoffDraft)).catch(() => {});
+    void Promise.resolve(reconcileRef.current(handoffRef.current)).catch(() => {});
     const subscription = AppState.addEventListener('change', (next) => {
-      if (next === 'active') void Promise.resolve(reconcileQuickEntries(handoffDraft)).catch(() => {});
+      if (next !== 'active') return;
+      if (persistenceNotice === 'quick-entry-cache-failed') void retryQuickEntrySnapshot().catch(() => {});
+      void Promise.resolve(reconcileRef.current(handoffRef.current)).catch(() => {});
     });
     return () => subscription.remove();
-  }, [appReady, handoffDraft, reconcileQuickEntries]);
+  }, [appReady, persistenceNotice, retryQuickEntrySnapshot]);
 
   const finishOpening = useCallback(() => setOpeningComplete(true), []);
 
@@ -131,7 +149,7 @@ export default function App() {
             readCorruptStash={readCorruptStash}
             persistenceNotice={persistenceNotice}
             quickEntryDraft={quickEntryDraft}
-            onQuickEntryDraftConsumed={() => setQuickEntryDraft(null)}
+            onQuickEntryDraftConsumed={consumeDraft}
           />
           {!openingComplete ? (
             <LoadingScreen ready onFinished={finishOpening} />

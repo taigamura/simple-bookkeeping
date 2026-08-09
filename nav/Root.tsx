@@ -78,7 +78,7 @@ interface RootProps {
   readCorruptStash: () => Promise<string | null>;
   persistenceNotice?: UseStore['persistenceNotice'];
   quickEntryDraft?: EntryDraft | null;
-  onQuickEntryDraftConsumed?: () => void;
+  onQuickEntryDraftConsumed?: (draft: EntryDraft) => void;
   /** Runtime-owned nearby state. Defaults to a truthful unpaired/offline surface. */
   householdSync?: {
     model: SyncStatusModel;
@@ -470,8 +470,7 @@ function Shell({
     setEditing(null);
     setEntryContentHeight(0);
     setSheet('entry');
-    onQuickEntryDraftConsumed?.();
-  }, [onQuickEntryDraftConsumed, quickEntryDraft]);
+  }, [quickEntryDraft]);
 
   // Single-sheet-host handlers (#60): the unified sheet host replaces the
   // three separate modals. Sheet state is authoritative; dismissal while a sheet
@@ -859,6 +858,7 @@ function Shell({
             onSave={handleSubmit}
             onDelete={handleDelete}
             onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
+            onInitialDraftInstalled={onQuickEntryDraftConsumed}
             onContentHeightChange={setEntryContentHeight}
             ScrollContainer={BottomSheetScrollView}
             />
