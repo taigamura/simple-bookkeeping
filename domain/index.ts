@@ -15,6 +15,31 @@ export type {
 export type { CategoryEntity } from './identity';
 export { stableId, legacyCategoryId, categoryEntities, legacyCategoryEntities, categoryIdFor, withCategoryId } from './identity';
 export {
+  PAIRING_VERSION,
+  DEFAULT_INVITATION_TTL_MS,
+  KEYCHAIN_SERVICE,
+  createHousehold,
+  createInvitation,
+  joinHousehold,
+  revokeDevice,
+  householdKeyAccount,
+  storeHouseholdKey,
+  loadHouseholdKey,
+  deleteHouseholdKey,
+  createAuthenticatedEnvelope,
+  openAuthenticatedEnvelope,
+  PairingError,
+  type DeviceAuthorization,
+  type PendingInvitation,
+  type HouseholdPairingState,
+  type HouseholdCreation,
+  type InvitationCreation,
+  type JoinResult,
+  type PairingFailure,
+  type KeychainSecretStore,
+  type AuthenticatedEnvelope,
+} from './pairing';
+export {
   DEFAULT_EXP_CATS,
   DEFAULT_INC_CATS,
   DEFAULT_CURRENCY,
