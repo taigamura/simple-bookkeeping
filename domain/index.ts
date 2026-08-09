@@ -195,6 +195,17 @@ export {
   type RecurrenceSyncApplyResult,
 } from './sync';
 export {
+  householdSyncStatus,
+  syncHistoryRows,
+  syncFailureMessage,
+  type HouseholdSyncStatus,
+  type SyncStatusFacts,
+  type SyncStatusModel,
+  type SyncHistoryChange,
+  type SyncHistoryRow,
+  type SyncFailureMessage,
+} from './syncPresentation';
+export {
   NEARBY_PROTOCOL_VERSION,
   NEARBY_SERVICE_TYPE,
   NearbySyncCoordinator,
