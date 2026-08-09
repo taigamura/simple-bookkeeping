@@ -44,6 +44,9 @@ import {
   type WeekendShift,
   type YM,
   type ZaimSkipTally,
+  householdSyncStatus,
+  type SyncHistoryRow,
+  type SyncStatusModel,
 } from '../domain';
 import { strings } from '../i18n';
 import { entrySaved } from '../platform/haptics';
@@ -54,6 +57,7 @@ import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
 import { RepeatsSheet } from '../screens/RepeatsSheet';
 import { SettingsSheet } from '../screens/SettingsSheet';
+import { HouseholdSyncSheet } from '../screens/HouseholdSyncSheet';
 import { SummaryScreen } from '../screens/SummaryScreen';
 import type { AppState, UseStore } from '../store';
 import { easings, metrics, useMotion, useTheme, withAppDelay, withAppTiming } from '../theme';
@@ -73,6 +77,13 @@ interface RootProps {
   hasCorruptStash: boolean;
   readCorruptStash: () => Promise<string | null>;
   persistenceNotice?: UseStore['persistenceNotice'];
+  /** Runtime-owned nearby state. Defaults to a truthful unpaired/offline surface. */
+  householdSync?: {
+    model: SyncStatusModel;
+    history: SyncHistoryRow[];
+    onSyncNow: () => void;
+    onRestore: (transactionId: string, operationId: string) => void;
+  };
 }
 
 // RN Web's Alert.alert is a no-op stub (react-native-web has no dialog
@@ -345,6 +356,12 @@ function Shell({
   hasCorruptStash,
   readCorruptStash,
   persistenceNotice = null,
+  householdSync = {
+    model: householdSyncStatus({ paired: false, foreground: true, partnerPresent: false, queuedOperationCount: 0 }),
+    history: [],
+    onSyncNow: () => {},
+    onRestore: () => {},
+  },
 }: RootProps) {
   const [tab, setTab] = useState<Tab>('calendar');
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -448,6 +465,7 @@ function Shell({
   const openSettings = () => setSheet('settings');
   const openRepeats = () => setSheet('repeats');
   const openBudgets = () => setSheet('budgets');
+  const openHouseholdSync = () => setSheet('household-sync');
   const backToSettings = () => setSheet('settings');
 
   // openEntry(): the ＋ button — always create mode (clear any prior editing).
@@ -839,6 +857,7 @@ function Shell({
             activeRepeatCount={activeRepeats.length}
             onOpenRepeats={openRepeats}
             onOpenBudgets={openBudgets}
+            onOpenHouseholdSync={openHouseholdSync}
             onExportData={exportData}
             onImportZaim={importZaim}
             hasCorruptStash={hasCorruptStash}
@@ -860,6 +879,16 @@ function Shell({
             onChangeTotalBudget={(totalBudget) => update({ totalBudget })}
             onDone={backToSettings}
             ScrollContainer={BottomSheetScrollView}
+            />
+          }
+          householdSync={
+            <HouseholdSyncSheet
+              model={householdSync.model}
+              history={householdSync.history}
+              onSyncNow={householdSync.onSyncNow}
+              onRestore={householdSync.onRestore}
+              onClose={backToSettings}
+              ScrollContainer={BottomSheetScrollView}
             />
           }
           repeats={
@@ -889,12 +918,14 @@ function SheetBody({
   entry,
   settings,
   budgets,
+  householdSync,
   repeats,
 }: {
   sheet: Sheet | null;
   entry: React.ReactNode;
   settings: React.ReactNode;
   budgets: React.ReactNode;
+  householdSync: React.ReactNode;
   repeats: React.ReactNode;
 }) {
   // BottomSheetView measures its direct child on native. A Fragment can
@@ -907,9 +938,11 @@ function SheetBody({
       ? entry
       : sheet === 'settings'
         ? settings
-        : sheet === 'budgets'
-          ? budgets
-          : sheet === 'repeats'
+          : sheet === 'budgets'
+            ? budgets
+            : sheet === 'household-sync'
+              ? householdSync
+            : sheet === 'repeats'
             ? repeats
             : null;
 

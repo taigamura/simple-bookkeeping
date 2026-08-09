@@ -135,6 +135,26 @@ export interface Strings {
     exportUnreadableBackup: string;
     deleteAllData: string;
     deleteAllDataConfirmMessage: string;
+    householdSync: string;
+  };
+  sync: {
+    paired: string;
+    offline: string;
+    syncing: string;
+    error: string;
+    lastSynced: string;
+    neverSynced: string;
+    syncNow: string;
+    partnerAbsent: string;
+    notPaired: string;
+    history: string;
+    added: string;
+    edited: string;
+    deleted: string;
+    by: (actor: string) => string;
+    restore: string;
+    noHistory: string;
+    nearbyOnly: string;
   };
   budgets: {
     title: string;
@@ -311,6 +331,16 @@ export const en: Strings = {
     exportUnreadableBackup: 'Export unreadable backup',
     deleteAllData: 'Delete all data',
     deleteAllDataConfirmMessage: 'This will permanently delete all entries, repeating series, and budgets. Categories, currency, and settings will be preserved.',
+    householdSync: 'Household sync',
+  },
+  sync: {
+    paired: 'Paired', offline: 'Offline', syncing: 'Syncing nearby', error: 'Sync error',
+    lastSynced: 'Last synced', neverSynced: 'Not synced yet', syncNow: 'Sync now',
+    partnerAbsent: 'Partner not nearby. Nothing will change on this phone.',
+    notPaired: 'Pair another phone to share changes nearby.',
+    history: 'Change history', added: 'Added', edited: 'Edited', deleted: 'Deleted',
+    by: (actor) => `By ${actor}`, restore: 'Restore version', noHistory: 'No shared changes yet.',
+    nearbyOnly: 'Nearby only while both paired phones are open. No background or remote sync.',
   },
   budgets: {
     title: 'Budgets',
@@ -497,6 +527,16 @@ export const ja: Strings = {
     exportUnreadableBackup: '読み取れないバックアップを書き出す',
     deleteAllData: 'すべてのデータを削除',
     deleteAllDataConfirmMessage: 'すべての記録、繰り返し、および予算が完全に削除されます。カテゴリ、通貨、および設定は保持されます。',
+    householdSync: '家庭内同期',
+  },
+  sync: {
+    paired: 'ペア済み', offline: 'オフライン', syncing: '近くの端末と同期中', error: '同期エラー',
+    lastSynced: '最終同期', neverSynced: 'まだ同期していません', syncNow: '今すぐ同期',
+    partnerAbsent: '相手の端末が近くにありません。この端末の記録は変更されません。',
+    notPaired: '近くで変更を共有するには、もう1台の端末とペアリングしてください。',
+    history: '変更履歴', added: '追加', edited: '編集', deleted: '削除',
+    by: (actor) => `${actor}が変更`, restore: 'この版を復元', noHistory: '共有された変更はまだありません。',
+    nearbyOnly: 'ペア済みの2台を開いて近くに置いた間だけ同期します。バックグラウンドやリモート同期はありません。',
   },
   budgets: {
     title: '予算',

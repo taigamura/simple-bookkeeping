@@ -66,6 +66,8 @@ interface SettingsSheetProps {
   onOpenRepeats: () => void;
   /** Drill into the Budgets sheet (#49) — Settings dismisses, Budgets presents. */
   onOpenBudgets: () => void;
+  /** Drill into the paired-household status/history sheet (#105). */
+  onOpenHouseholdSync?: () => void;
   onExportData: () => void;
   onImportZaim: () => void;
   /** Whether a corrupt-stash blob exists (#28) — gates the recovery row. */
@@ -93,6 +95,7 @@ export function SettingsSheet({
   activeRepeatCount,
   onOpenRepeats,
   onOpenBudgets,
+  onOpenHouseholdSync,
   onExportData,
   onImportZaim,
   hasCorruptStash,
@@ -123,6 +126,7 @@ export function SettingsSheet({
         />
         <RepeatsLink count={activeRepeatCount} onPress={onOpenRepeats} />
         <BudgetsLink onPress={onOpenBudgets} />
+        {onOpenHouseholdSync && <HouseholdSyncLink onPress={onOpenHouseholdSync} />}
         <DataActions
           onExportData={onExportData}
           onImportZaim={onImportZaim}
@@ -132,6 +136,26 @@ export function SettingsSheet({
         />
       </ScrollContainer>
     </View>
+  );
+}
+
+function HouseholdSyncLink({ onPress }: { onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Section label={strings.settings.householdSync}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={strings.settings.householdSync}
+        style={({ pressed }) => [
+          styles.linkRow,
+          { backgroundColor: pressed ? colors.card3 : colors.card2 },
+        ]}
+      >
+        <Txt variant="listItem" tone="ink" style={styles.linkLabel}>{strings.settings.householdSync}</Txt>
+        <Txt variant="listItem" tone="dim">›</Txt>
+      </Pressable>
+    </Section>
   );
 }
 

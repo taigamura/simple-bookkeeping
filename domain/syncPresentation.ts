@@ -1,4 +1,5 @@
-import type { SyncHistoryEntry, SyncState, Transaction, TransactionAttribution } from './sync';
+import type { SyncHistoryEntry, SyncState, TransactionAttribution } from './sync';
+import type { Transaction as LedgerTransaction } from './types';
 
 /** The four states exposed by the household surface. None of these imply a
  * server, background work, or an always-on connection. */
@@ -32,7 +33,7 @@ export interface SyncHistoryRow {
   change: SyncHistoryChange;
   actorId: string;
   /** Deliberately excludes note and other free-form fields. */
-  transaction?: Pick<Transaction, 'id' | 'y' | 'm' | 'day' | 'type' | 'amount' | 'category'>;
+  transaction?: Pick<LedgerTransaction, 'id' | 'y' | 'm' | 'day' | 'type' | 'amount' | 'category'>;
   attribution?: TransactionAttribution;
 }
 
@@ -96,7 +97,7 @@ export function householdSyncStatus(facts: SyncStatusFacts): SyncStatusModel {
   };
 }
 
-function safeTransaction(transaction: Transaction): SyncHistoryRow['transaction'] {
+function safeTransaction(transaction: LedgerTransaction): SyncHistoryRow['transaction'] {
   return {
     id: transaction.id, y: transaction.y, m: transaction.m, day: transaction.day,
     type: transaction.type, amount: transaction.amount, category: transaction.category,
