@@ -70,19 +70,26 @@ export default function App() {
   const reconcileAgain = useRef(false);
   const requestReconcile = useCallback(() => {
     if (!readyRef.current) return;
+    reconcileAgain.current = true;
     if (reconcileRunning.current) {
-      reconcileAgain.current = true;
       return;
     }
     reconcileRunning.current = true;
     void (async () => {
-      do {
-        reconcileAgain.current = false;
-        await reconcileRef.current(handoffRef.current);
-      } while (reconcileAgain.current);
-    })().catch(() => {}).finally(() => {
-      reconcileRunning.current = false;
-    });
+      try {
+        while (reconcileAgain.current) {
+          reconcileAgain.current = false;
+          try {
+            await reconcileRef.current(handoffRef.current);
+          } catch {
+            // A pending request is still allowed one drain turn after a failure.
+          }
+        }
+      } finally {
+        reconcileRunning.current = false;
+        if (reconcileAgain.current) requestReconcile();
+      }
+    })();
   }, []);
   const disposeDraft = useCallback((draft: EntryDraft, token: number) => {
     if (pendingDraft.current?.draft !== draft || pendingDraft.current.token !== token) return;

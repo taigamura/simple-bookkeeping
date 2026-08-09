@@ -1,6 +1,7 @@
 let mockStoreReady = true;
 let mockPersistenceNotice: string | null = null;
 const mockRetryQuickEntrySnapshot = jest.fn(async () => true);
+const mockReconcileQuickEntries = jest.fn<Promise<void>, []>(async () => undefined);
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 jest.mock('expo-splash-screen', () => ({
@@ -18,7 +19,7 @@ jest.mock('./store', () => ({
     readCorruptStash: jest.fn(),
     persistenceNotice: mockPersistenceNotice,
     retryQuickEntrySnapshot: mockRetryQuickEntrySnapshot,
-    reconcileQuickEntries: jest.fn(),
+    reconcileQuickEntries: (...args: Parameters<typeof mockReconcileQuickEntries>) => mockReconcileQuickEntries(...args),
   }),
 }));
 jest.mock('./nav', () => ({
@@ -45,7 +46,7 @@ jest.mock('./ui/LoadingScreen', () => ({
 }));
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { Linking } from 'react-native';
 
@@ -58,6 +59,8 @@ describe('App opening handoff', () => {
     mockStoreReady = true;
     mockPersistenceNotice = null;
     mockRetryQuickEntrySnapshot.mockClear();
+    mockReconcileQuickEntries.mockReset();
+    mockReconcileQuickEntries.mockResolvedValue(undefined);
   });
 
   it('mounts the ready Calendar behind the opening until its exit finishes', async () => {
@@ -106,14 +109,154 @@ describe('App opening handoff', () => {
     addListener.mockRestore();
   });
 
-  it('retries a failed quick-entry cache on foreground without changing ledger status', () => {
+  it('retries a failed quick-entry cache on foreground without changing ledger status', async () => {
     mockPersistenceNotice = 'quick-entry-cache-failed';
     const appState = require('react-native').AppState;
     const addListener = jest.spyOn(appState, 'addEventListener');
-    render(<App />);
+    addListener.mockReturnValue({ remove: jest.fn() });
+    const view = render(<App />);
+    await settleInitialRead();
     const handler = addListener.mock.calls.at(-1)?.[1] as ((state: string) => void);
-    handler('active');
+    await act(async () => {
+      handler('active');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     expect(mockRetryQuickEntrySnapshot).toHaveBeenCalledTimes(1);
+    view.unmount();
+    addListener.mockRestore();
+  });
+
+  it('coalesces overlapping reconciliation requests', async () => {
+    let resolveFirst!: () => void;
+    let resolveSecond!: () => void;
+    const firstReconcile = new Promise<void>((resolve) => { resolveFirst = resolve; });
+    const secondReconcile = new Promise<void>((resolve) => { resolveSecond = resolve; });
+    mockReconcileQuickEntries
+      .mockReturnValueOnce(firstReconcile)
+      .mockReturnValueOnce(secondReconcile);
+    const appState = require('react-native').AppState;
+    const addListener = jest.spyOn(appState, 'addEventListener');
+    addListener.mockReturnValue({ remove: jest.fn() });
+
+    const view = render(<App />);
+    await settleInitialRead();
+    const handler = addListener.mock.calls.at(-1)?.[1] as ((state: string) => void);
+    expect(mockReconcileQuickEntries).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      handler('active');
+      handler('active');
+    });
+    expect(mockReconcileQuickEntries).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveFirst();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mockReconcileQuickEntries).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      resolveSecond();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    view.unmount();
+    addListener.mockRestore();
+  });
+
+  it('services a request arriving while reconciliation rejects', async () => {
+    let resolveSecond!: () => void;
+    const secondReconcile = new Promise<void>((resolve) => { resolveSecond = resolve; });
+    mockReconcileQuickEntries
+      .mockRejectedValueOnce(new Error('acknowledge failed'))
+      .mockReturnValueOnce(secondReconcile);
+    const appState = require('react-native').AppState;
+    const addListener = jest.spyOn(appState, 'addEventListener');
+    addListener.mockReturnValue({ remove: jest.fn() });
+
+    const view = render(<App />);
+    await settleInitialRead();
+    const handler = addListener.mock.calls.at(-1)?.[1] as ((state: string) => void);
+    expect(mockReconcileQuickEntries).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      handler('active');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockReconcileQuickEntries).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      resolveSecond();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    view.unmount();
+    addListener.mockRestore();
+  });
+
+  it('does not lose a request at reconciliation completion', async () => {
+    let resolveFirst!: () => void;
+    let resolveSecond!: () => void;
+    const firstReconcile = new Promise<void>((resolve) => { resolveFirst = resolve; });
+    const secondReconcile = new Promise<void>((resolve) => { resolveSecond = resolve; });
+    mockReconcileQuickEntries
+      .mockReturnValueOnce(firstReconcile)
+      .mockReturnValueOnce(secondReconcile);
+    const appState = require('react-native').AppState;
+    const addListener = jest.spyOn(appState, 'addEventListener');
+    addListener.mockReturnValue({ remove: jest.fn() });
+
+    const view = render(<App />);
+    await settleInitialRead();
+    const handler = addListener.mock.calls.at(-1)?.[1] as ((state: string) => void);
+    firstReconcile.then(() => handler('active'));
+    await act(async () => {
+      resolveFirst();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockReconcileQuickEntries).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      resolveSecond();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    view.unmount();
+    addListener.mockRestore();
+  });
+
+  it('never runs concurrent reconciliations', async () => {
+    let resolveFirst!: () => void;
+    const firstReconcile = new Promise<void>((resolve) => { resolveFirst = resolve; });
+    let activeCalls = 0;
+    let maxActiveCalls = 0;
+    mockReconcileQuickEntries.mockImplementation(async () => {
+      activeCalls += 1;
+      maxActiveCalls = Math.max(maxActiveCalls, activeCalls);
+      if (mockReconcileQuickEntries.mock.calls.length === 1) await firstReconcile;
+      activeCalls -= 1;
+    });
+    const appState = require('react-native').AppState;
+    const addListener = jest.spyOn(appState, 'addEventListener');
+    addListener.mockReturnValue({ remove: jest.fn() });
+
+    const view = render(<App />);
+    await settleInitialRead();
+    const handler = addListener.mock.calls.at(-1)?.[1] as ((state: string) => void);
+    await act(async () => {
+      handler('active');
+      handler('active');
+      resolveFirst();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(maxActiveCalls).toBe(1);
+    view.unmount();
     addListener.mockRestore();
   });
 });
