@@ -16,6 +16,7 @@ import {
 import { pbkdf2 } from '@noble/hashes/pbkdf2';
 import { sha256 } from '@noble/hashes/sha2';
 
+import { isJsonSafe } from './jsonSafe';
 import type { HouseholdPairingState } from './pairing';
 import type { AppState } from '../store/schema';
 
@@ -115,19 +116,6 @@ async function passphraseKey(passphrase: string, salt: Uint8Array, iterations: n
 
 function aad(envelope: Omit<RecoveryPackEnvelope, 'sealed'>): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(envelope));
-}
-
-function isJsonSafe(value: unknown, seen = new Set<unknown>()): boolean {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
-  if (typeof value === 'number') return Number.isFinite(value);
-  if (typeof value !== 'object' || seen.has(value)) return false;
-  seen.add(value);
-  const valid = Array.isArray(value)
-    ? value.every((item) => isJsonSafe(item, seen))
-    : Object.keys(value).every((key) => key !== '__proto__' && key !== 'constructor' && key !== 'prototype'
-      && isJsonSafe((value as Record<string, unknown>)[key], seen));
-  seen.delete(value);
-  return valid;
 }
 
 function isSyncState(value: unknown, householdId: string): boolean {

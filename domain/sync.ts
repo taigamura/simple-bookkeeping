@@ -297,6 +297,11 @@ function validState(state: SyncState): boolean {
     && Object.entries(state.attribution).every(([transactionId, attribution]) => isId(transactionId) && isRecord(attribution));
 }
 
+/** Validate a sync state that arrived from storage, a transfer, or a backup file. */
+export function isSyncState(value: unknown): value is SyncState {
+  return isRecord(value) && validState(value as unknown as SyncState);
+}
+
 /** Validate an operation before it is allowed to affect a live replica. */
 export function validateSyncOperation(
   operation: unknown,
@@ -374,6 +379,11 @@ function validConfigState(state: HouseholdConfigState): boolean {
     && isRecord(state.deletedCategories) && isRecord(state.fieldOperations)
     && Array.isArray(state.operations) && state.operations.every((operation) => validateConfigOperation(operation, state.householdId) === null)
     && Array.isArray(state.history);
+}
+
+/** Validate a household configuration state restored from outside the app. */
+export function isHouseholdConfigState(value: unknown): value is HouseholdConfigState {
+  return isRecord(value) && validConfigState(value as unknown as HouseholdConfigState);
 }
 
 function configField(operation: HouseholdConfigOperation): string {
@@ -895,6 +905,12 @@ function validRecurrenceState(state: RecurrenceSyncState): boolean {
     && isVersionVector(state.versionVector) && Array.isArray(state.appliedOperations)
     && state.appliedOperations.every(isId) && isRecord(state.ruleOperations)
     && isRecord(state.history) && isRecord(state.tombstones) && isRecord(state.exceptions);
+}
+
+/** Validate a recurrence sync state restored from outside the app. */
+export function isRecurrenceSyncState(value: unknown): value is RecurrenceSyncState {
+  return isRecord(value) && Array.isArray(value.rules)
+    && validRecurrenceState(value as unknown as RecurrenceSyncState);
 }
 
 export function stableOccurrenceId(ruleId: string, scheduled: RecurrenceDate): string {

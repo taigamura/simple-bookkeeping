@@ -318,12 +318,32 @@ function isCategoryEntity(value: unknown): value is CategoryEntity {
     && txTypes.includes(value.type as TxType);
 }
 
-function isHouseholdState(value: unknown): value is HouseholdState {
+/**
+ * Validate and normalize a household slice on its own.
+ *
+ * The full-fidelity backup (#114) restores this slice without the surrounding
+ * device payload, so it needs the same per-record normalization `load()`
+ * applies — most importantly, legacy rows saved before timestamps existed get
+ * the deterministic inferred timestamp rather than being rejected.
+ */
+export function normalizeHouseholdState(value: unknown): HouseholdState | null {
   if (!isRecord(value) || !Array.isArray(value.entries) || !Array.isArray(value.recurrenceRules)
     || !Array.isArray(value.categories) || !value.categories.every(isCategoryEntity)
-    || !isBudgets(value.budgets) || !isCurrency(value.currency)) return false;
-  return value.entries.every((item) => normalizeTransaction(item) !== null)
-    && value.recurrenceRules.every((item) => normalizeRecurrenceRule(item) !== null);
+    || !isBudgets(value.budgets) || !isCurrency(value.currency)) return null;
+  const entries = value.entries.map((item) => normalizeTransaction(item));
+  const recurrenceRules = value.recurrenceRules.map((item) => normalizeRecurrenceRule(item));
+  if (entries.some((entry) => entry === null) || recurrenceRules.some((rule) => rule === null)) return null;
+  return {
+    entries: entries as Transaction[],
+    recurrenceRules: recurrenceRules as RecurrenceRule[],
+    categories: (value.categories as CategoryEntity[]).map((category) => ({ ...category })),
+    budgets: { ...value.budgets },
+    currency: { ...value.currency },
+  };
+}
+
+function isHouseholdState(value: unknown): value is HouseholdState {
+  return normalizeHouseholdState(value) !== null;
 }
 
 function isDeviceState(value: unknown): value is DeviceState {

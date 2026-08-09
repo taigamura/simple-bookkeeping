@@ -53,6 +53,23 @@ export {
   type RecoveryFailure,
 } from './recoveryPack';
 export {
+  HOUSEHOLD_BACKUP_FORMAT,
+  HOUSEHOLD_BACKUP_VERSION,
+  HOUSEHOLD_BACKUP_MIN_VERSION,
+  HOUSEHOLD_BACKUP_EXCLUDED_FIELDS,
+  createHouseholdBackup,
+  readHouseholdBackup,
+  previewHouseholdBackup,
+  restoreHouseholdBackup,
+  HouseholdBackupError,
+  type HouseholdBackup,
+  type HouseholdBackupPayload,
+  type HouseholdBackupPreview,
+  type HouseholdBackupRestore,
+  type HouseholdBackupStore,
+  type HouseholdBackupFailure,
+} from './householdBackup';
+export {
   DEFAULT_EXP_CATS,
   DEFAULT_INC_CATS,
   DEFAULT_CURRENCY,
@@ -174,6 +191,9 @@ export {
   validateSyncOperation,
   isSyncActorId,
   isSyncHouseholdId,
+  isSyncState,
+  isHouseholdConfigState,
+  isRecurrenceSyncState,
   type ActorId,
   type HouseholdId,
   type VersionVector,
