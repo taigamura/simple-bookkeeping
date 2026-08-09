@@ -72,8 +72,10 @@ an old materialized repeat cannot come back as an infinite series.
 (entries, rules, categories, budgets, tombstones, attributed transactions,
 history entries, applied operations) and writes nothing.
 
-`restoreHouseholdBackup` reads the current household as a checkpoint, then
-commits. If the write fails, the checkpoint is written back and the call fails
+`restoreHouseholdBackup` reads the current household as a checkpoint, derives
+the destination household identity from that checkpoint, and refuses a foreign
+file. Callers must first show `previewHouseholdBackup` and then pass the
+explicit confirmation boundary `{ confirm: true }` to commit. If the write fails, the checkpoint is written back and the call fails
 with `restore-failed`, so a failed restore never leaves half a household behind.
 A restore that succeeds returns a `rollback()` that puts the prior household
 back, for the user who restored the wrong file.

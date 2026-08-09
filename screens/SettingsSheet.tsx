@@ -70,6 +70,8 @@ interface SettingsSheetProps {
   onOpenHouseholdSync?: () => void;
   onExportData: () => void;
   onImportZaim: () => void;
+  onExportHouseholdBackup?: () => void;
+  onImportHouseholdBackup?: () => void;
   /** Whether a corrupt-stash blob exists (#28) — gates the recovery row. */
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
@@ -98,6 +100,8 @@ export function SettingsSheet({
   onOpenHouseholdSync,
   onExportData,
   onImportZaim,
+  onExportHouseholdBackup,
+  onImportHouseholdBackup,
   hasCorruptStash,
   onExportCorruptStash,
   onDeleteAllData,
@@ -130,6 +134,8 @@ export function SettingsSheet({
         <DataActions
           onExportData={onExportData}
           onImportZaim={onImportZaim}
+          onExportHouseholdBackup={onExportHouseholdBackup}
+          onImportHouseholdBackup={onImportHouseholdBackup}
           hasCorruptStash={hasCorruptStash}
           onExportCorruptStash={onExportCorruptStash}
           onDeleteAllData={onDeleteAllData}
@@ -498,12 +504,16 @@ function RepeatsLink({ count, onPress }: { count: number; onPress: () => void })
 function DataActions({
   onExportData,
   onImportZaim,
+  onExportHouseholdBackup,
+  onImportHouseholdBackup,
   hasCorruptStash,
   onExportCorruptStash,
   onDeleteAllData,
 }: {
   onExportData: () => void;
   onImportZaim: () => void;
+  onExportHouseholdBackup?: () => void;
+  onImportHouseholdBackup?: () => void;
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
   onDeleteAllData: () => void;
@@ -525,6 +535,24 @@ function DataActions({
           {strings.settings.exportData}
         </Txt>
       </Pressable>
+
+      {(onExportHouseholdBackup || onImportHouseholdBackup) && (
+        <>
+          <Txt variant="microLabel" tone="dim" style={styles.backupLabel}>{strings.settings.householdBackup}</Txt>
+          {onExportHouseholdBackup && (
+            <Pressable onPress={onExportHouseholdBackup} accessibilityRole="button"
+              accessibilityLabel={strings.settings.exportHouseholdBackup} style={rowStyle}>
+              <Txt variant="listItem" tone="ink">{strings.settings.exportHouseholdBackup}</Txt>
+            </Pressable>
+          )}
+          {onImportHouseholdBackup && (
+            <Pressable onPress={onImportHouseholdBackup} accessibilityRole="button"
+              accessibilityLabel={strings.settings.importHouseholdBackup} style={rowStyle}>
+              <Txt variant="listItem" tone="ink">{strings.settings.importHouseholdBackup}</Txt>
+            </Pressable>
+          )}
+        </>
+      )}
 
       <Pressable
         onPress={onImportZaim}
@@ -604,6 +632,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  backupLabel: { marginTop: 8 },
   linkRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -113,6 +113,18 @@ describe('full-fidelity household backup', () => {
     expect(createHouseholdBackup(backup.payload, { createdAt })).toBe(file);
   });
 
+  it('preserves an explicitly stored transaction repeat value', () => {
+    const repeatingEntry = { ...groceries, repeat: 'monthly' as const };
+    const repeatingPayload = {
+      ...payload,
+      household: { ...payload.household, entries: [repeatingEntry] },
+      sync: { ...payload.sync, entries: [repeatingEntry] },
+    };
+    const restored = readHouseholdBackup(createHouseholdBackup(repeatingPayload, { createdAt }));
+    expect(restored.payload.household.entries[0].repeat).toBe('monthly');
+    expect(restored.payload.sync.entries[0].repeat).toBe('monthly');
+  });
+
   it('excludes device-local preferences even when a file carries them', () => {
     const tampered = JSON.parse(file) as { payload: Record<string, unknown> };
     tampered.payload.device = { theme: 'dark', motion: 'off', expenseCategoryOrder: ['cat-food'] };
@@ -164,7 +176,7 @@ describe('full-fidelity household backup', () => {
     expect(previewHouseholdBackup(minimal).includesConfig).toBe(false);
   });
 
-  it('rejects corrupt, newer, and cross-household files', () => {
+  it('rejects corrupt, newer, and cross-household files', async () => {
     expect(() => readHouseholdBackup('not json')).toThrow(new HouseholdBackupError('invalid-backup'));
     expect(() => readHouseholdBackup(JSON.stringify({ format: 'kaji.csv', version: 1 })))
       .toThrow(new HouseholdBackupError('invalid-backup'));
@@ -180,8 +192,20 @@ describe('full-fidelity household backup', () => {
     foreign.payload.recurrence.householdId = 'other-home';
     expect(() => readHouseholdBackup(JSON.stringify(foreign)))
       .toThrow(new HouseholdBackupError('wrong-household'));
-    expect(() => readHouseholdBackup(file, { householdId: 'other-home' }))
-      .toThrow(new HouseholdBackupError('wrong-household'));
+    expect(() => restoreHouseholdBackup(memoryStore({ ...payload, sync: createSyncState('other-home') }), file, { confirm: true }))
+      .rejects.toEqual(new HouseholdBackupError('wrong-household'));
+  });
+
+  it('rejects deep metadata corruption and projection disagreement before restore', () => {
+    const tampered = JSON.parse(file) as { payload: HouseholdBackupPayload };
+    tampered.payload.sync.history[salary.id][0].transaction!.amount = -1;
+    expect(() => readHouseholdBackup(JSON.stringify(tampered)))
+      .toThrow(new HouseholdBackupError('invalid-backup'));
+
+    const mismatch = JSON.parse(file) as { payload: HouseholdBackupPayload };
+    mismatch.payload.household.currency = { code: 'USD', symbol: '$' };
+    expect(() => readHouseholdBackup(JSON.stringify(mismatch)))
+      .toThrow(new HouseholdBackupError('invalid-backup'));
   });
 
   it('rejects a file whose header claims a different household than its payload', () => {
@@ -196,7 +220,9 @@ describe('full-fidelity household backup', () => {
       sync: createSyncState(HOUSEHOLD),
     };
     const store = memoryStore(before);
-    const restore = await restoreHouseholdBackup(store, file);
+    await expect(restoreHouseholdBackup(store, file)).rejects
+      .toEqual(new HouseholdBackupError('confirmation-required'));
+    const restore = await restoreHouseholdBackup(store, file, { confirm: true });
     expect(restore.preview.entries).toBe(1);
     expect(store.current.sync.appliedOperations).toEqual(payload.sync.appliedOperations);
 
@@ -214,7 +240,7 @@ describe('full-fidelity household backup', () => {
         if (saved.length === 1) throw new Error('disk full');
       },
     };
-    await expect(restoreHouseholdBackup(store, file)).rejects
+    await expect(restoreHouseholdBackup(store, file, { confirm: true })).rejects
       .toEqual(new HouseholdBackupError('restore-failed'));
     expect(saved).toHaveLength(2);
     expect(saved[1]).toBe(before);

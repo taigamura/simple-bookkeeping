@@ -270,7 +270,7 @@ function normalizeRecurrenceRule(value: unknown): RecurrenceRule | null {
   return normalized;
 }
 
-function normalizeTransaction(value: unknown): Transaction | null {
+function normalizeTransaction(value: unknown, preserveRepeat = false): Transaction | null {
   if (!isRecord(value)) return null;
   if (typeof value.id !== 'string' || value.id.length === 0) return null;
   if (!isInteger(value.y)) return null;
@@ -300,8 +300,11 @@ function normalizeTransaction(value: unknown): Transaction | null {
     note: value.note,
   };
   // Materialized repeats from the pre-series schema are historical entries,
-  // not recurrence definitions. Never recreate an infinite series on load.
-  normalized.repeat = 'never';
+  // not recurrence definitions. Backup staging opts into preserving an
+  // explicitly stored value because a full-fidelity file must be byte-stable.
+  normalized.repeat = preserveRepeat && repeats.includes(value.repeat as Repeat)
+    ? value.repeat as Repeat
+    : 'never';
   if (value.timestamp === undefined || value.timestampInferred === true) {
     normalized.timestampInferred = true;
   }
@@ -326,11 +329,11 @@ function isCategoryEntity(value: unknown): value is CategoryEntity {
  * applies — most importantly, legacy rows saved before timestamps existed get
  * the deterministic inferred timestamp rather than being rejected.
  */
-export function normalizeHouseholdState(value: unknown): HouseholdState | null {
+export function normalizeHouseholdState(value: unknown, preserveRepeat = false): HouseholdState | null {
   if (!isRecord(value) || !Array.isArray(value.entries) || !Array.isArray(value.recurrenceRules)
     || !Array.isArray(value.categories) || !value.categories.every(isCategoryEntity)
     || !isBudgets(value.budgets) || !isCurrency(value.currency)) return null;
-  const entries = value.entries.map((item) => normalizeTransaction(item));
+  const entries = value.entries.map((item) => normalizeTransaction(item, preserveRepeat));
   const recurrenceRules = value.recurrenceRules.map((item) => normalizeRecurrenceRule(item));
   if (entries.some((entry) => entry === null) || recurrenceRules.some((rule) => rule === null)) return null;
   return {

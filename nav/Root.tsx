@@ -45,6 +45,12 @@ import {
   type YM,
   type ZaimSkipTally,
   householdSyncStatus,
+  createHouseholdBackup,
+  previewHouseholdBackup,
+  restoreHouseholdBackup,
+  createSyncState,
+  type HouseholdBackupPayload,
+  type HouseholdBackupStore,
   type SyncHistoryRow,
   type SyncStatusModel,
 } from '../domain';
@@ -539,6 +545,58 @@ function Shell({
     }
   };
 
+  // Local household backup is deliberately separate from the portable CSV.
+  // This app currently has one local household projection, so its identity is
+  // loaded from the same checkpoint used by restore rather than accepted from
+  // the picker/caller. No device preferences or pairing key material enter it.
+  const householdBackupPayload = (): HouseholdBackupPayload => ({
+    household: state.household,
+    sync: createSyncState('local-household', state.household.entries),
+  });
+  const householdBackupStore: HouseholdBackupStore = {
+    load: async () => householdBackupPayload(),
+    save: async (payload) => {
+      const saved = await update({
+        entries: payload.household.entries,
+        recurrenceRules: payload.household.recurrenceRules,
+        expCats: payload.household.categories.filter((category) => category.type === 'expense').map((category) => category.label),
+        incCats: payload.household.categories.filter((category) => category.type === 'income').map((category) => category.label),
+        budgets: payload.household.budgets,
+        currency: payload.household.currency,
+        household: payload.household,
+      });
+      if (saved === false) throw new Error('backup restore save failed');
+    },
+  };
+  const exportHouseholdBackup = async () => {
+    try {
+      await shareTextFile('kaji-household-backup.json', createHouseholdBackup(householdBackupPayload()));
+    } catch {
+      notify(strings.zaim.exportFailedTitle, strings.zaim.exportFailedMessage);
+    }
+  };
+  const importHouseholdBackup = async () => {
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
+      if (picked.canceled) return;
+      const asset = picked.assets[0];
+      const text = Platform.OS === 'web' ? await asset.file!.text() : await new File(asset.uri).text();
+      const preview = previewHouseholdBackup(text);
+      confirm(
+        strings.settings.importHouseholdBackup,
+        `${preview.entries} entries, ${preview.recurrenceRules} repeating rules, ${preview.categories} categories, and ${preview.budgets} budgets will replace this household.`,
+        () => {
+          void restoreHouseholdBackup(householdBackupStore, text, { confirm: true }).catch(() => {
+            notify(strings.zaim.importFailedTitle, strings.zaim.importFailedMessage);
+          });
+        },
+        strings.common.import,
+      );
+    } catch {
+      notify(strings.zaim.importFailedTitle, strings.zaim.importFailedMessage);
+    }
+  };
+
   // exportCorruptStash(): share the raw unreadable blob kept by the #28 safety
   // net, so a stuck user can get their pre-corruption data off the device.
   const exportCorruptStash = async () => {
@@ -894,6 +952,8 @@ function Shell({
             onOpenHouseholdSync={openHouseholdSync}
             onExportData={exportData}
             onImportZaim={importZaim}
+            onExportHouseholdBackup={exportHouseholdBackup}
+            onImportHouseholdBackup={importHouseholdBackup}
             hasCorruptStash={hasCorruptStash}
             onExportCorruptStash={exportCorruptStash}
             onDeleteAllData={deleteAllData}

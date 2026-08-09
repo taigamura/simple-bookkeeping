@@ -132,6 +132,9 @@ export interface Strings {
     data: string;
     exportData: string;
     importFromZaim: string;
+    householdBackup: string;
+    exportHouseholdBackup: string;
+    importHouseholdBackup: string;
     exportUnreadableBackup: string;
     deleteAllData: string;
     deleteAllDataConfirmMessage: string;
@@ -334,6 +337,9 @@ export const en: Strings = {
     data: 'Data',
     exportData: 'Export data',
     importFromZaim: 'Import from Zaim',
+    householdBackup: 'Full-fidelity household backup',
+    exportHouseholdBackup: 'Export household backup',
+    importHouseholdBackup: 'Restore household backup',
     exportUnreadableBackup: 'Export unreadable backup',
     deleteAllData: 'Delete all data',
     deleteAllDataConfirmMessage: 'This will permanently delete all entries, repeating series, and budgets. Categories, currency, and settings will be preserved.',
@@ -534,6 +540,9 @@ export const ja: Strings = {
     data: 'データ',
     exportData: 'データを書き出す',
     importFromZaim: 'Zaimから読み込む',
+    householdBackup: '家庭の完全バックアップ',
+    exportHouseholdBackup: '家庭のバックアップを書き出す',
+    importHouseholdBackup: '家庭のバックアップを復元',
     exportUnreadableBackup: '読み取れないバックアップを書き出す',
     deleteAllData: 'すべてのデータを削除',
     deleteAllDataConfirmMessage: 'すべての記録、繰り返し、および予算が完全に削除されます。カテゴリ、通貨、および設定は保持されます。',

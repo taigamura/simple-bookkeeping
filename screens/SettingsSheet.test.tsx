@@ -99,6 +99,17 @@ describe('SettingsSheet', () => {
     expect(onExportData).toHaveBeenCalled();
   });
 
+  it('separates full-fidelity household backup actions from portable CSV', () => {
+    const onExportHouseholdBackup = jest.fn();
+    const onImportHouseholdBackup = jest.fn();
+    renderSheet({ onExportHouseholdBackup, onImportHouseholdBackup });
+    expect(screen.getByText('Full-fidelity household backup')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Export household backup'));
+    fireEvent.press(screen.getByLabelText('Restore household backup'));
+    expect(onExportHouseholdBackup).toHaveBeenCalled();
+    expect(onImportHouseholdBackup).toHaveBeenCalled();
+  });
+
   it('does not offer sample data loading', () => {
     renderSheet();
     expect(screen.queryByText('Load sample data')).toBeNull();

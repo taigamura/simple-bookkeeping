@@ -109,6 +109,7 @@ export type HouseholdBackupFailure =
   | 'invalid-backup'
   | 'unsupported-version'
   | 'wrong-household'
+  | 'confirmation-required'
   | 'restore-failed';
 
 export class HouseholdBackupError extends Error {
@@ -141,9 +142,9 @@ function stagePayload(value: unknown): HouseholdBackupPayload {
   // Resolve lazily: store/schema imports the domain barrel for its field
   // validators, and this module is itself exported by that barrel.
   const { normalizeHouseholdState } = require('../store/schema') as {
-    normalizeHouseholdState(value: unknown): HouseholdState | null;
+    normalizeHouseholdState(value: unknown, preserveRepeat?: boolean): HouseholdState | null;
   };
-  const household = normalizeHouseholdState(value.household);
+  const household = normalizeHouseholdState(value.household, true);
   if (!household || !isSyncState(value.sync)) throw new HouseholdBackupError('invalid-backup');
   if (value.config !== undefined && !isHouseholdConfigState(value.config)) {
     throw new HouseholdBackupError('invalid-backup');
@@ -159,6 +160,37 @@ function stagePayload(value: unknown): HouseholdBackupPayload {
   if ((config && config.householdId !== sync.householdId)
     || (recurrence && recurrence.householdId !== sync.householdId)) {
     throw new HouseholdBackupError('wrong-household');
+  }
+  const legacyTimestampIds = new Set(
+    (value.household as Record<string, unknown>).entries instanceof Array
+      ? ((value.household as Record<string, unknown>).entries as Array<Record<string, unknown>>)
+        .filter((entry) => entry.timestamp === undefined).map((entry) => entry.id)
+      : [],
+  );
+  const comparableEntries = (entries: unknown) => (entries as Array<Record<string, unknown>>).map((entry) => {
+    const { timestampInferred, ...rest } = entry;
+    const comparable = {
+      ...rest,
+      timestamp: entry.timestamp ?? new Date(Date.UTC(entry.y as number, entry.m as number, entry.day as number, 12)).toISOString(),
+      repeat: entry.repeat ?? 'never',
+    };
+    if (timestampInferred === true || legacyTimestampIds.has(entry.id)) {
+      const { timestamp: _timestamp, ...withoutTimestamp } = comparable;
+      return withoutTimestamp;
+    }
+    return comparable;
+  });
+  const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
+  if (!same(comparableEntries(household.entries), comparableEntries(sync.entries))) {
+    throw new HouseholdBackupError('invalid-backup');
+  }
+  if (recurrence && !same(household.recurrenceRules, recurrence.rules)) {
+    throw new HouseholdBackupError('invalid-backup');
+  }
+  if (config && (!same(household.categories, config.categories)
+    || !same(household.budgets, config.budgets)
+    || !same(household.currency, config.currency))) {
+    throw new HouseholdBackupError('invalid-backup');
   }
   return {
     household,
@@ -220,7 +252,6 @@ export function createHouseholdBackup(
  */
 export function readHouseholdBackup(
   text: string,
-  options: { householdId?: HouseholdId } = {},
 ): HouseholdBackup {
   if (typeof text !== 'string' || text.length === 0 || text.length > MAX_BACKUP_BYTES) {
     throw new HouseholdBackupError('invalid-backup');
@@ -240,9 +271,6 @@ export function readHouseholdBackup(
   if (parsed.householdId !== payload.sync.householdId) {
     throw new HouseholdBackupError('wrong-household');
   }
-  if (options.householdId !== undefined && options.householdId !== payload.sync.householdId) {
-    throw new HouseholdBackupError('wrong-household');
-  }
   return {
     format: HOUSEHOLD_BACKUP_FORMAT,
     version,
@@ -255,9 +283,8 @@ export function readHouseholdBackup(
 /** Validate a file and describe what a restore would bring in, writing nothing. */
 export function previewHouseholdBackup(
   text: string,
-  options: { householdId?: HouseholdId } = {},
 ): HouseholdBackupPreview {
-  return previewOf(readHouseholdBackup(text, options));
+  return previewOf(readHouseholdBackup(text));
 }
 
 /**
@@ -269,10 +296,16 @@ export function previewHouseholdBackup(
 export async function restoreHouseholdBackup(
   store: HouseholdBackupStore,
   text: string,
-  options: { householdId?: HouseholdId } = {},
+  options: { confirm?: boolean } = {},
 ): Promise<HouseholdBackupRestore> {
-  const backup = readHouseholdBackup(text, options);
+  const backup = readHouseholdBackup(text);
   const checkpoint = await store.load();
+  // The destination identity belongs to the loaded checkpoint. A caller must
+  // not be able to redirect a restore by supplying an optional household ID.
+  if (!checkpoint.sync || checkpoint.sync.householdId !== backup.householdId) {
+    throw new HouseholdBackupError('wrong-household');
+  }
+  if (options.confirm !== true) throw new HouseholdBackupError('confirmation-required');
   try {
     await store.save(backup.payload);
   } catch {

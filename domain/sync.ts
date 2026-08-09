@@ -238,6 +238,14 @@ function isCurrency(value: unknown): value is Currency {
   return isRecord(value) && CURRENCIES.some((currency) => currency.code === value.code && currency.symbol === value.symbol);
 }
 
+function isDateKey(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  return daysInMonth(Number(match[1]), Number(match[2]) - 1) >= Number(match[3])
+    && Number(match[2]) >= 1 && Number(match[2]) <= 12 && Number(match[3]) >= 1;
+}
+
 function isTransaction(value: unknown): value is Transaction {
   if (!isRecord(value) || !isId(value.id) || !isTimestamp(value.timestamp)) return false;
   if (!isInteger(value.y) || !isInteger(value.m) || value.m < 0 || value.m > 11) return false;
@@ -246,6 +254,14 @@ function isTransaction(value: unknown): value is Transaction {
   if (!isInteger(value.amount) || value.amount <= 0) return false;
   if (typeof value.category !== 'string' || value.category.length === 0) return false;
   if (typeof value.note !== 'string') return false;
+  if (value.accountId !== undefined && !isId(value.accountId)) return false;
+  if (value.categoryId !== undefined && !isId(value.categoryId)) return false;
+  if (value.importProvenance !== undefined) {
+    const provenance = value.importProvenance;
+    if (!isRecord(provenance) || typeof provenance.provider !== 'string' || provenance.provider.length === 0
+      || typeof provenance.sourceId !== 'string' || provenance.sourceId.length === 0
+      || !isInteger(provenance.row) || provenance.row < 0) return false;
+  }
   return value.repeat === undefined || value.repeat === 'never' || value.repeat === 'daily'
     || value.repeat === 'monthly' || value.repeat === 'yearly';
 }
@@ -280,6 +296,31 @@ function vectorDominates(left: VersionVector, right: VersionVector): boolean {
   return strictlyGreater;
 }
 
+function isTombstone(value: unknown): value is Tombstone {
+  return isRecord(value) && isId(value.operationId) && isId(value.actorId)
+    && isInteger(value.sequence) && value.sequence >= 1
+    && isVersionVector(value.version)
+    && value.operationId === operationId(value.actorId, value.sequence)
+    && value.version[value.actorId] === value.sequence;
+}
+
+function isAttribution(value: unknown): value is TransactionAttribution {
+  return isRecord(value) && isId(value.createdBy) && isId(value.lastEditedBy)
+    && isId(value.createdOperationId) && isId(value.lastOperationId);
+}
+
+function isSyncHistoryEntry(value: unknown, transactionId: string, householdId: string): value is SyncHistoryEntry {
+  if (!isRecord(value) || !isId(value.operationId) || !isId(value.actorId)
+    || !isInteger(value.sequence) || value.sequence < 1 || !isVersionVector(value.version)
+    || value.operationId !== operationId(value.actorId, value.sequence)
+    || value.version[value.actorId] !== value.sequence
+    || !['add-transaction', 'edit-transaction', 'delete-transaction'].includes(value.kind as string)) return false;
+  if (value.kind === 'delete-transaction') return value.transaction === undefined || isTransaction(value.transaction);
+  return isTransaction(value.transaction)
+    && value.transaction.id === transactionId
+    && validateSyncOperation({ ...value, householdId, transactionId }, householdId) === null;
+}
+
 function validState(state: SyncState): boolean {
   return isId(state.householdId)
     && Array.isArray(state.entries)
@@ -290,11 +331,13 @@ function validState(state: SyncState): boolean {
     && isRecord(state.transactionOperations)
     && Object.entries(state.transactionOperations).every(([transactionId, operationId]) => isId(transactionId) && isId(operationId))
     && isRecord(state.history)
-    && Object.entries(state.history).every(([transactionId, entries]) => isId(transactionId) && Array.isArray(entries))
+    && new Set(state.appliedOperations).size === state.appliedOperations.length
+    && Object.entries(state.history).every(([transactionId, entries]) => isId(transactionId) && Array.isArray(entries)
+      && entries.every((entry) => isSyncHistoryEntry(entry, transactionId, state.householdId)))
     && isRecord(state.tombstones)
-    && Object.entries(state.tombstones).every(([transactionId, tombstone]) => isId(transactionId) && isRecord(tombstone))
+    && Object.entries(state.tombstones).every(([transactionId, tombstone]) => isId(transactionId) && isTombstone(tombstone))
     && isRecord(state.attribution)
-    && Object.entries(state.attribution).every(([transactionId, attribution]) => isId(transactionId) && isRecord(attribution));
+    && Object.entries(state.attribution).every(([transactionId, attribution]) => isId(transactionId) && isAttribution(attribution));
 }
 
 /** Validate a sync state that arrived from storage, a transfer, or a backup file. */
@@ -374,11 +417,29 @@ function validConfigState(state: HouseholdConfigState): boolean {
     && isRecord(state.budgets) && Object.entries(state.budgets).every(([id, amount]) => isId(id) && isInteger(amount) && amount > 0)
     && isInteger(state.totalBudget) && state.totalBudget >= 0
     && Array.isArray(state.appliedOperations) && state.appliedOperations.every(isId)
-    && isRecord(state.categoryHistory) && isRecord(state.budgetHistory)
-    && Array.isArray(state.totalBudgetHistory) && Array.isArray(state.currencyHistory)
+    && new Set(state.appliedOperations).size === state.appliedOperations.length
+    && isRecord(state.categoryHistory) && Object.entries(state.categoryHistory).every(([id, history]) => isId(id)
+      && Array.isArray(history) && history.every(validCategory))
+    && isRecord(state.budgetHistory) && Object.entries(state.budgetHistory).every(([id, history]) => isId(id)
+      && Array.isArray(history) && history.every((amount) => isInteger(amount) && amount > 0))
+    && Array.isArray(state.totalBudgetHistory) && state.totalBudgetHistory.every((amount) => isInteger(amount) && amount >= 0)
+    && Array.isArray(state.currencyHistory) && state.currencyHistory.every(isCurrency)
     && isRecord(state.deletedCategories) && isRecord(state.fieldOperations)
+    && Object.entries(state.deletedCategories).every(([id, operationId]) => isId(id) && isId(operationId))
+    && Object.entries(state.fieldOperations).every(([field, operationId]) => field.length > 0 && isId(operationId))
     && Array.isArray(state.operations) && state.operations.every((operation) => validateConfigOperation(operation, state.householdId) === null)
-    && Array.isArray(state.history);
+    && new Set(state.operations.map((operation) => operation.operationId)).size === state.operations.length
+    && Array.isArray(state.history) && state.history.every((entry) => isRecord(entry)
+      && isId(entry.operationId) && isId(entry.actorId) && isInteger(entry.sequence) && entry.sequence >= 1
+      && isVersionVector(entry.version) && entry.operationId === operationId(entry.actorId, entry.sequence)
+      && entry.version[entry.actorId] === entry.sequence && typeof entry.field === 'string'
+      && ['add-category', 'rename-category', 'delete-category', 'set-category-budget', 'set-total-budget', 'set-currency'].includes(entry.kind as string)
+      && (entry.kind === 'add-category' ? validCategory(entry.value as SharedCategory)
+        : entry.kind === 'rename-category' ? typeof entry.value === 'string' && entry.value.trim().length > 0
+          : entry.kind === 'delete-category' ? entry.value === null
+            : entry.kind === 'set-category-budget' ? (entry.value === null || (isInteger(entry.value) && entry.value > 0))
+              : entry.kind === 'set-total-budget' ? isInteger(entry.value) && entry.value >= 0
+                : isCurrency(entry.value)));
 }
 
 /** Validate a household configuration state restored from outside the app. */
@@ -846,14 +907,14 @@ function isRecurrenceDate(value: unknown): value is RecurrenceDate {
 
 function isRecurrenceRule(value: unknown): value is RecurrenceRule {
   if (!isRecord(value) || !isId(value.id) || !isTimestamp(value.timestamp)
-    || !isRecurrenceDate(value.start) || !isInteger(value.anchorDay) || value.anchorDay < 1
+    || !isRecurrenceDate(value.start) || !isInteger(value.anchorDay) || value.anchorDay < 1 || value.anchorDay > 31
     || value.type !== 'income' && value.type !== 'expense'
     || !isInteger(value.amount) || value.amount <= 0 || typeof value.category !== 'string'
     || value.category.length === 0 || typeof value.note !== 'string'
     || !['daily', 'monthly', 'yearly'].includes(value.repeat as string)
     || !['after', 'before', 'off'].includes(value.weekendShift as string)
-    || !Array.isArray(value.exceptions) || !value.exceptions.every((item) => typeof item === 'string')) return false;
-  return value.endsBefore === undefined || (typeof value.endsBefore === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.endsBefore));
+    || !Array.isArray(value.exceptions) || !value.exceptions.every(isDateKey)) return false;
+  return value.endsBefore === undefined || isDateKey(value.endsBefore);
 }
 
 function recurrenceRuleId(operation: RecurrenceSyncOperation): string {
@@ -901,10 +962,22 @@ export function validateRecurrenceSyncOperation(
 }
 
 function validRecurrenceState(state: RecurrenceSyncState): boolean {
-  return isId(state.householdId) && state.rules.every(isRecurrenceRule)
+  const validHistory = (id: string, entry: unknown) => isRecord(entry) && isId(entry.operationId)
+    && isId(entry.actorId) && isInteger(entry.sequence) && entry.sequence >= 1
+    && isVersionVector(entry.version) && entry.operationId === operationId(entry.actorId, entry.sequence)
+    && entry.version[entry.actorId] === entry.sequence
+    && ['add-recurrence-rule', 'edit-recurrence-rule', 'exception-recurrence', 'split-recurrence-rule', 'delete-recurrence-rule'].includes(entry.kind as string)
+    && (entry.rule === undefined || (isRecurrenceRule(entry.rule)
+      && (entry.rule.id === id || (entry.kind === 'split-recurrence-rule' && entry.rule.id.startsWith(`${id}:split:`)))));
+  return isId(state.householdId) && Array.isArray(state.rules) && state.rules.every(isRecurrenceRule)
     && isVersionVector(state.versionVector) && Array.isArray(state.appliedOperations)
-    && state.appliedOperations.every(isId) && isRecord(state.ruleOperations)
-    && isRecord(state.history) && isRecord(state.tombstones) && isRecord(state.exceptions);
+    && state.appliedOperations.every(isId) && new Set(state.appliedOperations).size === state.appliedOperations.length
+    && isRecord(state.ruleOperations) && Object.entries(state.ruleOperations).every(([id, operation]) => isId(id) && isId(operation))
+    && isRecord(state.history) && Object.entries(state.history).every(([id, history]) => isId(id) && Array.isArray(history)
+      && history.every((entry) => validHistory(id, entry)))
+    && isRecord(state.tombstones) && Object.entries(state.tombstones).every(([id, tombstone]) => isId(id) && isTombstone(tombstone))
+    && isRecord(state.exceptions) && Object.entries(state.exceptions).every(([id, exceptions]) => isId(id)
+      && Array.isArray(exceptions) && exceptions.every(isDateKey));
 }
 
 /** Validate a recurrence sync state restored from outside the app. */
