@@ -14,6 +14,10 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.taigamura.kaji",
       "buildNumber": "1",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Kaji connects to your paired household phone when both apps are open and nearby.",
+        "NSBonjourServices": ["_kaji-sync._tcp"]
+      },
       "config": {
         "usesNonExemptEncryption": false
       }

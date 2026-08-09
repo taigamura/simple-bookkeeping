@@ -195,6 +195,20 @@ export {
   type RecurrenceSyncApplyResult,
 } from './sync';
 export {
+  NEARBY_PROTOCOL_VERSION,
+  NEARBY_SERVICE_TYPE,
+  NearbySyncCoordinator,
+  createMultipeerConnectivityTransport,
+  nearbyDiscoveryInfo,
+  type NearbyPeer,
+  type NearbyTransport,
+  type NearbyTransportHandlers,
+  type MultipeerConnectivityModule,
+  type NearbyOperationBatch,
+  type NearbyOperationAck,
+  type NearbySyncCoordinatorOptions,
+} from '../platform/nearbySync';
+export {
   createHouseholdConfigState,
   addLocalCategory,
   renameLocalCategory,
