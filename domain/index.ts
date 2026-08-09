@@ -156,6 +156,15 @@ export {
   type SetCurrencyOperation,
   type HouseholdConfigOperation,
   type ConfigApplyResult,
+  type AddRecurrenceRuleOperation,
+  type EditRecurrenceRuleOperation,
+  type ExceptionRecurrenceOperation,
+  type SplitRecurrenceRuleOperation,
+  type DeleteRecurrenceRuleOperation,
+  type RecurrenceSyncOperation,
+  type RecurrenceHistoryEntry,
+  type RecurrenceSyncState,
+  type RecurrenceSyncApplyResult,
 } from './sync';
 export {
   createHouseholdConfigState,
@@ -167,6 +176,16 @@ export {
   setLocalCurrency,
   applyHouseholdConfigOperation,
   applyHouseholdConfigOperations,
+  createRecurrenceSyncState,
+  addLocalRecurrenceRule,
+  editLocalRecurrenceRule,
+  addRecurrenceException,
+  splitLocalRecurrenceRule,
+  deleteLocalRecurrenceRule,
+  applyRecurrenceSyncOperation,
+  applyRecurrenceSyncOperations,
+  validateRecurrenceSyncOperation,
+  stableOccurrenceId,
 } from './sync';
 export {
   pressKey,

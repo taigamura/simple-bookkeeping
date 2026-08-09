@@ -7,7 +7,7 @@
  */
 import { daysInMonth } from './calendar';
 import { CURRENCIES } from './categories';
-import type { Currency, Transaction, TxType } from './types';
+import type { Currency, RecurrenceDate, RecurrenceRule, Transaction, TxType } from './types';
 
 export type ActorId = string;
 export type HouseholdId = string;
@@ -129,6 +129,50 @@ export type SyncValidationError =
   | 'invalid-sequence'
   | 'invalid-version'
   | 'invalid-transaction';
+
+/** A recurrence rule is a replicated household record, separate from entries. */
+export interface AddRecurrenceRuleOperation {
+  kind: 'add-recurrence-rule';
+  operationId: string; householdId: HouseholdId; actorId: ActorId;
+  sequence: number; version: VersionVector; rule: RecurrenceRule;
+}
+export interface EditRecurrenceRuleOperation extends Omit<AddRecurrenceRuleOperation, 'kind' | 'rule'> {
+  kind: 'edit-recurrence-rule'; ruleId: string; rule: RecurrenceRule;
+}
+export interface ExceptionRecurrenceOperation extends Omit<AddRecurrenceRuleOperation, 'kind' | 'rule'> {
+  kind: 'exception-recurrence'; ruleId: string; scheduled: RecurrenceDate;
+}
+export interface SplitRecurrenceRuleOperation extends Omit<AddRecurrenceRuleOperation, 'kind' | 'rule'> {
+  kind: 'split-recurrence-rule'; ruleId: string; cutoff: string; rule: RecurrenceRule;
+}
+export interface DeleteRecurrenceRuleOperation extends Omit<AddRecurrenceRuleOperation, 'kind' | 'rule'> {
+  kind: 'delete-recurrence-rule'; ruleId: string;
+}
+export type RecurrenceSyncOperation = AddRecurrenceRuleOperation | EditRecurrenceRuleOperation
+  | ExceptionRecurrenceOperation | SplitRecurrenceRuleOperation | DeleteRecurrenceRuleOperation;
+
+export interface RecurrenceHistoryEntry {
+  operationId: string;
+  kind: RecurrenceSyncOperation['kind'];
+  actorId: ActorId; sequence: number; version: VersionVector;
+  rule?: RecurrenceRule;
+}
+
+export interface RecurrenceSyncState {
+  householdId: HouseholdId;
+  rules: RecurrenceRule[];
+  versionVector: VersionVector;
+  appliedOperations: string[];
+  ruleOperations: Record<string, string>;
+  history: Record<string, RecurrenceHistoryEntry[]>;
+  tombstones: Record<string, Tombstone>;
+  /** Exception facts are monotonic, so concurrent one-occurrence edits union. */
+  exceptions: Record<string, string[]>;
+}
+
+export interface RecurrenceSyncApplyResult {
+  state: RecurrenceSyncState; accepted: boolean; error?: SyncValidationError;
+}
 
 export interface SyncApplyResult {
   state: SyncState;
@@ -598,3 +642,193 @@ export function applySyncOperations(state: SyncState, operations: readonly unkno
 
 export function isSyncActorId(value: unknown): value is ActorId { return isId(value); }
 export function isSyncHouseholdId(value: unknown): value is HouseholdId { return isId(value); }
+
+function isRecurrenceDate(value: unknown): value is RecurrenceDate {
+  return isRecord(value) && isInteger(value.y) && isInteger(value.m) && value.m >= 0 && value.m <= 11
+    && isInteger(value.day) && value.day >= 1 && value.day <= daysInMonth(value.y, value.m);
+}
+
+function isRecurrenceRule(value: unknown): value is RecurrenceRule {
+  if (!isRecord(value) || !isId(value.id) || !isTimestamp(value.timestamp)
+    || !isRecurrenceDate(value.start) || !isInteger(value.anchorDay) || value.anchorDay < 1
+    || value.type !== 'income' && value.type !== 'expense'
+    || !isInteger(value.amount) || value.amount <= 0 || typeof value.category !== 'string'
+    || value.category.length === 0 || typeof value.note !== 'string'
+    || !['daily', 'monthly', 'yearly'].includes(value.repeat as string)
+    || !['after', 'before', 'off'].includes(value.weekendShift as string)
+    || !Array.isArray(value.exceptions) || !value.exceptions.every((item) => typeof item === 'string')) return false;
+  return value.endsBefore === undefined || (typeof value.endsBefore === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.endsBefore));
+}
+
+function recurrenceRuleId(operation: RecurrenceSyncOperation): string {
+  return operation.kind === 'add-recurrence-rule' ? operation.rule.id : operation.ruleId;
+}
+
+function recurrenceSplitId(ruleId: string, cutoff: string): string {
+  return `${ruleId}:split:${cutoff}`;
+}
+
+function validateRecurrenceOperation(
+  operation: unknown,
+  householdId: HouseholdId,
+): SyncValidationError | null {
+  if (!isRecord(operation) || ![
+    'add-recurrence-rule', 'edit-recurrence-rule', 'exception-recurrence',
+    'split-recurrence-rule', 'delete-recurrence-rule',
+  ].includes(operation.kind as string)) return 'invalid-operation';
+  if (operation.householdId !== householdId) return 'wrong-household';
+  if (!isId(operation.householdId) || !isId(operation.actorId) || !isInteger(operation.sequence)
+    || operation.sequence < 1 || !isVersionVector(operation.version)
+    || operation.version[operation.actorId] !== operation.sequence
+    || operation.operationId !== operationId(operation.actorId, operation.sequence)) return 'invalid-operation';
+  if (operation.kind === 'add-recurrence-rule' && !isRecurrenceRule(operation.rule)) return 'invalid-operation';
+  if (operation.kind !== 'add-recurrence-rule' && !isId(operation.ruleId)) return 'invalid-operation';
+  if (operation.kind === 'edit-recurrence-rule'
+    && (!isRecurrenceRule(operation.rule) || operation.rule.id !== operation.ruleId)) return 'invalid-operation';
+  if (operation.kind === 'exception-recurrence'
+    && !isRecurrenceDate(operation.scheduled)) return 'invalid-operation';
+  if (operation.kind === 'split-recurrence-rule') {
+    const cutoff = operation.cutoff;
+    const child = operation.rule;
+    const sourceId = operation.ruleId;
+    if (typeof cutoff !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(cutoff)
+      || !isId(sourceId) || !isRecurrenceRule(child) || child.id !== recurrenceSplitId(sourceId, cutoff)) return 'invalid-operation';
+  }
+  return null;
+}
+
+export function validateRecurrenceSyncOperation(
+  operation: unknown,
+  householdId?: HouseholdId,
+): SyncValidationError | null {
+  return validateRecurrenceOperation(operation, householdId ?? (isRecord(operation) && typeof operation.householdId === 'string' ? operation.householdId : ''));
+}
+
+function validRecurrenceState(state: RecurrenceSyncState): boolean {
+  return isId(state.householdId) && state.rules.every(isRecurrenceRule)
+    && isVersionVector(state.versionVector) && Array.isArray(state.appliedOperations)
+    && state.appliedOperations.every(isId) && isRecord(state.ruleOperations)
+    && isRecord(state.history) && isRecord(state.tombstones) && isRecord(state.exceptions);
+}
+
+export function stableOccurrenceId(ruleId: string, scheduled: RecurrenceDate): string {
+  if (!isId(ruleId) || !isRecurrenceDate(scheduled)) throw new Error('Invalid occurrence identity');
+  return `${ruleId}@${String(scheduled.y).padStart(4, '0')}-${String(scheduled.m + 1).padStart(2, '0')}-${String(scheduled.day).padStart(2, '0')}`;
+}
+
+export function createRecurrenceSyncState(
+  householdId: HouseholdId,
+  rules: RecurrenceRule[] = [],
+): RecurrenceSyncState {
+  if (!isId(householdId) || !rules.every(isRecurrenceRule)) throw new Error('Invalid recurrence sync state');
+  return {
+    householdId, rules: [...rules].sort((a, b) => a.id.localeCompare(b.id)), versionVector: {},
+    appliedOperations: [], ruleOperations: {}, history: {}, tombstones: {}, exceptions: {},
+  };
+}
+
+function recurrenceWinner(state: RecurrenceSyncState, id: string, incoming: RecurrenceSyncOperation): boolean {
+  const priorId = state.ruleOperations[id];
+  if (!priorId) return true;
+  const prior = state.history[id]?.find((entry) => entry.operationId === priorId);
+  const after = Boolean(prior && vectorDominates(incoming.version, prior.version));
+  const before = Boolean(prior && vectorDominates(prior.version, incoming.version));
+  return after || (!before && incoming.operationId < priorId);
+}
+
+function recurrenceHistoryRule(operation: RecurrenceSyncOperation): RecurrenceRule | undefined {
+  if (operation.kind === 'exception-recurrence' || operation.kind === 'delete-recurrence-rule') return undefined;
+  return operation.rule;
+}
+
+export function applyRecurrenceSyncOperation(
+  state: RecurrenceSyncState,
+  operation: unknown,
+): RecurrenceSyncApplyResult {
+  if (!validRecurrenceState(state)) return { state, accepted: false, error: 'invalid-state' };
+  const error = validateRecurrenceOperation(operation, state.householdId);
+  if (error) return { state, accepted: false, error };
+  const incoming = operation as RecurrenceSyncOperation;
+  if (state.appliedOperations.includes(incoming.operationId)) return { state, accepted: false };
+
+  const id = recurrenceRuleId(incoming);
+  const next: RecurrenceSyncState = {
+    ...state, rules: [...state.rules], versionVector: { ...state.versionVector },
+    appliedOperations: [...state.appliedOperations, incoming.operationId].sort(),
+    ruleOperations: { ...state.ruleOperations }, history: { ...state.history },
+    tombstones: { ...state.tombstones }, exceptions: Object.fromEntries(
+      Object.entries(state.exceptions).map(([key, values]) => [key, [...values]]),
+    ),
+  };
+  for (const [actor, sequence] of Object.entries(incoming.version)) next.versionVector[actor] = Math.max(next.versionVector[actor] ?? 0, sequence);
+  const historyEntry: RecurrenceHistoryEntry = {
+    operationId: incoming.operationId, kind: incoming.kind, actorId: incoming.actorId,
+    sequence: incoming.sequence, version: cloneVector(incoming.version),
+    ...(recurrenceHistoryRule(incoming) ? { rule: recurrenceHistoryRule(incoming) } : {}),
+  };
+  next.history[id] = [...(next.history[id] ?? []), historyEntry].sort((a, b) => a.operationId.localeCompare(b.operationId));
+
+  if (incoming.kind === 'exception-recurrence') {
+    const key = stableOccurrenceId(incoming.ruleId, incoming.scheduled).split('@')[1];
+    next.exceptions[id] = [...new Set([...(next.exceptions[id] ?? []), key])].sort();
+    next.rules = next.rules.map((rule) => rule.id === id
+      ? { ...rule, exceptions: [...new Set([...rule.exceptions, key])].sort() } : rule);
+  } else if (incoming.kind === 'delete-recurrence-rule') {
+    const prior = next.tombstones[id];
+    if (!prior || incoming.operationId < prior.operationId) {
+      next.tombstones[id] = { operationId: incoming.operationId, actorId: incoming.actorId, sequence: incoming.sequence, version: cloneVector(incoming.version) };
+    }
+    next.rules = next.rules.filter((rule) => rule.id !== id);
+    next.ruleOperations[id] = next.tombstones[id].operationId;
+  } else if (!next.tombstones[id] && recurrenceWinner(next, id, incoming)) {
+    const rule = { ...incoming.rule, exceptions: [...new Set([...(incoming.rule.exceptions ?? []), ...(next.exceptions[id] ?? [])])].sort() };
+    if (incoming.kind === 'split-recurrence-rule') {
+      // A split is one deterministic fact: truncate the source and create the
+      // child whose identity is derived from source + cutoff. The child rule
+      // is independently conflict-ordered, so delivery order cannot duplicate
+      // or fork a household segment.
+      next.rules = next.rules.map((item) => item.id === incoming.ruleId
+        ? { ...item, endsBefore: incoming.cutoff } : item);
+      next.ruleOperations[incoming.ruleId] = incoming.operationId;
+      if (!next.rules.some((item) => item.id === incoming.ruleId)) {
+        const source = next.history[incoming.ruleId]?.find((entry) => entry.rule)?.rule;
+        if (source) next.rules.push({ ...source, endsBefore: incoming.cutoff });
+      }
+      const childPrior = next.ruleOperations[rule.id];
+      if (!childPrior || incoming.operationId < childPrior) {
+        next.rules = [...next.rules.filter((item) => item.id !== rule.id), rule];
+        next.ruleOperations[rule.id] = incoming.operationId;
+      }
+    } else {
+      next.rules = [...next.rules.filter((item) => item.id !== id), rule];
+      next.ruleOperations[id] = incoming.operationId;
+    }
+  }
+  next.rules.sort((a, b) => a.id.localeCompare(b.id));
+  return { state: next, accepted: true };
+}
+
+function makeLocalRecurrenceOperation<T extends RecurrenceSyncOperation>(
+  state: RecurrenceSyncState,
+  actorId: ActorId,
+  operation: Omit<T, 'operationId' | 'sequence' | 'version' | 'householdId' | 'actorId'>,
+): { operation: T; state: RecurrenceSyncState } {
+  if (!validRecurrenceState(state) || !isId(actorId)) throw new Error('Invalid local recurrence operation');
+  const sequence = (state.versionVector[actorId] ?? 0) + 1;
+  const full = { ...operation, operationId: operationId(actorId, sequence), householdId: state.householdId, actorId, sequence, version: { ...state.versionVector, [actorId]: sequence } } as T;
+  const result = applyRecurrenceSyncOperation(state, full);
+  if (!result.accepted) throw new Error(result.error ?? 'Unable to apply local recurrence operation');
+  return { operation: full, state: result.state };
+}
+
+export const addLocalRecurrenceRule = (state: RecurrenceSyncState, actorId: ActorId, rule: RecurrenceRule) => makeLocalRecurrenceOperation<AddRecurrenceRuleOperation>(state, actorId, { kind: 'add-recurrence-rule', rule });
+export const editLocalRecurrenceRule = (state: RecurrenceSyncState, actorId: ActorId, rule: RecurrenceRule) => makeLocalRecurrenceOperation<EditRecurrenceRuleOperation>(state, actorId, { kind: 'edit-recurrence-rule', ruleId: rule.id, rule });
+export const addRecurrenceException = (state: RecurrenceSyncState, actorId: ActorId, ruleId: string, scheduled: RecurrenceDate) => makeLocalRecurrenceOperation<ExceptionRecurrenceOperation>(state, actorId, { kind: 'exception-recurrence', ruleId, scheduled });
+export const splitLocalRecurrenceRule = (state: RecurrenceSyncState, actorId: ActorId, ruleId: string, cutoff: string, rule: Omit<RecurrenceRule, 'id'>) => makeLocalRecurrenceOperation<SplitRecurrenceRuleOperation>(state, actorId, { kind: 'split-recurrence-rule', ruleId, cutoff, rule: { ...rule, id: recurrenceSplitId(ruleId, cutoff) } });
+export const deleteLocalRecurrenceRule = (state: RecurrenceSyncState, actorId: ActorId, ruleId: string) => makeLocalRecurrenceOperation<DeleteRecurrenceRuleOperation>(state, actorId, { kind: 'delete-recurrence-rule', ruleId });
+
+export function applyRecurrenceSyncOperations(state: RecurrenceSyncState, operations: readonly unknown[]): RecurrenceSyncApplyResult {
+  let current = state; let accepted = false;
+  for (const operation of operations) { const result = applyRecurrenceSyncOperation(current, operation); current = result.state; accepted ||= result.accepted; }
+  return { state: current, accepted };
+}
