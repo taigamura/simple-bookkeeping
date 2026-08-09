@@ -41,6 +41,7 @@ export function useStore(store: Store = defaultStore): UseStore {
   const [showCorruptNotice, setShowCorruptNotice] = useState(false);
   const [hasCorruptStash, setHasCorruptStash] = useState(false);
   const [persistenceNotice, setPersistenceNotice] = useState<UseStore['persistenceNotice']>(null);
+  const operationQueue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     let alive = true;
@@ -78,22 +79,29 @@ export function useStore(store: Store = defaultStore): UseStore {
     (patch: Partial<AppState>): Promise<boolean> => {
       const prev = stateRef.current;
       const next = { ...prev, ...patch };
-      const durableDevice = {
-        ...prev.device,
-        ...(patch.theme !== undefined ? { theme: patch.theme } : {}),
-        ...(patch.budgetMode !== undefined ? { budgetMode: patch.budgetMode } : {}),
-        ...(patch.totalBudget !== undefined ? { totalBudget: patch.totalBudget } : {}),
-        ...(patch.calendarView !== undefined ? { calendarView: patch.calendarView } : {}),
-        ...(patch.motion !== undefined ? { motion: patch.motion } : {}),
-        ...(patch.summaryGranularity !== undefined ? { summaryGranularity: patch.summaryGranularity } : {}),
-      };
-      const durableState = withIdentitySlices({ ...next, device: durableDevice }, false, true);
       stateRef.current = next;
       setState(next);
-      return store.save(durableState).then(
+      const run = operationQueue.current.then(async () => {
+        const current = stateRef.current;
+        const currentNext = { ...current, ...patch };
+        const durableDevice = {
+          ...current.device,
+          ...(patch.theme !== undefined ? { theme: patch.theme } : {}),
+          ...(patch.budgetMode !== undefined ? { budgetMode: patch.budgetMode } : {}),
+          ...(patch.totalBudget !== undefined ? { totalBudget: patch.totalBudget } : {}),
+          ...(patch.calendarView !== undefined ? { calendarView: patch.calendarView } : {}),
+          ...(patch.motion !== undefined ? { motion: patch.motion } : {}),
+          ...(patch.summaryGranularity !== undefined ? { summaryGranularity: patch.summaryGranularity } : {}),
+        };
+        const durableState = withIdentitySlices({ ...currentNext, device: durableDevice }, false, true);
+        await store.save(durableState);
+        stateRef.current = currentNext;
+        setState(currentNext);
+        void publishQuickEntrySnapshot(durableState);
+      });
+      operationQueue.current = run.catch(() => {});
+      return run.then(
         () => {
-          setState((current) => ({ ...current, household: durableState.household, device: durableDevice }));
-          void publishQuickEntrySnapshot(durableState);
           setPersistenceNotice((current) => (current === 'save-failed' ? null : current));
           return true;
         },
@@ -109,9 +117,14 @@ export function useStore(store: Store = defaultStore): UseStore {
   const readCorruptStash = useCallback(() => store.readCorruptStash(), [store]);
   const reconcileQuickEntries = useCallback(async () => {
     if (!ready) return;
-    await reconcileNativeQuickEntries(store);
-    const result = await store.reconcileQuickEntryCommands(state);
-    if (result.state !== state) setState(result.state);
+    const run = operationQueue.current.then(async () => {
+      await reconcileNativeQuickEntries(store);
+      const result = await store.reconcileQuickEntryCommands(stateRef.current);
+      stateRef.current = result.state;
+      setState(result.state);
+    });
+    operationQueue.current = run.catch(() => {});
+    await run;
   }, [ready, state, store]);
 
   return {

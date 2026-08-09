@@ -1,22 +1,24 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
 export interface QuickEntryNativeBridge {
-  listInboxAsync(): Promise<readonly { name: string; contents: string }[]>;
+  listInboxAsync(): Promise<readonly { name: string; contents: string | null }[]>;
   acknowledgeInboxFileAsync(name: string): Promise<void>;
   quarantineInboxFileAsync(name: string): Promise<void>;
   enqueueDeepLinkAsync(url: string): Promise<void>;
-  drainDeepLinksAsync(): Promise<readonly string[]>;
-  writeCommandFileAsync(name: string, command: string): Promise<void>;
+  peekDeepLinksAsync(): Promise<readonly { id: string; url: string }[]>;
+  acknowledgeDeepLinkAsync(id: string): Promise<void>;
+  writeCommandFileAsync(command: string): Promise<void>;
   writeSnapshotAsync(snapshot: string): Promise<void>;
 }
 
 declare class KajiQuickEntryModule extends NativeModule<{}> implements QuickEntryNativeBridge {
-  listInboxAsync(): Promise<readonly { name: string; contents: string }[]>;
+  listInboxAsync(): Promise<readonly { name: string; contents: string | null }[]>;
   acknowledgeInboxFileAsync(name: string): Promise<void>;
   quarantineInboxFileAsync(name: string): Promise<void>;
   enqueueDeepLinkAsync(url: string): Promise<void>;
-  drainDeepLinksAsync(): Promise<readonly string[]>;
-  writeCommandFileAsync(name: string, command: string): Promise<void>;
+  peekDeepLinksAsync(): Promise<readonly { id: string; url: string }[]>;
+  acknowledgeDeepLinkAsync(id: string): Promise<void>;
+  writeCommandFileAsync(command: string): Promise<void>;
   writeSnapshotAsync(snapshot: string): Promise<void>;
 }
 

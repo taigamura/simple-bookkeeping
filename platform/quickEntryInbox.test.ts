@@ -1,5 +1,5 @@
 import { createQuickEntryInbox, type InboxFileSystem } from './quickEntryInbox';
-import { makeQuickEntrySnapshot } from './quickEntryConfig';
+import { isQuickEntrySnapshot, makeQuickEntrySnapshot } from './quickEntryConfig';
 
 function memoryFiles(): InboxFileSystem & { files: Map<string, string> } {
   const files = new Map<string, string>();
@@ -46,11 +46,34 @@ describe('quick-entry App Group inbox', () => {
     await inbox.acknowledge('bad.json');
   });
 
+  it('surfaces acknowledgement failures except for a missing source', async () => {
+    const fs = memoryFiles();
+    const inbox = createQuickEntryInbox(fs, '/group');
+    await expect(inbox.acknowledge('missing.json')).resolves.toBeUndefined();
+    fs.remove = async () => { throw new Error('permission denied'); };
+    await expect(inbox.acknowledge('present.json')).rejects.toThrow('permission denied');
+  });
+
+  it('keeps unreadable inbox files observable instead of dropping them', async () => {
+    const fs = memoryFiles();
+    const inbox = createQuickEntryInbox(fs, '/group');
+    await inbox.publish('partial.json', '{"version":');
+    fs.read = async () => { throw new Error('invalid UTF-8'); };
+    await expect(inbox.list()).resolves.toEqual([{ name: 'partial.json', contents: null }]);
+  });
+
   it('freezes the extension snapshot so it cannot mutate app settings', () => {
-    const snapshot = makeQuickEntrySnapshot(['Food'], { symbol: '¥', code: 'JPY' });
+    const snapshot = makeQuickEntrySnapshot(['Food'], { symbol: '¥', code: 'JPY' }, ['food-id'], ['food-id']);
     expect(Object.isFrozen(snapshot)).toBe(true);
     expect(Object.isFrozen(snapshot.categories)).toBe(true);
     expect(Object.isFrozen(snapshot.currency)).toBe(true);
-    expect(snapshot).toEqual({ version: 1, categories: ['Food'], currency: { symbol: '¥', code: 'JPY' } });
+    expect(snapshot).toEqual({
+      version: 2,
+      categories: [{ id: 'food-id', name: 'Food' }],
+      currency: { symbol: '¥', code: 'JPY' },
+      defaults: { categoryId: 'food-id', recentCategoryIds: ['food-id'] },
+    });
+    expect(isQuickEntrySnapshot(snapshot)).toBe(true);
+    expect(isQuickEntrySnapshot({ version: 1 })).toBe(false);
   });
 });

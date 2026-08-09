@@ -5,7 +5,7 @@ import {
 
 export interface InboxFile {
   readonly name: string;
-  readonly contents: string;
+  readonly contents: string | null;
 }
 
 export interface InboxFileSystem {
@@ -55,17 +55,18 @@ export function createQuickEntryInbox(fs: InboxFileSystem, root: string): QuickE
       const names = (await fs.list(inbox)).filter(safeName).sort();
       const files: InboxFile[] = [];
       for (const name of names) {
-        try {
-          files.push({ name, contents: await fs.read(pathFor(inbox, name)) });
-        } catch {
-          // A file removed by an extension between list and read is harmless.
-        }
+        try { files.push({ name, contents: await fs.read(pathFor(inbox, name)) }); }
+        catch { files.push({ name, contents: null }); }
       }
       return files;
     },
     async acknowledge(fileName) {
       if (!safeName(fileName)) return;
-      await fs.remove(pathFor(inbox, fileName));
+      try { await fs.remove(pathFor(inbox, fileName)); }
+      catch (error) {
+        if (error instanceof Error && /missing|not found|no such file/i.test(error.message)) return;
+        throw error;
+      }
     },
     async quarantine(fileName) {
       if (!safeName(fileName)) return;

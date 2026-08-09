@@ -18,6 +18,7 @@
         "com.apple.security.application-groups": ["group.com.taigamura.kaji"]
       },
       "infoPlist": {
+        "CFBundleURLTypes": [{ "CFBundleURLSchemes": ["kaji-quick-entry"] }],
         "NSLocalNetworkUsageDescription": "Kaji connects to your paired household phone when both apps are open and nearby.",
         "NSBonjourServices": ["_kaji-sync._tcp"]
       },
@@ -53,7 +54,8 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "./config/withQuickEntry"
     ],
     "extra": {
       "eas": {
