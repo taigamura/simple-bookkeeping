@@ -84,6 +84,9 @@ export {
   pruneBudgets,
   isBudgetActive,
   getRemainingBudget,
+  getTodayAllowance,
+  type TodayAllowance,
+  type TodayAllowanceStatus,
   type Budgets,
 } from './budgets';
 export {

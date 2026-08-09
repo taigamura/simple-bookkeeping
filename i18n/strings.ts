@@ -57,6 +57,9 @@ export interface Strings {
     net: string;
     /** Strip label for the month's remaining budget (#50). */
     budget: string;
+    todayAllowance: string;
+    noBudget: string;
+    overBudget: string;
     /** Sub-title under the month, counting the month's entries. */
     entriesThisMonth: (n: number) => string;
     /** Header toggle, labelled by the view it switches *to*. */
@@ -233,6 +236,9 @@ export const en: Strings = {
     out: 'Out',
     net: 'Net',
     budget: 'Budget',
+    todayAllowance: 'Today',
+    noBudget: 'No budget',
+    overBudget: 'Over budget',
     entriesThisMonth: (n) => `${n} ${n === 1 ? 'entry' : 'entries'} this month`,
     showDots: 'Show dots',
     showNumbers: 'Show numbers',
@@ -416,6 +422,9 @@ export const ja: Strings = {
     out: '支出',
     net: '収支',
     budget: '予算',
+    todayAllowance: '今日',
+    noBudget: '予算なし',
+    overBudget: '予算超過',
     entriesThisMonth: (n) => `今月 ${n} 件`,
     showDots: 'ドット表示',
     showNumbers: '金額表示',
