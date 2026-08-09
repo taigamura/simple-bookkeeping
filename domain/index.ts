@@ -42,6 +42,17 @@ export {
   type OpenEnvelopeOptions,
 } from './pairing';
 export {
+  RECOVERY_PACK_VERSION,
+  exportRecoveryPack,
+  openRecoveryPack,
+  restoreRecoveryPack,
+  RecoveryPackError,
+  type RecoverySnapshot,
+  type RecoveryStore,
+  type DeviceAuthenticator,
+  type RecoveryFailure,
+} from './recoveryPack';
+export {
   DEFAULT_EXP_CATS,
   DEFAULT_INC_CATS,
   DEFAULT_CURRENCY,
