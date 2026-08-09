@@ -66,18 +66,37 @@ export default function App() {
     setQuickEntryPresentationToken(token);
   }), []);
   handoffRef.current = handoffDraft;
-  const consumeDraft = useCallback((draft: EntryDraft, token: number) => {
+  const reconcileRunning = useRef(false);
+  const reconcileAgain = useRef(false);
+  const requestReconcile = useCallback(() => {
+    if (!readyRef.current) return;
+    if (reconcileRunning.current) {
+      reconcileAgain.current = true;
+      return;
+    }
+    reconcileRunning.current = true;
+    void (async () => {
+      do {
+        reconcileAgain.current = false;
+        await reconcileRef.current(handoffRef.current);
+      } while (reconcileAgain.current);
+    })().catch(() => {}).finally(() => {
+      reconcileRunning.current = false;
+    });
+  }, []);
+  const disposeDraft = useCallback((draft: EntryDraft, token: number) => {
     if (pendingDraft.current?.draft !== draft || pendingDraft.current.token !== token) return;
     pendingDraft.current.resolve();
     pendingDraft.current = null;
     setQuickEntryDraft((current) => current === draft ? null : current);
-  }, []);
+    requestReconcile();
+  }, [requestReconcile]);
 
   const receiveUrl = useCallback(async (url: string | null) => {
     if (!url) return;
     if (quickEntryBridge) {
       await quickEntryBridge.enqueueDeepLinkAsync(url);
-      if (readyRef.current) await reconcileRef.current(handoffRef.current);
+      requestReconcile();
       return;
     }
     if (readyRef.current) {
@@ -95,11 +114,11 @@ export default function App() {
 
   useEffect(() => {
     if (!appReady) return;
-    void Promise.resolve(reconcileRef.current(handoffRef.current)).catch(() => {});
+    requestReconcile();
     const subscription = AppState.addEventListener('change', (next) => {
       if (next !== 'active') return;
       if (persistenceNotice === 'quick-entry-cache-failed') void retryQuickEntrySnapshot().catch(() => {});
-      void Promise.resolve(reconcileRef.current(handoffRef.current)).catch(() => {});
+      requestReconcile();
     });
     return () => subscription.remove();
   }, [appReady, persistenceNotice, retryQuickEntrySnapshot]);
@@ -154,7 +173,7 @@ export default function App() {
             persistenceNotice={persistenceNotice}
             quickEntryDraft={quickEntryDraft}
             quickEntryPresentationToken={quickEntryPresentationToken}
-            onQuickEntryDraftConsumed={consumeDraft}
+            onQuickEntryDraftDisposition={disposeDraft}
           />
           {!openingComplete ? (
             <LoadingScreen ready onFinished={finishOpening} />

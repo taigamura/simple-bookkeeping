@@ -43,6 +43,9 @@ export async function reconcileNativeQuickEntries(
     if (!handoffDraft) continue;
     await handoffDraft(draft);
     await bridge.acknowledgeDeepLinkAsync(item.id);
+    // A valid deep link represents a user disposition, not merely a parsed
+    // command. Leave all later native items durable until the next reconcile.
+    break;
   }
 }
 

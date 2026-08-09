@@ -20,7 +20,9 @@ function bridge(files: readonly { name: string; contents: string | null }[], lin
     acknowledgeInboxFileAsync: async (name) => { acknowledged.push(name); },
     quarantineInboxFileAsync: async (name) => { acknowledged.push(`quarantine:${name}`); },
     enqueueDeepLinkAsync: async () => {},
-    peekDeepLinksAsync: async () => links.map((url, index) => ({ id: `link-${index + 1}`, url })),
+    peekDeepLinksAsync: async () => links
+      .map((url, index) => ({ id: `link-${index + 1}`, url }))
+      .filter((item) => !deepLinkAcks.includes(item.id)),
     acknowledgeDeepLinkAsync: async (id) => { deepLinkAcks.push(id); },
     quarantineDeepLinkAsync: async (id) => { deepLinkQuarantines.push(id); },
     writeCommandFileAsync: async () => {},
@@ -61,36 +63,32 @@ describe('native quick-entry reconciliation seam', () => {
     expect(native.deepLinkAcks).toEqual(['link-1']);
   });
 
-  it('processes different queued links in order and waits for each exact handoff before acking', async () => {
+  it('installs and acknowledges at most one valid queued link per reconcile', async () => {
     const native = bridge([], [
       'kaji-quick-entry://new?amount=100&category=Food&date=2026-08-10',
       'kaji-quick-entry://new?amount=200&category=Rent&date=2026-08-11',
     ]);
     const drafts: EntryDraft[] = [];
-    let releaseFirst!: () => void;
-    const firstConsumed = new Promise<void>((resolve) => { releaseFirst = resolve; });
-    const run = reconcileNativeQuickEntries(createStore(createMemoryPersistence()), native, async (draft) => {
+    await reconcileNativeQuickEntries(createStore(createMemoryPersistence()), native, async (draft) => {
       drafts.push(draft);
-      if (drafts.length === 1) await firstConsumed;
     });
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(drafts.map((draft) => draft.category)).toEqual(['Food']);
-    expect(native.deepLinkAcks).toEqual([]);
-    releaseFirst();
-    await run;
-
-    expect(drafts.map((draft) => draft.category)).toEqual(['Food', 'Rent']);
-    expect(native.deepLinkAcks).toEqual(['link-1', 'link-2']);
+    expect(native.deepLinkAcks).toEqual(['link-1']);
   });
 
-  it('confirms and acknowledges identical queued links sequentially without ledger mutation', async () => {
+  it('keeps identical queued links distinct by native identity across reconciles', async () => {
     const native = bridge([], [
       'kaji-quick-entry://new?amount=500&category=Food&date=2026-08-10',
       'kaji-quick-entry://new?amount=500&category=Food&date=2026-08-10',
     ]);
     const store = createStore(createMemoryPersistence());
     const confirmations: EntryDraft[] = [];
+    await reconcileNativeQuickEntries(store, native, async (draft) => {
+      confirmations.push(draft);
+    });
+    expect(confirmations).toHaveLength(1);
+    expect(native.deepLinkAcks).toEqual(['link-1']);
+
     await reconcileNativeQuickEntries(store, native, async (draft) => {
       confirmations.push(draft);
     });

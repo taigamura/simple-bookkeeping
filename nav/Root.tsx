@@ -79,7 +79,7 @@ interface RootProps {
   persistenceNotice?: UseStore['persistenceNotice'];
   quickEntryDraft?: EntryDraft | null;
   quickEntryPresentationToken?: number;
-  onQuickEntryDraftConsumed?: (draft: EntryDraft, token: number) => void;
+  onQuickEntryDraftDisposition?: (draft: EntryDraft, token: number) => void;
   /** Runtime-owned nearby state. Defaults to a truthful unpaired/offline surface. */
   householdSync?: {
     model: SyncStatusModel;
@@ -361,7 +361,7 @@ function Shell({
   persistenceNotice = null,
   quickEntryDraft = null,
   quickEntryPresentationToken = 0,
-  onQuickEntryDraftConsumed,
+  onQuickEntryDraftDisposition,
   householdSync = {
     model: householdSyncStatus({ paired: false, foreground: true, partnerPresent: false, queuedOperationCount: 0 }),
     history: [],
@@ -395,6 +395,7 @@ function Shell({
   // Which entry the Entry sheet is editing (#43); null = create mode.
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [activeQuickEntryDraft, setActiveQuickEntryDraft] = useState<EntryDraft | null>(null);
+  const activeQuickEntryToken = quickEntryPresentationToken;
   const [entryContentHeight, setEntryContentHeight] = useState(0);
 
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
@@ -474,10 +475,22 @@ function Shell({
     setSheet('entry');
   }, [quickEntryDraft, quickEntryPresentationToken]);
 
+  const disposeQuickEntry = () => {
+    if (!activeQuickEntryDraft || !quickEntryDraft) return false;
+    const draft = activeQuickEntryDraft;
+    setActiveQuickEntryDraft(null);
+    setSheet(null);
+    onQuickEntryDraftDisposition?.(draft, activeQuickEntryToken);
+    return true;
+  };
+
   // Single-sheet-host handlers (#60): the unified sheet host replaces the
   // three separate modals. Sheet state is authoritative; dismissal while a sheet
   // is still requested gets reconciled by re-presenting.
-  const closeSheet = () => setSheet(null);
+  const closeSheet = () => {
+    if (sheet === 'entry' && disposeQuickEntry()) return;
+    setSheet(null);
+  };
 
   const openSettings = () => setSheet('settings');
   const openRepeats = () => setSheet('repeats');
@@ -487,6 +500,7 @@ function Shell({
 
   // openEntry(): the ＋ button — always create mode (clear any prior editing).
   const openEntry = () => {
+    if (activeQuickEntryDraft) return;
     setActiveQuickEntryDraft(null);
     setEditing(null);
     setEntryContentHeight(0);
@@ -860,7 +874,6 @@ function Shell({
             onSave={handleSubmit}
             onDelete={handleDelete}
             onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
-            onInitialDraftInstalled={(draft) => onQuickEntryDraftConsumed?.(draft, quickEntryPresentationToken)}
             onContentHeightChange={setEntryContentHeight}
             ScrollContainer={BottomSheetScrollView}
             />

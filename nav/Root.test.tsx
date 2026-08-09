@@ -51,8 +51,8 @@ import { ThemeProvider } from '../theme';
 import { Root } from './Root';
 
 describe('Root unified sheet host (#60)', () => {
-  it('installs two identical queued drafts as separate deliveries', async () => {
-    const onConsumed = jest.fn();
+  it('disposes identical queued drafts only after each exact presentation closes', async () => {
+    const onDisposition = jest.fn();
     const first = {
       type: 'expense' as const, amountStr: '500', category: 'Food', note: '',
       y: 2026, m: 7, day: 10, repeat: 'never' as const,
@@ -68,12 +68,14 @@ describe('Root unified sheet host (#60)', () => {
           readCorruptStash={async () => null}
           quickEntryDraft={first}
           quickEntryPresentationToken={1}
-          onQuickEntryDraftConsumed={onConsumed}
+          onQuickEntryDraftDisposition={onDisposition}
         />
       </ThemeProvider>,
     );
 
-    await waitFor(() => expect(onConsumed).toHaveBeenCalledTimes(1));
+    expect(onDisposition).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByLabelText(strings.nav.close));
+    expect(onDisposition).toHaveBeenCalledWith(first, 1);
     view.rerender(
       <ThemeProvider>
         <Root
@@ -84,13 +86,43 @@ describe('Root unified sheet host (#60)', () => {
           readCorruptStash={async () => null}
           quickEntryDraft={second}
           quickEntryPresentationToken={2}
-          onQuickEntryDraftConsumed={onConsumed}
+          onQuickEntryDraftDisposition={onDisposition}
         />
       </ThemeProvider>,
     );
 
-    await waitFor(() => expect(onConsumed).toHaveBeenCalledTimes(2));
-    expect(onConsumed.mock.calls.map(([draft]) => draft)).toEqual([first, second]);
+    expect(onDisposition).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByLabelText(strings.nav.close));
+    expect(onDisposition).toHaveBeenCalledWith(second, 2);
+    expect(onDisposition).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not dispose a quick entry when its persistence fails', async () => {
+    const onDisposition = jest.fn();
+    const update = jest.fn(async () => false);
+    const draft = {
+      type: 'expense' as const, amountStr: '500', category: 'Food', note: '',
+      y: 2026, m: 7, day: 10, repeat: 'never' as const,
+    };
+    render(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={update}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+          quickEntryDraft={draft}
+          quickEntryPresentationToken={7}
+          onQuickEntryDraftDisposition={onDisposition}
+        />
+      </ThemeProvider>,
+    );
+
+    fireEvent.press(screen.getByLabelText(strings.entry.addExpense));
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(onDisposition).not.toHaveBeenCalled();
+    expect(screen.getByTestId('entry-sheet')).toBeTruthy();
   });
 
   it('renders successfully with default state', () => {
