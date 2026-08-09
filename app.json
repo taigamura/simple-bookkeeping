@@ -14,7 +14,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.taigamura.kaji",
       "buildNumber": "1",
-      "config": { "usesNonExemptEncryption": false }
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -43,7 +45,8 @@
             "backgroundColor": "#0F0F13"
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

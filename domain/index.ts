@@ -35,9 +35,11 @@ export {
   type HouseholdCreation,
   type InvitationCreation,
   type JoinResult,
+  type RevocationResult,
   type PairingFailure,
   type KeychainSecretStore,
   type AuthenticatedEnvelope,
+  type OpenEnvelopeOptions,
 } from './pairing';
 export {
   DEFAULT_EXP_CATS,
