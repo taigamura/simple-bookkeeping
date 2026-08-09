@@ -37,12 +37,14 @@ jest.mock('expo-crypto', () => {
 });
 
 import { DEFAULT_STATE } from '../store/schema';
+import { createSyncState } from './sync';
 import {
   exportRecoveryPack,
   openRecoveryPack,
   RecoveryPackError,
   restoreRecoveryPack,
   type RecoverySnapshot,
+  type RecoveryStore,
 } from './recoveryPack';
 
 const key = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
@@ -54,7 +56,7 @@ const snapshot: RecoverySnapshot = {
     invitations: [],
   },
   householdKey: key,
-  syncState: { versionVector: { owner: 2 } },
+  syncState: { ...createSyncState('home'), versionVector: { owner: 2 } },
 };
 
 const authenticator = { authenticate: jest.fn(async () => true) };
@@ -85,27 +87,96 @@ describe('household recovery packs', () => {
 
   it('rejects unsupported versions and malformed snapshots without opening them', async () => {
     const pack = await exportRecoveryPack(snapshot, 'correct horse battery', authenticator);
-    const envelope = JSON.parse(pack) as { v: number };
+    const envelope = JSON.parse(pack) as { v: number; kdf: string; iterations: number };
+    expect(envelope.kdf).toBe('PBKDF2-HMAC-SHA-256');
+    expect(envelope.iterations).toBeGreaterThanOrEqual(100_000);
     envelope.v = 99;
     await expect(openRecoveryPack(JSON.stringify(envelope), 'correct horse battery'))
+      .rejects.toEqual(new RecoveryPackError('unsupported-version'));
+
+    const downgraded = { ...envelope, v: 1, kdf: 'SHA-256-ITERATED' };
+    await expect(openRecoveryPack(JSON.stringify(downgraded), 'correct horse battery'))
       .rejects.toEqual(new RecoveryPackError('unsupported-version'));
   });
 
   it('restores only after staging and rolls back the checkpoint on save failure', async () => {
-    let live = { ...DEFAULT_STATE };
+    const previous: RecoverySnapshot = {
+      appState: { ...DEFAULT_STATE, theme: 'light' },
+      pairingState: {
+        householdId: 'old-home',
+        devices: [{ deviceId: 'old-owner', authorizedAt: 1 }],
+        invitations: [],
+      },
+      householdKey: 'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
+      syncState: { versionVector: { 'old-owner': 7 } },
+    };
+    let live: RecoverySnapshot = previous;
     let saves = 0;
-    const store = {
+    const store: RecoveryStore = {
       load: async () => live,
-      save: async (next: typeof DEFAULT_STATE) => {
+      save: async (next: RecoverySnapshot) => {
         saves += 1;
-        if (saves === 1) throw new Error('disk full');
+        if (saves === 1) {
+          live = { ...next, householdKey: 'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=' };
+          throw new Error('disk full');
+        }
         live = next;
       },
     };
     const pack = await exportRecoveryPack(snapshot, 'correct horse battery', authenticator);
     await expect(restoreRecoveryPack(store, pack, 'correct horse battery'))
       .rejects.toEqual(new RecoveryPackError('restore-failed'));
-    expect(live).toEqual(DEFAULT_STATE);
+    expect(live).toEqual(previous);
     expect(saves).toBe(2);
+  });
+
+  it('atomically installs the complete recovered household snapshot', async () => {
+    let live: RecoverySnapshot = {
+      ...snapshot,
+      appState: { ...DEFAULT_STATE, theme: 'light' },
+      pairingState: { householdId: 'old-home', devices: [{ deviceId: 'old-owner', authorizedAt: 1 }], invitations: [] },
+      householdKey: 'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=',
+      syncState: { versionVector: { 'old-owner': 1 } },
+    };
+    const store: RecoveryStore = { load: async () => live, save: async (next) => { live = next; } };
+    const pack = await exportRecoveryPack(snapshot, 'correct horse battery', authenticator);
+
+    const restored = await restoreRecoveryPack(store, pack, 'correct horse battery');
+
+    expect(restored).toEqual(snapshot);
+    expect(live).toEqual(snapshot);
+    expect(live.pairingState.devices).toEqual([{ deviceId: 'owner', authorizedAt: 1 }]);
+  });
+
+  it('normalizes app state and rejects malformed or over-capacity household state', async () => {
+    const legacyEntry = { id: 'entry-1', y: 2026, m: 0, day: 2, type: 'expense', amount: 100, category: 'Food', note: 'Lunch' } as unknown as RecoverySnapshot['appState']['entries'][number];
+    const normalized = await openRecoveryPack(
+      await exportRecoveryPack({ ...snapshot, appState: { ...DEFAULT_STATE, entries: [legacyEntry] } }, 'correct horse battery', authenticator),
+      'correct horse battery',
+    );
+    expect(normalized.appState.entries[0]).toEqual(expect.objectContaining({ timestamp: expect.any(String), repeat: 'never' }));
+
+    await expect(exportRecoveryPack({ ...snapshot, pairingState: {
+      ...snapshot.pairingState,
+      devices: [{ deviceId: 'one', authorizedAt: 1 }, { deviceId: 'two', authorizedAt: 2 }, { deviceId: 'three', authorizedAt: 3 }],
+    } }, 'correct horse battery', authenticator)).rejects.toEqual(new RecoveryPackError('invalid-pack'));
+    await expect(exportRecoveryPack({ ...snapshot, pairingState: {
+      ...snapshot.pairingState,
+      devices: [{ deviceId: 'one', authorizedAt: 1 }, { deviceId: 'two', authorizedAt: 2 }],
+    } }, 'correct horse battery', authenticator)).rejects.toEqual(new RecoveryPackError('invalid-pack'));
+    await expect(exportRecoveryPack({ ...snapshot, syncState: { versionVector: { owner: 2 } } }, 'correct horse battery', authenticator))
+      .rejects.toEqual(new RecoveryPackError('invalid-pack'));
+  });
+
+  it('leaves the complete live snapshot unchanged when device authentication is cancelled', async () => {
+    const live: RecoverySnapshot = { ...snapshot, appState: { ...DEFAULT_STATE, theme: 'light' } };
+    const store: RecoveryStore = { load: async () => live, save: jest.fn(async () => {}) };
+    const pack = await exportRecoveryPack(snapshot, 'correct horse battery', authenticator);
+    authenticator.authenticate.mockResolvedValueOnce(false);
+
+    await expect(restoreRecoveryPack(store, pack, 'correct horse battery', authenticator))
+      .rejects.toEqual(new RecoveryPackError('cancelled'));
+    expect(live).toEqual({ ...snapshot, appState: { ...DEFAULT_STATE, theme: 'light' } });
+    expect(store.save).not.toHaveBeenCalled();
   });
 });

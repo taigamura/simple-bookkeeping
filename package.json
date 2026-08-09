@@ -7,6 +7,7 @@
     "@expo/metro-runtime": "~57.0.2",
     "@expo/vector-icons": "^15.0.2",
     "@gorhom/bottom-sheet": "^5.2.14",
+    "@noble/hashes": "1.8.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "^9.1.0",
     "encoding-japanese": "^2.2.0",
