@@ -73,6 +73,7 @@ export function HouseholdSyncSheet({
           </View>
           <Txt variant="secondary" tone="muted">{strings.sync.lastSynced}: {model.lastSyncedAt ?? strings.sync.neverSynced}</Txt>
           <Txt variant="secondary" tone="muted" style={styles.notice}>{failureMessage?.message ?? statusMessage}</Txt>
+          <Txt variant="secondary" tone="muted" style={styles.notice}>{strings.sync.recoveryLimitNotice}</Txt>
           <Pressable
             onPress={onSyncNow}
             accessibilityRole="button"

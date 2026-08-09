@@ -160,6 +160,7 @@ export interface Strings {
     revokeDevice: string;
     inviteReplacement: string;
     deviceLimitWarning: string;
+    recoveryLimitNotice: string;
   };
   budgets: {
     title: string;
@@ -349,6 +350,7 @@ export const en: Strings = {
     devices: 'Paired phones', thisPhone: 'This phone', revokeDevice: 'Revoke',
     inviteReplacement: 'Invite replacement phone',
     deviceLimitWarning: 'Only two phones can be active. Revoking a lost phone cannot be undone, and creates a fresh key before replacement pairing.',
+    recoveryLimitNotice: 'If both phones are lost, recovery is impossible without a surviving phone or a valid recovery pack.',
   },
   budgets: {
     title: 'Budgets',
@@ -548,6 +550,7 @@ export const ja: Strings = {
     devices: 'ペア済みの端末', thisPhone: 'この端末', revokeDevice: '失効',
     inviteReplacement: '交換端末を招待',
     deviceLimitWarning: '有効な端末は2台までです。紛失した端末の失効は取り消せず、交換端末とのペアリング前に新しい鍵を作成します。',
+    recoveryLimitNotice: '2台の端末を両方失った場合、生き残っている端末または有効なリカバリーパックがなければ復旧できません。',
   },
   budgets: {
     title: '予算',

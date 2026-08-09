@@ -38,6 +38,7 @@ jest.mock('expo-crypto', () => {
 
 import { DEFAULT_STATE } from '../store/schema';
 import { createSyncState } from './sync';
+import * as pbkdf2Module from '@noble/hashes/pbkdf2';
 import {
   exportRecoveryPack,
   openRecoveryPack,
@@ -61,7 +62,15 @@ const snapshot: RecoverySnapshot = {
 
 const authenticator = { authenticate: jest.fn(async () => true) };
 
+jest.setTimeout(120_000);
+
 describe('household recovery packs', () => {
+  let validPack: string;
+
+  beforeAll(async () => {
+    validPack = await exportRecoveryPack(snapshot, 'correct horse battery', authenticator);
+  });
+
   beforeEach(() => authenticator.authenticate.mockClear());
 
   it('requires device authentication and never puts the passphrase in the pack', async () => {
@@ -75,10 +84,9 @@ describe('household recovery packs', () => {
   });
 
   it('rejects wrong passphrases and tampering before returning staged state', async () => {
-    const pack = await exportRecoveryPack(snapshot, 'correct horse battery', authenticator);
-    await expect(openRecoveryPack(pack, 'wrong passphrase'))
+    await expect(openRecoveryPack(validPack, 'wrong passphrase'))
       .rejects.toEqual(new RecoveryPackError('tampered-pack'));
-    const envelope = JSON.parse(pack) as { sealed: string };
+    const envelope = JSON.parse(validPack) as { sealed: string };
     envelope.sealed = `${envelope.sealed[0] === 'A' ? 'B' : 'A'}${envelope.sealed.slice(1)}`;
     const tampered = JSON.stringify(envelope);
     await expect(openRecoveryPack(tampered, 'correct horse battery'))
@@ -86,10 +94,9 @@ describe('household recovery packs', () => {
   });
 
   it('rejects unsupported versions and malformed snapshots without opening them', async () => {
-    const pack = await exportRecoveryPack(snapshot, 'correct horse battery', authenticator);
-    const envelope = JSON.parse(pack) as { v: number; kdf: string; iterations: number };
+    const envelope = JSON.parse(validPack) as { v: number; kdf: string; iterations: number };
     expect(envelope.kdf).toBe('PBKDF2-HMAC-SHA-256');
-    expect(envelope.iterations).toBeGreaterThanOrEqual(100_000);
+    expect(envelope.iterations).toBeGreaterThanOrEqual(600_000);
     envelope.v = 99;
     await expect(openRecoveryPack(JSON.stringify(envelope), 'correct horse battery'))
       .rejects.toEqual(new RecoveryPackError('unsupported-version'));
@@ -97,6 +104,16 @@ describe('household recovery packs', () => {
     const downgraded = { ...envelope, v: 1, kdf: 'SHA-256-ITERATED' };
     await expect(openRecoveryPack(JSON.stringify(downgraded), 'correct horse battery'))
       .rejects.toEqual(new RecoveryPackError('unsupported-version'));
+
+    const kdf = jest.spyOn(pbkdf2Module, 'pbkdf2');
+    const iterationDowngraded = { ...envelope, iterations: 599_999 };
+    await expect(openRecoveryPack(JSON.stringify(iterationDowngraded), 'correct horse battery'))
+      .rejects.toEqual(new RecoveryPackError('unsupported-version'));
+    const iterationTampered = { ...envelope, iterations: 600_001 };
+    await expect(openRecoveryPack(JSON.stringify(iterationTampered), 'correct horse battery'))
+      .rejects.toEqual(new RecoveryPackError('unsupported-version'));
+    expect(kdf).not.toHaveBeenCalled();
+    kdf.mockRestore();
   });
 
   it('restores only after staging and rolls back the checkpoint on save failure', async () => {
@@ -123,8 +140,7 @@ describe('household recovery packs', () => {
         live = next;
       },
     };
-    const pack = await exportRecoveryPack(snapshot, 'correct horse battery', authenticator);
-    await expect(restoreRecoveryPack(store, pack, 'correct horse battery'))
+    await expect(restoreRecoveryPack(store, validPack, 'correct horse battery'))
       .rejects.toEqual(new RecoveryPackError('restore-failed'));
     expect(live).toEqual(previous);
     expect(saves).toBe(2);
@@ -139,9 +155,7 @@ describe('household recovery packs', () => {
       syncState: { versionVector: { 'old-owner': 1 } },
     };
     const store: RecoveryStore = { load: async () => live, save: async (next) => { live = next; } };
-    const pack = await exportRecoveryPack(snapshot, 'correct horse battery', authenticator);
-
-    const restored = await restoreRecoveryPack(store, pack, 'correct horse battery');
+    const restored = await restoreRecoveryPack(store, validPack, 'correct horse battery');
 
     expect(restored).toEqual(snapshot);
     expect(live).toEqual(snapshot);
@@ -171,10 +185,9 @@ describe('household recovery packs', () => {
   it('leaves the complete live snapshot unchanged when device authentication is cancelled', async () => {
     const live: RecoverySnapshot = { ...snapshot, appState: { ...DEFAULT_STATE, theme: 'light' } };
     const store: RecoveryStore = { load: async () => live, save: jest.fn(async () => {}) };
-    const pack = await exportRecoveryPack(snapshot, 'correct horse battery', authenticator);
     authenticator.authenticate.mockResolvedValueOnce(false);
 
-    await expect(restoreRecoveryPack(store, pack, 'correct horse battery', authenticator))
+    await expect(restoreRecoveryPack(store, validPack, 'correct horse battery', authenticator))
       .rejects.toEqual(new RecoveryPackError('cancelled'));
     expect(live).toEqual({ ...snapshot, appState: { ...DEFAULT_STATE, theme: 'light' } });
     expect(store.save).not.toHaveBeenCalled();

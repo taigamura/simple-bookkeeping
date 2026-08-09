@@ -76,6 +76,7 @@ describe('HouseholdSyncSheet', () => {
     expect(screen.getByText('Offline')).toBeTruthy();
     expect(screen.getByText('Last synced: 2026-08-10T01:02:03.000Z')).toBeTruthy();
     expect(screen.getByText('Partner not nearby. Nothing will change on this phone.')).toBeTruthy();
+    expect(screen.getByText('If both phones are lost, recovery is impossible without a surviving phone or a valid recovery pack.')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Sync now'));
     expect(onSyncNow).toHaveBeenCalledTimes(1);
   });

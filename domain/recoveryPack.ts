@@ -20,7 +20,7 @@ import type { HouseholdPairingState } from './pairing';
 import type { AppState } from '../store/schema';
 
 export const RECOVERY_PACK_VERSION = 1;
-const KDF_ITERATIONS = 100_000;
+const KDF_ITERATIONS = 600_000;
 const MAX_PACK_BYTES = 4 * 1024 * 1024;
 const BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
