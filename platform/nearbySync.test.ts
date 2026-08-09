@@ -14,6 +14,7 @@ jest.mock('expo-crypto', () => {
   return {
     CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
     getRandomBytes: (length: number) => webcrypto.getRandomValues(new Uint8Array(length)),
+    randomUUID: () => 'batch-id-1',
     digestStringAsync: async (algorithm: string, value: string) => BufferClass.from(await webcrypto.subtle.digest(algorithm, new TextEncoder().encode(value))).toString('hex'),
     AESEncryptionKey: Key,
     AESSealedData: Sealed,
@@ -32,8 +33,8 @@ jest.mock('expo-crypto', () => {
   };
 });
 
-import { createAuthenticatedEnvelope, createHousehold, createInvitation, joinHousehold } from '../domain/pairing';
-import { NearbySyncCoordinator, nearbyDiscoveryInfo, type NearbyPeer, type NearbyTransport } from './nearbySync';
+import { createAuthenticatedEnvelope, createHousehold, createInvitation, joinHousehold, openAuthenticatedEnvelope } from '../domain/pairing';
+import { NearbySyncCoordinator, nearbyDiscoveryInfo, nearbyDiscoveryTag, type NearbyPeer, type NearbyQueueSnapshot, type NearbyTransport } from './nearbySync';
 
 function transportDouble() {
   let handlers: Parameters<NearbyTransport['start']>[0]['handlers'] | null = null;
@@ -46,10 +47,19 @@ function transportDouble() {
   return { transport, sent, handlers: () => handlers };
 }
 
-const peer = (householdId: string): NearbyPeer => ({
+const peer = (householdTag: string): NearbyPeer => ({
   deviceId: 'partner',
-  discoveryInfo: nearbyDiscoveryInfo(householdId),
+  discoveryInfo: nearbyDiscoveryInfo(householdTag),
 });
+
+function queueStore(initial: NearbyQueueSnapshot = { pending: [], seenMessageIds: [], inFlight: null }) {
+  let snapshot = initial;
+  return {
+    load: async () => snapshot,
+    save: async (next: NearbyQueueSnapshot) => { snapshot = next; },
+    snapshot: () => snapshot,
+  };
+}
 
 describe('foreground nearby sync', () => {
   it('does not discover or send while backgrounded, then queues and flushes after foreground', async () => {
@@ -58,21 +68,23 @@ describe('foreground nearby sync', () => {
     const joined = await joinHousehold(invitation.state, invitation.qrPayload, invitation.invitation.matchingCode, 'partner', 2);
     const doubled = transportDouble();
     const applied: unknown[] = [];
+    const persisted = queueStore({ pending: [{ operationId: 'persisted-op', kind: 'add-transaction' }], seenMessageIds: [], inFlight: null });
     const coordinator = new NearbySyncCoordinator({
       state: joined.state,
       householdKey: joined.householdKey,
       deviceId: 'owner',
       transport: doubled.transport,
-      applyOperation: (operation) => { applied.push(operation); return true; },
+      applyOperation: (operation) => { applied.push(operation); return 'applied'; },
+      queueStore: persisted,
     });
 
     coordinator.enqueue({ operationId: 'op-1', kind: 'add-transaction' });
     expect(doubled.sent).toHaveLength(0);
     await coordinator.setForeground(true);
-    doubled.handlers()!.onPeer(peer(joined.state.householdId));
+    doubled.handlers()!.onPeer(peer(await nearbyDiscoveryTag(joined.householdKey)));
     await new Promise((resolve) => setTimeout(resolve, 25));
     expect(doubled.sent).toHaveLength(1);
-    expect(coordinator.queuedOperationIds).toEqual(['op-1']);
+    expect(coordinator.queuedOperationIds).toEqual(['persisted-op', 'op-1']);
   });
 
   it('rejects unpaired or wrong-household peers without exposing financial metadata', async () => {
@@ -84,12 +96,13 @@ describe('foreground nearby sync', () => {
       householdKey: owner.householdKey,
       deviceId: 'owner',
       transport: doubled.transport,
-      applyOperation: () => true,
+      applyOperation: () => 'applied',
+      queueStore: queueStore(),
       onError: (error) => errors.push(error),
     });
     await coordinator.setForeground(true);
-    doubled.handlers()!.onPeer(peer('other-household'));
-    doubled.handlers()!.onPeer({ deviceId: 'stranger', discoveryInfo: nearbyDiscoveryInfo(owner.state.householdId) });
+    doubled.handlers()!.onPeer(peer('other-household-tag'));
+    doubled.handlers()!.onPeer({ deviceId: 'stranger', discoveryInfo: nearbyDiscoveryInfo(await nearbyDiscoveryTag(owner.householdKey)) });
     expect(doubled.sent).toHaveLength(0);
     expect(errors).toHaveLength(0);
     expect(JSON.stringify(doubled.handlers())).not.toContain('amount');
@@ -106,23 +119,124 @@ describe('foreground nearby sync', () => {
       if (fail) { fail = false; throw new Error('peer unavailable'); }
       return originalSend(target, envelope);
     };
+    const persisted = queueStore();
     const coordinator = new NearbySyncCoordinator({
       state: joined.state,
       householdKey: joined.householdKey,
       deviceId: 'owner',
       transport: doubled.transport,
-      applyOperation: () => true,
+      applyOperation: () => 'applied',
+      queueStore: persisted,
     });
     coordinator.enqueue({ operationId: 'op-2', kind: 'add-transaction' });
     await coordinator.setForeground(true);
-    doubled.handlers()!.onPeer(peer(joined.state.householdId));
+    const remote = peer(await nearbyDiscoveryTag(joined.householdKey));
+    doubled.handlers()!.onPeer(remote);
     await new Promise((resolve) => setTimeout(resolve, 25));
     expect(coordinator.queuedOperationIds).toEqual(['op-2']);
+    doubled.handlers()!.onPeer(remote);
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(doubled.sent).toHaveLength(1);
     const ack = await createAuthenticatedEnvelope(
-      { v: 1, kind: 'ack', operationIds: ['op-2'] }, joined.householdKey, joined.state, 'partner', 'ack-1',
+      { v: 1, kind: 'ack', batchId: persisted.snapshot().inFlight!.batchId, operationIds: ['op-2'] },
+      joined.householdKey, joined.state, 'partner', 'ack-1',
     );
-    doubled.handlers()!.onMessage(peer(joined.state.householdId), ack);
+    doubled.handlers()!.onMessage(remote, ack);
     await new Promise((resolve) => setTimeout(resolve, 25));
     expect(coordinator.queuedOperationIds).toEqual([]);
+  });
+
+  it('ignores an authenticated acknowledgement that does not match the sent batch', async () => {
+    const owner = createHousehold('owner', 1);
+    const invitation = await createInvitation(owner.state, owner.householdKey, 'owner', 1);
+    const joined = await joinHousehold(invitation.state, invitation.qrPayload, invitation.invitation.matchingCode, 'partner', 2);
+    const doubled = transportDouble();
+    const errors: Error[] = [];
+    const coordinator = new NearbySyncCoordinator({
+      state: joined.state,
+      householdKey: joined.householdKey,
+      deviceId: 'owner',
+      transport: doubled.transport,
+      applyOperation: () => 'applied',
+      queueStore: queueStore(),
+      onError: (error) => errors.push(error),
+    });
+    coordinator.enqueue({ operationId: 'op-correlated', kind: 'add-transaction' });
+    await coordinator.setForeground(true);
+    const remote = peer(await nearbyDiscoveryTag(joined.householdKey));
+    doubled.handlers()!.onPeer(remote);
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    const wrongAck = await createAuthenticatedEnvelope(
+      { v: 1, kind: 'ack', batchId: 'never-sent', operationIds: ['op-correlated'] },
+      joined.householdKey, joined.state, 'partner', 'ack-wrong-batch',
+    );
+    doubled.handlers()!.onMessage(remote, wrongAck);
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(coordinator.queuedOperationIds).toEqual(['op-correlated']);
+    expect(errors.some((error) => error.message.includes('uncorrelated'))).toBe(true);
+  });
+
+  it('serializes rapid foreground transitions and ends in the latest state', async () => {
+    const owner = createHousehold('owner', 1);
+    const transitions: string[] = [];
+    let releaseFirstStart: (() => void) | undefined;
+    const transport: NearbyTransport = {
+      start: async () => {
+        transitions.push('start');
+        if (!releaseFirstStart) await new Promise<void>((resolve) => { releaseFirstStart = resolve; });
+      },
+      stop: async () => { transitions.push('stop'); },
+      send: async () => {},
+    };
+    const coordinator = new NearbySyncCoordinator({
+      state: owner.state,
+      householdKey: owner.householdKey,
+      deviceId: 'owner',
+      transport,
+      applyOperation: () => 'applied',
+      queueStore: queueStore(),
+    });
+    const active = coordinator.setForeground(true);
+    const inactive = coordinator.setForeground(false);
+    const activeAgain = coordinator.setForeground(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseFirstStart?.();
+    await Promise.all([active, inactive, activeAgain]);
+    expect(transitions).toEqual(['start', 'stop', 'start']);
+    expect(coordinator.isForeground).toBe(true);
+  });
+
+  it('acknowledges only applied or duplicate operations and keeps rejected data at the sender', async () => {
+    const owner = createHousehold('owner', 1);
+    const invitation = await createInvitation(owner.state, owner.householdKey, 'owner', 1);
+    const joined = await joinHousehold(invitation.state, invitation.qrPayload, invitation.invitation.matchingCode, 'partner', 2);
+    const doubled = transportDouble();
+    const coordinator = new NearbySyncCoordinator({
+      state: joined.state,
+      householdKey: joined.householdKey,
+      deviceId: 'owner',
+      transport: doubled.transport,
+      applyOperation: (operation) => (operation as { operationId: string }).operationId === 'bad' ? 'rejected' : 'duplicate',
+      queueStore: queueStore(),
+    });
+    await coordinator.setForeground(true);
+    const remote = peer(await nearbyDiscoveryTag(joined.householdKey));
+    doubled.handlers()!.onPeer(remote);
+    const batch = await createAuthenticatedEnvelope(
+      { v: 1, kind: 'operations', batchId: 'remote-batch', operations: [{ operationId: 'good' }, { operationId: 'bad' }] },
+      joined.householdKey,
+      joined.state,
+      'partner',
+      'batch-1',
+    );
+    doubled.handlers()!.onMessage(remote, batch);
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(doubled.sent).toHaveLength(1);
+    const payload = await openAuthenticatedEnvelope<{ operationIds: string[] }>(
+      doubled.sent[0].envelope,
+      joined.householdKey,
+      joined.state,
+    );
+    expect(payload.operationIds).toEqual(['good']);
   });
 });

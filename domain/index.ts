@@ -207,7 +207,11 @@ export {
   type NearbyOperationBatch,
   type NearbyOperationAck,
   type NearbySyncCoordinatorOptions,
+  type NearbyApplyResult,
+  type NearbyQueueSnapshot,
+  type NearbyQueueStore,
 } from '../platform/nearbySync';
+export { createNearbyQueueStore, nearbyQueueStorageKey } from '../platform/nearbyQueueStore';
 export {
   createHouseholdConfigState,
   addLocalCategory,
