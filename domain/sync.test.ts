@@ -155,6 +155,20 @@ describe('household sync tracer bullet', () => {
     expect(replacement.state.appliedOperations).toEqual(deleted.state.appliedOperations);
   });
 
+  it('replays cross-actor replacement history in causal order, not actor-name order', () => {
+    const added = addLocalTransaction(createSyncState('home'), 'z-phone', transaction('cross-actor'));
+    const edited = editLocalTransaction(
+      added.state,
+      'a-phone',
+      { ...transaction('cross-actor'), amount: 9900, note: 'partner edit' },
+    );
+
+    const transfer = createSyncStateTransfer(edited.state);
+    expect(transfer.map((operation) => operation.operationId)).toEqual(['z-phone:1', 'a-phone:1']);
+    const replacement = applySyncStateTransfer(createSyncState('home'), transfer);
+    expect(replacement.state).toEqual(edited.state);
+  });
+
   it('rolls a live record back through a new attributed edit', () => {
     const added = addLocalTransaction(createSyncState('home'), 'phone-a', transaction('live'));
     const edited = editLocalTransaction(added.state, 'phone-a', { ...transaction('live'), amount: 4500, note: 'changed' });

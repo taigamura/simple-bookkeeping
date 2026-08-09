@@ -811,7 +811,14 @@ export function createSyncStateTransfer(state: SyncState): SyncOperation[] {
           kind: 'delete-transaction' as const, operationId: entry.operationId, householdId: state.householdId,
           actorId: entry.actorId, sequence: entry.sequence, version: cloneVector(entry.version), transactionId,
         }))
-    .sort((left, right) => left.operationId.localeCompare(right.operationId));
+    // A causally later operation has a strictly larger vector sum. Sorting by
+    // that depth prevents an edit/delete from reaching a replacement before
+    // its add merely because another actor ID sorts first lexically.
+    .sort((left, right) => {
+      const leftDepth = Object.values(left.version).reduce((sum, value) => sum + value, 0);
+      const rightDepth = Object.values(right.version).reduce((sum, value) => sum + value, 0);
+      return leftDepth - rightDepth || left.operationId.localeCompare(right.operationId);
+    });
 }
 
 /** Merge a replacement's authenticated history atomically into the surviving ledger. */
