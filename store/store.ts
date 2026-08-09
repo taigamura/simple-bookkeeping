@@ -16,6 +16,7 @@ import {
   type AppState,
   type PersistedEnvelope,
 } from './schema';
+import { reconcileQuickEntryCommands } from '../domain';
 
 export type LoadIssue = 'none' | 'corrupt' | 'read-failed' | 'recovery-failed';
 
@@ -33,6 +34,9 @@ export interface Store {
   hasCorruptStash(): Promise<boolean>;
   /** The stashed raw blob, or `null` if none exists. */
   readCorruptStash(): Promise<string | null>;
+  queueQuickEntryCommand(command: unknown): Promise<void>;
+  reconcileQuickEntryCommands(state: AppState): Promise<{ state: AppState; quarantined: number }>;
+  readQuickEntryQuarantine(): Promise<string | null>;
 }
 
 export function createStore(
@@ -41,6 +45,20 @@ export function createStore(
   let lastLoadCorrupt = false;
   let lastLoadIssue: LoadIssue = 'none';
   let saveQueue: Promise<void> = Promise.resolve();
+  const writeState = (state: AppState) => persistence.write(JSON.stringify({
+    version: SCHEMA_VERSION,
+    state: withIdentitySlices(state, false, true),
+  }));
+  const readQueue = async (): Promise<unknown[]> => {
+    const raw = await persistence.readQuickEntryQueue?.();
+    if (!raw) return [];
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      return [raw];
+    }
+  };
 
   // Stash the raw blob load() couldn't use before degrading to defaults, so a
   // bad blob is recoverable instead of silently lost on the next save.
@@ -98,5 +116,46 @@ export function createStore(
     lastLoadIssue: () => lastLoadIssue,
     hasCorruptStash: async () => (await persistence.readCorruptStash()) !== null,
     readCorruptStash: () => persistence.readCorruptStash(),
+    async queueQuickEntryCommand(command) {
+      const write = async () => {
+        const queue = await readQueue();
+        queue.push(command);
+        await persistence.writeQuickEntryQueue?.(JSON.stringify(queue));
+      };
+      saveQueue = saveQueue.then(write, write);
+      await saveQueue;
+    },
+    async reconcileQuickEntryCommands(state) {
+      const write = async () => {
+        const commands = await readQueue();
+        const result = reconcileQuickEntryCommands(state.entries, commands);
+        if (result.quarantined.length > 0) {
+          const previousRaw = await persistence.readQuickEntryQuarantine?.();
+          let previous: unknown[] = [];
+          if (previousRaw) {
+            try {
+              const parsed: unknown = JSON.parse(previousRaw);
+              previous = Array.isArray(parsed) ? parsed : [parsed];
+            } catch { previous = [previousRaw]; }
+          }
+          await persistence.writeQuickEntryQuarantine?.(JSON.stringify([...previous, ...result.quarantined]));
+        }
+        if (result.applied.length > 0 || result.quarantined.length > 0) {
+          const next = withIdentitySlices({ ...state, entries: result.entries }, false, true);
+          await writeState(next);
+          // Clear only after the household blob is durable. If the write
+          // fails, the command remains available for the next boot/retry.
+          await persistence.writeQuickEntryQueue?.(JSON.stringify([]));
+          return { state: next, quarantined: result.quarantined.length };
+        }
+        return { state, quarantined: 0 };
+      };
+      let output: { state: AppState; quarantined: number } = { state, quarantined: 0 };
+      const run = async () => { output = await write(); };
+      saveQueue = saveQueue.then(run, run);
+      await saveQueue;
+      return output;
+    },
+    readQuickEntryQuarantine: () => persistence.readQuickEntryQuarantine?.() ?? Promise.resolve(null),
   };
 }

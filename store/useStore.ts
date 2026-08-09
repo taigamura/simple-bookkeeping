@@ -28,6 +28,8 @@ export interface UseStore {
   readCorruptStash: () => Promise<string | null>;
   /** Non-corrupt persistence failures that need user-visible recovery guidance. */
   persistenceNotice: Exclude<LoadIssue, 'none' | 'corrupt'> | 'save-failed' | null;
+  /** Reconcile queued external commands after boot or foregrounding. */
+  reconcileQuickEntries: () => Promise<void>;
 }
 
 export function useStore(store: Store = defaultStore): UseStore {
@@ -95,6 +97,11 @@ export function useStore(store: Store = defaultStore): UseStore {
   );
 
   const readCorruptStash = useCallback(() => store.readCorruptStash(), [store]);
+  const reconcileQuickEntries = useCallback(async () => {
+    if (!ready) return;
+    const result = await store.reconcileQuickEntryCommands(state);
+    if (result.state !== state) setState(result.state);
+  }, [ready, state, store]);
 
   return {
     ready,
@@ -104,5 +111,6 @@ export function useStore(store: Store = defaultStore): UseStore {
     hasCorruptStash,
     readCorruptStash,
     persistenceNotice,
+    reconcileQuickEntries,
   };
 }

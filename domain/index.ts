@@ -127,3 +127,15 @@ export {
   AMOUNT_MAX_DIGITS,
   type KeypadKey,
 } from './keypad';
+export {
+  QUICK_ENTRY_COMMAND_VERSION,
+  validateQuickEntryCommand,
+  quickEntryCommandKey,
+  quickEntryTransactionId,
+  transactionFromQuickEntryCommand,
+  reconcileQuickEntryCommands,
+  type QuickEntryCommand,
+  type QuickEntryDate,
+  type QuickEntryReconciliation,
+  type QuickEntryValidationError,
+} from './quickEntry';

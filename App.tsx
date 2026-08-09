@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { AppState, Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Root } from './nav';
@@ -35,6 +35,7 @@ export default function App() {
     hasCorruptStash,
     readCorruptStash,
     persistenceNotice,
+    reconcileQuickEntries,
   } = useStore();
   const appReady = fontsLoaded && ready;
 
@@ -44,6 +45,15 @@ export default function App() {
     // wait for the hydrated theme/motion values before the React handoff.
     if (appReady) SplashScreen.hideAsync();
   }, [appReady]);
+
+  useEffect(() => {
+    if (!appReady) return;
+    void reconcileQuickEntries();
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void reconcileQuickEntries();
+    });
+    return () => subscription.remove();
+  }, [appReady, reconcileQuickEntries]);
 
   const finishOpening = useCallback(() => setOpeningComplete(true), []);
 

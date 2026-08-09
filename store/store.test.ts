@@ -17,6 +17,7 @@ import {
   type RecurrenceRule,
   type Transaction,
 } from '../domain';
+import { QUICK_ENTRY_COMMAND_VERSION, type QuickEntryCommand } from '../domain';
 
 /** A full AppState with the given overrides, so tests state only what matters. */
 const stateWith = (over: Partial<AppState> = {}): AppState => ({
@@ -37,7 +38,49 @@ const sampleEntry: Transaction = {
   repeat: 'never',
 };
 
+const quickCommand: QuickEntryCommand = {
+  version: QUICK_ENTRY_COMMAND_VERSION,
+  source: 'widget',
+  id: 'coffee-1',
+  timestamp: '2026-08-10T00:00:00.000Z',
+  amount: 500,
+  category: 'Food',
+  note: 'Coffee',
+  date: { y: 2026, m: 7, day: 10 },
+};
+
 describe('createStore', () => {
+  it('reconciles concurrent and retried quick-entry commands exactly once', async () => {
+    const persistence = createMemoryPersistence();
+    const store = createStore(persistence);
+    await Promise.all([
+      store.queueQuickEntryCommand(quickCommand),
+      store.queueQuickEntryCommand(quickCommand),
+    ]);
+
+    const first = await store.reconcileQuickEntryCommands(stateWith());
+    const second = await store.reconcileQuickEntryCommands(first.state);
+
+    expect(first.state.entries).toEqual([expect.objectContaining({ id: 'quick:widget:coffee-1' })]);
+    expect(second.state).toBe(first.state);
+    expect(await persistence.readQuickEntryQueue!()).toBe('[]');
+  });
+
+  it('quarantines malformed commands while allowing valid commands to recover', async () => {
+    const persistence = createMemoryPersistence();
+    const store = createStore(persistence);
+    await store.queueQuickEntryCommand({ ...quickCommand, amount: 0 });
+    await store.queueQuickEntryCommand(quickCommand);
+
+    const result = await store.reconcileQuickEntryCommands(stateWith());
+
+    expect(result.quarantined).toBe(1);
+    expect(result.state.entries).toHaveLength(1);
+    expect(JSON.parse((await store.readQuickEntryQuarantine())!)).toEqual([
+      expect.objectContaining({ amount: 0 }),
+    ]);
+  });
+
   it('migrates a v1 envelope once and separates household identities from device state', async () => {
     const { household: _household, device: _device, ...legacyState } = stateWith({ entries: [sampleEntry] });
     const persistence = createMemoryPersistence(JSON.stringify({ version: 1, state: legacyState }));

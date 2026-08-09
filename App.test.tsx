@@ -15,6 +15,7 @@ jest.mock('./store', () => ({
     hasCorruptStash: false,
     readCorruptStash: jest.fn(),
     persistenceNotice: null,
+    reconcileQuickEntries: jest.fn(),
   }),
 }));
 jest.mock('./nav', () => ({
