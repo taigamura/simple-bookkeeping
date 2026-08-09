@@ -31,7 +31,7 @@ import type {
 } from '../domain';
 import { isMotionPreference, type MotionPreference } from '../theme/motion';
 import { isThemePreference, type ThemePreference } from '../theme/tokens';
-import { categoryEntities, categoryIdFor, withCategoryId, type CategoryEntity } from '../domain/identity';
+import { categoryEntities, categoryIdFor, legacyCategoryEntities, withCategoryId, type CategoryEntity } from '../domain/identity';
 
 /** Bump when the shape changes incompatibly; `load()` falls back to defaults. */
 export const SCHEMA_VERSION = 2;
@@ -94,6 +94,8 @@ export interface AppState {
   device: DeviceState;
 }
 
+const DEFAULT_CATEGORIES = legacyCategoryEntities(DEFAULT_EXP_CATS, DEFAULT_INC_CATS);
+
 export const DEFAULT_STATE: AppState = {
   theme: 'system',
   entries: [],
@@ -108,12 +110,12 @@ export const DEFAULT_STATE: AppState = {
   motion: 'system',
   summaryGranularity: 'monthly',
   household: {
-    entries: [], recurrenceRules: [], categories: categoryEntities(DEFAULT_EXP_CATS, DEFAULT_INC_CATS),
+    entries: [], recurrenceRules: [], categories: DEFAULT_CATEGORIES,
     budgets: {}, currency: DEFAULT_CURRENCY,
   },
   device: {
-    expenseCategoryOrder: DEFAULT_EXP_CATS.map((label) => categoryEntities(DEFAULT_EXP_CATS, DEFAULT_INC_CATS).find((c) => c.label === label)!.id),
-    incomeCategoryOrder: DEFAULT_INC_CATS.map((label) => categoryEntities(DEFAULT_EXP_CATS, DEFAULT_INC_CATS).find((c) => c.label === label)!.id),
+    expenseCategoryOrder: DEFAULT_EXP_CATS.map((label) => DEFAULT_CATEGORIES.find((c) => c.type === 'expense' && c.label === label)!.id),
+    incomeCategoryOrder: DEFAULT_INC_CATS.map((label) => DEFAULT_CATEGORIES.find((c) => c.type === 'income' && c.label === label)!.id),
     theme: 'system', budgetMode: 'category', totalBudget: 0, calendarView: 'dots', motion: 'system', summaryGranularity: 'monthly',
   },
 };
@@ -224,6 +226,7 @@ function normalizeRecurrenceRule(value: unknown): RecurrenceRule | null {
   if (!txTypes.includes(value.type as TxType)) return null;
   if (!isInteger(value.amount) || value.amount <= 0) return null;
   if (typeof value.category !== 'string' || typeof value.note !== 'string') return null;
+  if (value.categoryId !== undefined && typeof value.categoryId !== 'string') return null;
   if (!recurringRepeats.includes(value.repeat as RecurrenceRule['repeat'])) return null;
   if (!weekendShifts.includes(value.weekendShift as WeekendShift)) return null;
   if (
@@ -251,6 +254,7 @@ function normalizeRecurrenceRule(value: unknown): RecurrenceRule | null {
     weekendShift: value.weekendShift as WeekendShift,
     exceptions: [...value.exceptions] as string[],
   };
+  if (typeof value.categoryId === 'string') normalized.categoryId = value.categoryId;
   if (value.timestamp === undefined || value.timestampInferred === true) {
     normalized.timestampInferred = true;
   }
@@ -287,15 +291,42 @@ function normalizeTransaction(value: unknown): Transaction | null {
     category: value.category,
     note: value.note,
   };
-  // Legacy materialized repeats have no series identity. Treat them as
-  // one-time history rather than accidentally turning every old occurrence
-  // into its own infinite rule.
+  // Materialized repeats from the pre-series schema are historical entries,
+  // not recurrence definitions. Never recreate an infinite series on load.
   normalized.repeat = 'never';
   if (value.timestamp === undefined || value.timestampInferred === true) {
     normalized.timestampInferred = true;
   }
   if (value.accountId !== undefined) normalized.accountId = value.accountId;
+  if (typeof value.categoryId === 'string') normalized.categoryId = value.categoryId;
   return normalized;
+}
+
+function isCategoryEntity(value: unknown): value is CategoryEntity {
+  return isRecord(value)
+    && typeof value.id === 'string' && value.id.length > 0
+    && typeof value.label === 'string' && value.label.length > 0
+    && txTypes.includes(value.type as TxType);
+}
+
+function isHouseholdState(value: unknown): value is HouseholdState {
+  if (!isRecord(value) || !Array.isArray(value.entries) || !Array.isArray(value.recurrenceRules)
+    || !Array.isArray(value.categories) || !value.categories.every(isCategoryEntity)
+    || !isBudgets(value.budgets) || !isCurrency(value.currency)) return false;
+  return value.entries.every((item) => normalizeTransaction(item) !== null)
+    && value.recurrenceRules.every((item) => normalizeRecurrenceRule(item) !== null);
+}
+
+function isDeviceState(value: unknown): value is DeviceState {
+  return isRecord(value)
+    && isCategoryArray(value.expenseCategoryOrder)
+    && isCategoryArray(value.incomeCategoryOrder)
+    && isThemePreference(value.theme)
+    && (value.budgetMode === 'category' || value.budgetMode === 'total')
+    && typeof value.totalBudget === 'number' && Number.isFinite(value.totalBudget) && value.totalBudget >= 0
+    && isCalendarView(value.calendarView)
+    && isMotionPreference(value.motion)
+    && isSummaryGranularity(value.summaryGranularity);
 }
 
 function validateField(key: StateKey, value: unknown): boolean {
@@ -324,8 +355,9 @@ function validateField(key: StateKey, value: unknown): boolean {
     case 'summaryGranularity':
       return isSummaryGranularity(value);
     case 'household':
+      return isHouseholdState(value);
     case 'device':
-      return isRecord(value);
+      return isDeviceState(value);
   }
 }
 
@@ -366,25 +398,39 @@ export function normalizePersistedState(value: unknown): AppState | null {
 
 /** Build the v2 split payload from the compatibility projection. */
 export function withIdentitySlices(state: AppState, migrateLegacy = false, forceCanonical = false): AppState {
-  const categories = categoryEntities(state.expCats, state.incCats, migrateLegacy ? [] : state.household.categories);
+  const categories = categoryEntities(
+    state.expCats,
+    state.incCats,
+    migrateLegacy ? [] : state.household.categories,
+    { legacy: migrateLegacy },
+  );
   const entries = state.entries.map((entry) => migrateLegacy ? withCategoryId(entry, categories) : entry);
   const recurrenceRules = state.recurrenceRules.map((rule) => ({
     ...rule,
     ...(migrateLegacy && !rule.categoryId ? { categoryId: categoryIdFor(rule.category, rule.type, categories) } : {}),
   }));
-  const budgets = Object.fromEntries(Object.entries(state.budgets).map(([label, amount]) => [
-    categoryIdFor(label, 'expense', categories), amount,
+  const budgets = Object.fromEntries(Object.entries(state.budgets).map(([labelOrId, amount]) => [
+    categories.some((category) => category.id === labelOrId)
+      ? labelOrId
+      : categoryIdFor(labelOrId, 'expense', categories), amount,
   ]));
   const hasPersistedHousehold = forceCanonical || migrateLegacy || state.household.entries.length > 0 || state.household.recurrenceRules.length > 0 || Object.keys(state.household.budgets).length > 0;
   const household: HouseholdState = hasPersistedHousehold
     ? { entries, recurrenceRules, categories, budgets, currency: state.currency }
     : state.household;
-  const hasPersistedDevice = migrateLegacy;
-  const device: DeviceState = hasPersistedDevice ? {
-    expenseCategoryOrder: state.expCats.map((label) => categoryIdFor(label, 'expense', categories)),
-    incomeCategoryOrder: state.incCats.map((label) => categoryIdFor(label, 'income', categories)),
-    theme: state.theme, budgetMode: state.budgetMode, totalBudget: state.totalBudget,
-    calendarView: state.calendarView, motion: state.motion, summaryGranularity: state.summaryGranularity,
-  } : state.device;
+  const categoryIds = (type: TxType, labels: string[], existing: string[]) => [
+    ...existing.filter((id) => categories.some((category) => category.type === type && category.id === id)),
+    ...labels.map((label) => categoryIdFor(label, type, categories))
+      .filter((id, index, all) => all.indexOf(id) === index && !existing.includes(id)),
+  ];
+  const device: DeviceState = {
+    ...state.device,
+    expenseCategoryOrder: categoryIds('expense', state.expCats, migrateLegacy ? [] : state.device.expenseCategoryOrder),
+    incomeCategoryOrder: categoryIds('income', state.incCats, migrateLegacy ? [] : state.device.incomeCategoryOrder),
+    ...(migrateLegacy ? {
+      theme: state.theme, budgetMode: state.budgetMode, totalBudget: state.totalBudget,
+      calendarView: state.calendarView, motion: state.motion, summaryGranularity: state.summaryGranularity,
+    } : {}),
+  };
   return { ...state, entries, recurrenceRules, household, device };
 }

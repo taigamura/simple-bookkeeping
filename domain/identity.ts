@@ -2,6 +2,7 @@
 import type { Transaction, TxType } from './types';
 
 export interface CategoryEntity { id: string; label: string; type: TxType; }
+export interface CategoryEntityOptions { legacy?: boolean; }
 
 /** A UUID from the platform CSPRNG, with a Web Crypto fallback. */
 export function stableId(): string {
@@ -23,13 +24,24 @@ export function legacyCategoryId(type: TxType, label: string): string {
   return `legacy-${type}-${(hash >>> 0).toString(16).padStart(8, '0')}`;
 }
 
-export function categoryEntities(expCats: string[], incCats: string[], existing: CategoryEntity[] = []): CategoryEntity[] {
+export function categoryEntities(
+  expCats: string[],
+  incCats: string[],
+  existing: CategoryEntity[] = [],
+  options: CategoryEntityOptions = {},
+): CategoryEntity[] {
   const make = (label: string, type: TxType): CategoryEntity => ({
-    id: existing.find((item) => item.type === type && item.label === label)?.id ?? (existing.length > 0 ? stableId() : legacyCategoryId(type, label)),
+    id: existing.find((item) => item.type === type && item.label === label)?.id
+      ?? (options.legacy ? legacyCategoryId(type, label) : stableId()),
     label,
     type,
   });
   return [...expCats.map((label) => make(label, 'expense')), ...incCats.map((label) => make(label, 'income'))];
+}
+
+/** Recreate identities for categories that predate the household schema. */
+export function legacyCategoryEntities(expCats: string[], incCats: string[]): CategoryEntity[] {
+  return categoryEntities(expCats, incCats, [], { legacy: true });
 }
 
 export function categoryIdFor(category: string, type: TxType, categories: CategoryEntity[]): string {
