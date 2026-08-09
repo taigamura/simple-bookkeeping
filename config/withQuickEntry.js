@@ -8,6 +8,8 @@ const APP_GROUP = 'group.com.taigamura.kaji';
 const EXTENSION_NAME = 'KajiQuickEntryExtension';
 const EXTENSION_BUNDLE_ID = `${APP_BUNDLE_ID}.quick-entry`;
 const SCHEME = 'kaji-quick-entry';
+const EXTENSION_MARKETING_VERSION = '0.1.0';
+const EXTENSION_PROJECT_VERSION = '1';
 
 if (extensionSpec.bundleIdentifier !== EXTENSION_BUNDLE_ID || extensionSpec.appGroup !== APP_GROUP || extensionSpec.urlScheme !== SCHEME) {
   throw new Error('Quick-entry extension identifiers must derive from the Kaji app namespace');
@@ -35,6 +37,8 @@ function addExtensionTarget(project) {
     build.buildSettings.CODE_SIGN_ENTITLEMENTS = `"${EXTENSION_NAME}/${EXTENSION_NAME}.entitlements"`;
     build.buildSettings.SWIFT_VERSION = '5.0';
     build.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = '16.4';
+    build.buildSettings.CURRENT_PROJECT_VERSION = EXTENSION_PROJECT_VERSION;
+    build.buildSettings.MARKETING_VERSION = EXTENSION_MARKETING_VERSION;
   }
   const files = project.pbxFileReferenceSection();
   const sourcePhase = nativeTarget.buildPhases.find((phase) => phase.comment === 'Sources')
@@ -67,7 +71,7 @@ const withQuickEntryFiles = (config) => withDangerousMod(config, ['ios', async (
   const extensionRoot = path.join(config.modRequest.platformProjectRoot, EXTENSION_NAME);
   fs.mkdirSync(extensionRoot, { recursive: true });
   fs.writeFileSync(path.join(extensionRoot, `${EXTENSION_NAME}.swift`), `import SwiftUI\nimport WidgetKit\n\nstruct KajiQuickEntryWidgetEntry: TimelineEntry {\n  let date: Date\n}\n\nstruct KajiQuickEntryProvider: TimelineProvider {\n  func placeholder(in context: Context) -> KajiQuickEntryWidgetEntry { KajiQuickEntryWidgetEntry(date: Date()) }\n  func getSnapshot(in context: Context, completion: @escaping (KajiQuickEntryWidgetEntry) -> Void) { completion(placeholder(in: context)) }\n  func getTimeline(in context: Context, completion: @escaping (Timeline<KajiQuickEntryWidgetEntry>) -> Void) {\n    completion(Timeline(entries: [placeholder(in: context)], policy: .never))\n  }\n}\n\nstruct KajiQuickEntryWidget: Widget {\n  var body: some WidgetConfiguration {\n    StaticConfiguration(kind: "KajiQuickEntryWidget", provider: KajiQuickEntryProvider()) { _ in\n      Text("Quick Entry")\n    }\n    .configurationDisplayName("Quick Entry")\n    .description("Open the app to review a draft expense.")\n    .supportedFamilies([.systemSmall])\n  }\n}\n\n@main\nstruct KajiQuickEntryExtension: WidgetBundle {\n  var body: some Widget { KajiQuickEntryWidget() }\n}\n`);
-  fs.writeFileSync(path.join(extensionRoot, `${EXTENSION_NAME}-Info.plist`), `<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundlePackageType</key><string>XPC!</string><key>NSExtension</key><dict><key>NSExtensionPointIdentifier</key><string>com.apple.widgetkit-extension</string></dict></dict></plist>`);
+  fs.writeFileSync(path.join(extensionRoot, `${EXTENSION_NAME}-Info.plist`), `<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string><key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string><key>CFBundleName</key><string>$(PRODUCT_NAME)</string><key>CFBundleInfoDictionaryVersion</key><string>6.0</string><key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string><key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string><key>CFBundlePackageType</key><string>XPC!</string><key>NSExtension</key><dict><key>NSExtensionPointIdentifier</key><string>com.apple.widgetkit-extension</string></dict></dict></plist>`);
   fs.copyFileSync(path.join(config.modRequest.projectRoot, 'config/quick-entry.entitlements'), path.join(extensionRoot, `${EXTENSION_NAME}.entitlements`));
   return config;
 }]);

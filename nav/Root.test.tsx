@@ -51,6 +51,48 @@ import { ThemeProvider } from '../theme';
 import { Root } from './Root';
 
 describe('Root unified sheet host (#60)', () => {
+  it('installs two identical queued drafts as separate deliveries', async () => {
+    const onConsumed = jest.fn();
+    const first = {
+      type: 'expense' as const, amountStr: '500', category: 'Food', note: '',
+      y: 2026, m: 7, day: 10, repeat: 'never' as const,
+    };
+    const second = { ...first };
+    const view = render(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={jest.fn()}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+          quickEntryDraft={first}
+          quickEntryPresentationToken={1}
+          onQuickEntryDraftConsumed={onConsumed}
+        />
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => expect(onConsumed).toHaveBeenCalledTimes(1));
+    view.rerender(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={jest.fn()}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+          quickEntryDraft={second}
+          quickEntryPresentationToken={2}
+          onQuickEntryDraftConsumed={onConsumed}
+        />
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => expect(onConsumed).toHaveBeenCalledTimes(2));
+    expect(onConsumed.mock.calls.map(([draft]) => draft)).toEqual([first, second]);
+  });
+
   it('renders successfully with default state', () => {
     const { root } = render(
       <ThemeProvider>

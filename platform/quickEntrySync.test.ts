@@ -84,6 +84,23 @@ describe('native quick-entry reconciliation seam', () => {
     expect(native.deepLinkAcks).toEqual(['link-1', 'link-2']);
   });
 
+  it('confirms and acknowledges identical queued links sequentially without ledger mutation', async () => {
+    const native = bridge([], [
+      'kaji-quick-entry://new?amount=500&category=Food&date=2026-08-10',
+      'kaji-quick-entry://new?amount=500&category=Food&date=2026-08-10',
+    ]);
+    const store = createStore(createMemoryPersistence());
+    const confirmations: EntryDraft[] = [];
+    await reconcileNativeQuickEntries(store, native, async (draft) => {
+      confirmations.push(draft);
+    });
+
+    expect(confirmations).toHaveLength(2);
+    expect(confirmations[0]).toEqual(confirmations[1]);
+    expect(native.deepLinkAcks).toEqual(['link-1', 'link-2']);
+    expect((await store.load()).entries).toEqual([]);
+  });
+
   it('quarantines malformed URLs without touching the ledger', async () => {
     const native = bridge([], ['kaji-quick-entry://new?amount=0&category=Food&date=2026-08-10']);
     const store = createStore(createMemoryPersistence());

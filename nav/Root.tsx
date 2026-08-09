@@ -78,7 +78,8 @@ interface RootProps {
   readCorruptStash: () => Promise<string | null>;
   persistenceNotice?: UseStore['persistenceNotice'];
   quickEntryDraft?: EntryDraft | null;
-  onQuickEntryDraftConsumed?: (draft: EntryDraft) => void;
+  quickEntryPresentationToken?: number;
+  onQuickEntryDraftConsumed?: (draft: EntryDraft, token: number) => void;
   /** Runtime-owned nearby state. Defaults to a truthful unpaired/offline surface. */
   householdSync?: {
     model: SyncStatusModel;
@@ -359,6 +360,7 @@ function Shell({
   readCorruptStash,
   persistenceNotice = null,
   quickEntryDraft = null,
+  quickEntryPresentationToken = 0,
   onQuickEntryDraftConsumed,
   householdSync = {
     model: householdSyncStatus({ paired: false, foreground: true, partnerPresent: false, queuedOperationCount: 0 }),
@@ -470,7 +472,7 @@ function Shell({
     setEditing(null);
     setEntryContentHeight(0);
     setSheet('entry');
-  }, [quickEntryDraft]);
+  }, [quickEntryDraft, quickEntryPresentationToken]);
 
   // Single-sheet-host handlers (#60): the unified sheet host replaces the
   // three separate modals. Sheet state is authoritative; dismissal while a sheet
@@ -844,7 +846,7 @@ function Shell({
           sheet={sheet}
           entry={
             <EntrySheet
-            key={activeQuickEntryDraft ? JSON.stringify(activeQuickEntryDraft) : 'new-entry'}
+            key={activeQuickEntryDraft ? `quick-entry-${quickEntryPresentationToken}` : 'new-entry'}
             expCats={state.expCats}
             incCats={state.incCats}
             y={cursor.y}
@@ -858,7 +860,7 @@ function Shell({
             onSave={handleSubmit}
             onDelete={handleDelete}
             onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
-            onInitialDraftInstalled={onQuickEntryDraftConsumed}
+            onInitialDraftInstalled={(draft) => onQuickEntryDraftConsumed?.(draft, quickEntryPresentationToken)}
             onContentHeightChange={setEntryContentHeight}
             ScrollContainer={BottomSheetScrollView}
             />

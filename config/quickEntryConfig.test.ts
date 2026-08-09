@@ -4,6 +4,7 @@ import path from 'node:path';
 // xcode ships without TypeScript declarations; this test intentionally parses
 // the generated project through its public runtime parser.
 const xcode: any = require('xcode');
+const plist = require('@expo/plist').default;
 
 const root = path.resolve(__dirname, '..');
 
@@ -83,9 +84,30 @@ describe('generated quick-entry native configuration', () => {
       const settings = extensionBuilds[config.value].buildSettings;
       expect(settings.INFOPLIST_FILE).toBe('"KajiQuickEntryExtension/KajiQuickEntryExtension-Info.plist"');
       expect(settings.CODE_SIGN_ENTITLEMENTS).toBe('"KajiQuickEntryExtension/KajiQuickEntryExtension.entitlements"');
+      expect(settings.CURRENT_PROJECT_VERSION).toBe(1);
+      expect(settings.MARKETING_VERSION).toBe('0.1.0');
     }
     expect(fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension.entitlements'), 'utf8')).toContain('group.com.taigamura.kaji');
     const extensionInfo = fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension-Info.plist'), 'utf8');
+    const parsedExtensionInfo = plist.parse(extensionInfo);
+    expect(parsedExtensionInfo).toEqual(expect.objectContaining({
+      CFBundleExecutable: '$(EXECUTABLE_NAME)',
+      CFBundleIdentifier: '$(PRODUCT_BUNDLE_IDENTIFIER)',
+      CFBundleName: '$(PRODUCT_NAME)',
+      CFBundleInfoDictionaryVersion: '6.0',
+      CFBundleVersion: '$(CURRENT_PROJECT_VERSION)',
+      CFBundleShortVersionString: '$(MARKETING_VERSION)',
+      CFBundlePackageType: 'XPC!',
+      NSExtension: { NSExtensionPointIdentifier: 'com.apple.widgetkit-extension' },
+    }));
+    for (const key of [
+      'CFBundleExecutable', '$(EXECUTABLE_NAME)',
+      'CFBundleIdentifier', '$(PRODUCT_BUNDLE_IDENTIFIER)',
+      'CFBundleName', '$(PRODUCT_NAME)',
+      'CFBundleInfoDictionaryVersion', '6.0',
+      'CFBundleVersion', '$(CURRENT_PROJECT_VERSION)',
+      'CFBundleShortVersionString', '$(MARKETING_VERSION)',
+    ]) expect(extensionInfo).toContain(key);
     expect(extensionInfo).toContain('com.apple.widgetkit-extension');
     expect(extensionInfo).not.toContain('NSExtensionPrincipalClass');
     expect(extensionInfo).not.toContain('WKCompanionAppBundleIdentifier');

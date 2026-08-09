@@ -31,6 +31,7 @@ export default function App() {
   const fontsLoaded = useAppFonts();
   const [openingComplete, setOpeningComplete] = useState(false);
   const [quickEntryDraft, setQuickEntryDraft] = useState<EntryDraft | null>(null);
+  const [quickEntryPresentationToken, setQuickEntryPresentationToken] = useState(0);
   const {
     ready,
     state,
@@ -51,19 +52,22 @@ export default function App() {
     if (appReady) SplashScreen.hideAsync();
   }, [appReady]);
 
-  const pendingDraft = useRef<{ draft: EntryDraft; resolve: () => void } | null>(null);
+  const pendingDraft = useRef<{ draft: EntryDraft; token: number; resolve: () => void } | null>(null);
+  const presentationToken = useRef(0);
   const readyRef = useRef(ready);
   const reconcileRef = useRef(reconcileQuickEntries);
   const handoffRef = useRef<((draft: EntryDraft) => Promise<void>) | undefined>(undefined);
   readyRef.current = ready;
   reconcileRef.current = reconcileQuickEntries;
   const handoffDraft = useCallback((draft: EntryDraft) => new Promise<void>((resolve) => {
-    pendingDraft.current = { draft, resolve };
+    const token = ++presentationToken.current;
+    pendingDraft.current = { draft, token, resolve };
     setQuickEntryDraft(draft);
+    setQuickEntryPresentationToken(token);
   }), []);
   handoffRef.current = handoffDraft;
-  const consumeDraft = useCallback((draft: EntryDraft) => {
-    if (pendingDraft.current?.draft !== draft) return;
+  const consumeDraft = useCallback((draft: EntryDraft, token: number) => {
+    if (pendingDraft.current?.draft !== draft || pendingDraft.current.token !== token) return;
     pendingDraft.current.resolve();
     pendingDraft.current = null;
     setQuickEntryDraft((current) => current === draft ? null : current);
@@ -149,6 +153,7 @@ export default function App() {
             readCorruptStash={readCorruptStash}
             persistenceNotice={persistenceNotice}
             quickEntryDraft={quickEntryDraft}
+            quickEntryPresentationToken={quickEntryPresentationToken}
             onQuickEntryDraftConsumed={consumeDraft}
           />
           {!openingComplete ? (
