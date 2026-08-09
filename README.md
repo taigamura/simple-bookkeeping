@@ -157,10 +157,10 @@ requires a new production build and a repeat of the affected checks. EAS
 Submit uploads a binary to App Store Connect; it does not replace the final
 metadata and App Review submission steps there.
 
-While crash reporting remains disabled, every EAS build profile sets
-`SENTRY_DISABLE_AUTO_UPLOAD=true`. If Sentry is enabled later, configure its
-organization/project and `SENTRY_AUTH_TOKEN`, remove that flag, and update the
-privacy policy and App Store privacy answers before shipping.
+The release build has no crash-reporting, analytics, or telemetry SDK. Run
+`npm run privacy:check` to enforce the no-internet boundary. Authenticated
+nearby peer-to-peer traffic is the only reserved transport exception and must
+remain inside the named `platform/nearbyTransport.ts` boundary.
 
 ### V1 release status (2026-07-13)
 
@@ -182,7 +182,6 @@ The remaining work for a public V1 is tracked in
    then submit that exact build for review.
 
 V1 ships without advertising, purchases, Premium state, analytics, accounts,
-sync, or enabled crash reporting. The Sentry integration remains inert while
-`sentryDsn` is blank, EAS builds disable source-map upload accordingly, and the
-zero-data-collection release posture is documented in
+sync, or crash reporting. Its local-only, no-internet privacy posture is
+documented in
 [`docs/v1-privacy-mode.md`](docs/v1-privacy-mode.md).

@@ -37,8 +37,8 @@ currency conversion.
 - [x] CSV import/export and corrupt-load safety net implemented.
 - [x] Haptics and optional native device authentication implemented.
 - [x] Privacy policy written and hosted in English and Japanese.
-- [x] Sentry kept inert with a blank DSN, source-map upload disabled, and a
-      unit test proving blank-DSN runtime initialization is skipped.
+- [x] Crash reporting, analytics, and telemetry SDK/config surfaces removed;
+      the privacy boundary checker is enforced in CI.
 - [x] Real-iPhone behavior tested and accepted as sufficient to enter the
       release-candidate phase.
 - [x] Total/per-category budgets, delete-all-data, launch destination, and
@@ -93,7 +93,7 @@ currency conversion.
       promotional copy, and support contact details.
 - [ ] Complete Finance category, age rating, copyright, privacy-policy URL,
       support URL, and export-compliance metadata.
-- [x] Declare “Data Not Collected” only while Sentry, analytics, advertising,
+- [x] Declare “Data Not Collected” only while crash reporting, analytics, advertising,
       and every other transmission path remain disabled; see
       `docs/v1-privacy-mode.md`.
 - [ ] Capture current Japanese and English screenshots for every App Store

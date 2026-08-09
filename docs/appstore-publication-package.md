@@ -16,7 +16,7 @@ Personal expense tracker
 
 ### Description
 
-[NAME] is a small, fast, local-first personal income and expense tracker. All your financial data stays on your device—there are no accounts, cloud sync, or analytics.
+[NAME] is a small, fast, local-first personal income and expense tracker. All your financial data stays on your device. There are no accounts, internet backend, cloud sync, or analytics. Authenticated nearby peer-to-peer traffic is separately bounded and is not internet networking.
 
 **What you can do:**
 - Track income and expenses by day with an optional note.
@@ -31,7 +31,7 @@ Personal expense tracker
 **What [NAME] doesn't do:**
 - No account creation or login.
 - No cloud sync or multi-device sharing.
-- No connection to banks or other services.
+- No connection to banks, internet services, or cloud backends.
 - No currency conversion (currency choices are display-only).
 - No ads or in-app purchases.
 - No analytics or data collection.
@@ -46,7 +46,10 @@ Start on the Calendar to add your first entry, or on the Summary to see your mon
 money, expense, budget, personal finance, tracker, local-first
 
 ### Promotional Text (Optional; up to 170 characters)
-All your financial data stays on your device. No accounts, no sync, no analytics.
+All your financial data stays on your device. No accounts, no backend, no
+internet service, no sync, and no analytics. Authenticated nearby peer-to-peer
+traffic is a separate, explicitly bounded network capability, not “zero
+networking.”
 
 ### Category
 Finance
@@ -131,7 +134,7 @@ Standard
 ### Data Collection
 
 **App Privacy Details:**
-- **Data Not Collected** – [NAME] does not collect any user data. All financial information (transactions, categories, budgets, settings) is stored only on your device in local app storage. There is no account, sync, analytics, advertising, crash reporting, or any network transmission of user data.
+- **Data Not Collected** – [NAME] does not collect any user data. All financial information (transactions, categories, budgets, settings) is stored only on your device in local app storage. There is no account, internet backend, sync, analytics, advertising, or crash reporting. Any authenticated nearby peer-to-peer transport is separately bounded and is not an internet service.
 
 ---
 
@@ -149,7 +152,7 @@ Standard
 5. **CSV import/export:**
    - To export: In Settings, tap "Export data" to save a CSV file using the system share sheet. Repeating occurrences through today are exported as concrete one-time rows because Zaim CSV has no recurrence-rule format.
    - To import: In Settings, tap "Import from Zaim" to select a CSV file. [NAME] accepts standard Zaim CSV format and UTF-8 or Shift-JIS encoding.
-6. **No login, no network:** The app has no account creation, login, or network activity. It does not connect to banks, services, or cloud backends. All data is private and local.
+6. **No login, no internet backend:** The app has no account creation, login, or internet service. It does not connect to banks, services, or cloud backends. All data is private and local. Any authenticated nearby peer-to-peer traffic is separately bounded and must not be described as zero networking.
 7. **Locales:** The app respects the device language setting. Change your device language to Japanese to verify the full Japanese UI and copy.
 8. **Delete all data:** In Settings, scroll to "Data" and select "Delete all data" to see a confirmation that clarifies the scope: entries, repeating series, and budgets are deleted, but currency, categories, and settings are preserved.
 

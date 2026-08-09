@@ -4,16 +4,20 @@ Status date: 2026-07-13.
 
 V1 is frozen as a zero-data-collection build. The app stores user-entered
 transactions, categories, budgets, settings, and corrupt-load recovery backups
-only in local app storage on the device. It has no account, sync, advertising,
-analytics, purchase, subscription, Premium, or enabled crash-reporting surface.
+only in local app storage on the device. It has no account, backend, internet
+service, sync, advertising, analytics, purchase, subscription, Premium, or
+crash-reporting surface. Authenticated nearby peer-to-peer household traffic is
+the only permitted future transport boundary; it is networking and must not be
+described as zero networking.
 
 ## Runtime and Release Configuration
 
-- `app.json` keeps `expo.extra.sentryDsn` blank.
-- Every EAS profile in `eas.json` sets `SENTRY_DISABLE_AUTO_UPLOAD=true`.
-- `platform/errorReporting.ts` returns before calling `Sentry.init` when the
-  DSN is blank, and `platform/errorReporting.test.ts` locks that behavior.
-- No analytics or telemetry SDK is installed or initialized.
+- No crash-reporting, analytics, or telemetry SDK is installed, configured, or
+  initialized.
+- `npm run privacy:check` rejects internet-capable imports, browser/network
+  APIs, and telemetry configuration in app code. The only exception is the
+  explicitly named `platform/nearbyTransport.ts` boundary, which is reserved
+  for authenticated nearby peer-to-peer traffic.
 
 ## Legacy Premium Compatibility
 
@@ -36,12 +40,13 @@ Required journey:
 6. Import a local Zaim CSV and export app CSV through the system share sheet.
 7. Delete all data and relaunch.
 
-Expected result: no app-initiated network requests during the required journey.
+Expected result: no internet or backend requests during the required journey.
 System-owned iOS file picker and share sheet UI may appear, but Kaji does not
-transmit user data from those flows. Any future non-empty Sentry
-DSN, analytics SDK, ad SDK, account, sync, or purchase integration invalidates
-the “Data Not Collected” claim until the audit and public privacy text are
-updated.
+transmit user data to an internet service from those flows. Authenticated
+nearby peer-to-peer traffic, if added at the named boundary, is a separate
+explicitly reviewed network path. Any future analytics SDK, ad SDK, account,
+sync, or internet backend invalidates the “Data Not Collected” claim until the
+audit and public privacy text are updated.
 
 ## App Store Privacy Answers
 

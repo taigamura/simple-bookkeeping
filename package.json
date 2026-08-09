@@ -8,7 +8,6 @@
     "@expo/vector-icons": "^15.0.2",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@sentry/react-native": "~7.11.0",
     "encoding-japanese": "^2.2.0",
     "expo": "~57.0.1",
     "expo-asset": "~57.0.2",
@@ -57,7 +56,8 @@
     "e2e:install": "playwright install",
     "e2e:test": "playwright test",
     "e2e:test:firefox": "node e2e/run-firefox.mjs",
-    "e2e": "npm run e2e:export && npm run e2e:test"
+    "e2e": "npm run e2e:export && npm run e2e:test",
+    "privacy:check": "node scripts/check-privacy-boundary.mjs"
   },
   "private": true
 }

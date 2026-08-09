@@ -35,6 +35,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Privacy boundary
+        run: npm run privacy:check
+
       - name: Unit tests (jest)
         run: npm test
 
