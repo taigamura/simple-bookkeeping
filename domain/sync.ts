@@ -6,7 +6,8 @@
  * returned ledger plus sync metadata form one atomic snapshot.
  */
 import { daysInMonth } from './calendar';
-import type { Transaction } from './types';
+import { CURRENCIES } from './categories';
+import type { Currency, Transaction, TxType } from './types';
 
 export type ActorId = string;
 export type HouseholdId = string;
@@ -34,6 +35,52 @@ export interface DeleteTransactionOperation extends Omit<AddTransactionOperation
 }
 
 export type SyncOperation = AddTransactionOperation | EditTransactionOperation | DeleteTransactionOperation;
+
+export interface SharedCategory {
+  id: string;
+  label: string;
+  type: TxType;
+}
+
+export interface HouseholdConfigState {
+  householdId: HouseholdId;
+  categories: SharedCategory[];
+  budgets: Record<string, number>;
+  totalBudget: number;
+  currency: Currency;
+  versionVector: VersionVector;
+  appliedOperations: string[];
+  categoryHistory: Record<string, SharedCategory[]>;
+  budgetHistory: Record<string, number[]>;
+  totalBudgetHistory: number[];
+  currencyHistory: Currency[];
+  deletedCategories: Record<string, string>;
+  fieldOperations: Record<string, string>;
+}
+
+export interface AddCategoryOperation {
+  kind: 'add-category'; operationId: string; householdId: HouseholdId; actorId: ActorId;
+  sequence: number; version: VersionVector; category: SharedCategory;
+}
+export interface RenameCategoryOperation extends Omit<AddCategoryOperation, 'kind' | 'category'> {
+  kind: 'rename-category'; categoryId: string; label: string;
+}
+export interface DeleteCategoryOperation extends Omit<AddCategoryOperation, 'kind' | 'category'> {
+  kind: 'delete-category'; categoryId: string;
+}
+export interface SetCategoryBudgetOperation extends Omit<AddCategoryOperation, 'kind' | 'category'> {
+  kind: 'set-category-budget'; categoryId: string; amount: number | null;
+}
+export interface SetTotalBudgetOperation extends Omit<AddCategoryOperation, 'kind' | 'category'> {
+  kind: 'set-total-budget'; amount: number;
+}
+export interface SetCurrencyOperation extends Omit<AddCategoryOperation, 'kind' | 'category'> {
+  kind: 'set-currency'; currency: Currency;
+}
+export type HouseholdConfigOperation = AddCategoryOperation | RenameCategoryOperation | DeleteCategoryOperation
+  | SetCategoryBudgetOperation | SetTotalBudgetOperation | SetCurrencyOperation;
+
+export interface ConfigApplyResult { state: HouseholdConfigState; accepted: boolean; error?: SyncValidationError; }
 
 export interface TransactionAttribution {
   createdBy: ActorId;
@@ -107,6 +154,10 @@ function isVersionVector(value: unknown): value is VersionVector {
   return isRecord(value) && Object.entries(value).every(([actor, sequence]) =>
     isId(actor) && isInteger(sequence) && sequence >= 0,
   );
+}
+
+function isCurrency(value: unknown): value is Currency {
+  return isRecord(value) && CURRENCIES.some((currency) => currency.code === value.code && currency.symbol === value.symbol);
 }
 
 function isTransaction(value: unknown): value is Transaction {
@@ -205,6 +256,154 @@ export function createSyncState(householdId: HouseholdId, entries: Transaction[]
     tombstones: {},
     attribution: {},
   };
+}
+
+/** Create the shared configuration slice. Category order and presentation are intentionally absent. */
+export function createHouseholdConfigState(
+  householdId: HouseholdId,
+  categories: SharedCategory[] = [],
+  currency: Currency = CURRENCIES[0],
+): HouseholdConfigState {
+  if (!isId(householdId) || !categories.every((category) => isId(category.id)
+    && typeof category.label === 'string' && category.label.length > 0
+    && (category.type === 'income' || category.type === 'expense')) || !isCurrency(currency)) {
+    throw new Error('Invalid household configuration');
+  }
+  return {
+    householdId, categories: [...categories], budgets: {}, totalBudget: 0, currency,
+    versionVector: {}, appliedOperations: [], categoryHistory: {}, budgetHistory: {},
+    totalBudgetHistory: [], currencyHistory: [currency], deletedCategories: {}, fieldOperations: {},
+  };
+}
+
+function validConfigState(state: HouseholdConfigState): boolean {
+  return isId(state.householdId) && Array.isArray(state.categories)
+    && state.categories.every((category) => isId(category.id) && typeof category.label === 'string'
+      && category.label.length > 0 && (category.type === 'income' || category.type === 'expense'))
+    && isCurrency(state.currency) && isVersionVector(state.versionVector)
+    && Array.isArray(state.appliedOperations) && state.appliedOperations.every(isId);
+}
+
+function configField(operation: HouseholdConfigOperation): string {
+  switch (operation.kind) {
+    case 'rename-category': return `category:${operation.categoryId}:label`;
+    case 'delete-category': return `category:${operation.categoryId}:delete`;
+    case 'set-category-budget': return `budget:${operation.categoryId}`;
+    case 'set-total-budget': return 'total-budget';
+    case 'set-currency': return 'currency';
+    case 'add-category': return `category:${operation.category.id}:add`;
+  }
+}
+
+function validateConfigOperation(operation: unknown, householdId: HouseholdId): SyncValidationError | null {
+  if (!isRecord(operation)) return 'invalid-operation';
+  if (operation.householdId !== householdId) return 'wrong-household';
+  if (!isId(operation.householdId)
+    || !isId(operation.actorId) || !isInteger(operation.sequence) || operation.sequence < 1
+    || !isVersionVector(operation.version) || operation.version[operation.actorId] !== operation.sequence
+    || operation.operationId !== operationId(operation.actorId, operation.sequence)) return 'invalid-operation';
+  const kind = operation.kind;
+  if (!['add-category', 'rename-category', 'delete-category', 'set-category-budget', 'set-total-budget', 'set-currency'].includes(kind as string)) return 'invalid-operation';
+  if (kind === 'add-category') {
+    const category = operation.category as Record<string, unknown>;
+    if (!isRecord(category) || !isId(category.id) || typeof category.label !== 'string' || category.label.length === 0
+      || (category.type !== 'income' && category.type !== 'expense')) return 'invalid-operation';
+  }
+  if (kind === 'rename-category' || kind === 'delete-category' || kind === 'set-category-budget') {
+    if (!isId(operation.categoryId)) return 'invalid-operation';
+  }
+  if (kind === 'rename-category' && (typeof operation.label !== 'string' || operation.label.trim().length === 0)) return 'invalid-operation';
+  if (kind === 'set-category-budget' && operation.amount !== null
+    && (!isInteger(operation.amount) || operation.amount < 0)) return 'invalid-operation';
+  if (kind === 'set-total-budget' && (!isInteger(operation.amount) || operation.amount < 0)) return 'invalid-operation';
+  if (kind === 'set-currency' && !isCurrency(operation.currency)) return 'invalid-operation';
+  return null;
+}
+
+function configWins(state: HouseholdConfigState, field: string, incoming: HouseholdConfigOperation): boolean {
+  const priorId = state.fieldOperations[field];
+  if (!priorId) return true;
+  // The operation ID is a stable lexical tie-breaker for concurrent writes.
+  // Deletions are handled separately as monotonic remove-wins facts.
+  return incoming.operationId < priorId;
+}
+
+/** Apply shared configuration operations. Device-local preferences never enter this merge. */
+export function applyHouseholdConfigOperation(state: HouseholdConfigState, operation: unknown): ConfigApplyResult {
+  if (!validConfigState(state)) return { state, accepted: false, error: 'invalid-state' };
+  const error = validateConfigOperation(operation, state.householdId);
+  if (error) return { state, accepted: false, error };
+  const incoming = operation as HouseholdConfigOperation;
+  if (state.appliedOperations.includes(incoming.operationId)) return { state, accepted: false };
+  const next: HouseholdConfigState = {
+    ...state, categories: [...state.categories], budgets: { ...state.budgets },
+    versionVector: { ...state.versionVector }, appliedOperations: [...state.appliedOperations, incoming.operationId].sort(),
+    categoryHistory: { ...state.categoryHistory }, budgetHistory: { ...state.budgetHistory },
+    totalBudgetHistory: [...state.totalBudgetHistory], currencyHistory: [...state.currencyHistory],
+    deletedCategories: { ...state.deletedCategories }, fieldOperations: { ...state.fieldOperations },
+  };
+  for (const [actor, sequence] of Object.entries(incoming.version)) next.versionVector[actor] = Math.max(next.versionVector[actor] ?? 0, sequence);
+  const record = (key: string, value: number | Currency | SharedCategory) => {
+    if (typeof value === 'number') next.budgetHistory[key] = [...(next.budgetHistory[key] ?? []), value];
+    else if ('code' in value) next.currencyHistory.push(value);
+    else next.categoryHistory[key] = [...(next.categoryHistory[key] ?? []), value];
+  };
+  if (incoming.kind === 'add-category') {
+    if (!next.categories.some((category) => category.id === incoming.category.id) && !next.deletedCategories[incoming.category.id]) next.categories.push(incoming.category);
+    record(incoming.category.id, incoming.category);
+  } else if (incoming.kind === 'delete-category') {
+    const priorDelete = next.deletedCategories[incoming.categoryId];
+    next.deletedCategories[incoming.categoryId] = priorDelete && priorDelete < incoming.operationId ? priorDelete : incoming.operationId;
+    next.categories = next.categories.filter((category) => category.id !== incoming.categoryId);
+    next.fieldOperations[configField(incoming)] = next.deletedCategories[incoming.categoryId];
+  } else if (incoming.kind === 'rename-category') {
+    if (!next.deletedCategories[incoming.categoryId] && configWins(next, configField(incoming), incoming)) {
+      next.categories = next.categories.map((category) => category.id === incoming.categoryId ? { ...category, label: incoming.label.trim() } : category);
+      next.fieldOperations[configField(incoming)] = incoming.operationId;
+    }
+    const category = next.categories.find((item) => item.id === incoming.categoryId)
+      ?? [...(next.categoryHistory[incoming.categoryId] ?? [])].pop();
+    if (category) record(incoming.categoryId, { ...category, label: incoming.label.trim() });
+  } else if (incoming.kind === 'set-category-budget') {
+    if (!next.deletedCategories[incoming.categoryId] && configWins(next, configField(incoming), incoming)) {
+      if (incoming.amount === null) delete next.budgets[incoming.categoryId]; else next.budgets[incoming.categoryId] = incoming.amount;
+      next.fieldOperations[configField(incoming)] = incoming.operationId;
+    }
+    if (incoming.amount !== null) record(incoming.categoryId, incoming.amount);
+  } else if (incoming.kind === 'set-total-budget') {
+    if (configWins(next, 'total-budget', incoming)) { next.totalBudget = incoming.amount; next.fieldOperations['total-budget'] = incoming.operationId; }
+    next.totalBudgetHistory.push(incoming.amount);
+  } else if (incoming.kind === 'set-currency') {
+    if (configWins(next, 'currency', incoming)) { next.currency = incoming.currency; next.fieldOperations.currency = incoming.operationId; }
+    next.currencyHistory.push(incoming.currency);
+  }
+  for (const history of Object.values(next.categoryHistory)) history.sort((a, b) => a.label.localeCompare(b.label));
+  for (const history of Object.values(next.budgetHistory)) history.sort((a, b) => a - b);
+  next.currencyHistory.sort((a, b) => `${a.code}:${a.symbol}`.localeCompare(`${b.code}:${b.symbol}`));
+  next.categories.sort((a, b) => a.id.localeCompare(b.id));
+  return { state: next, accepted: true };
+}
+
+function makeConfigOperation<T extends HouseholdConfigOperation>(state: HouseholdConfigState, actorId: ActorId, operation: Omit<T, 'operationId' | 'sequence' | 'version' | 'householdId' | 'actorId'>): { operation: T; state: HouseholdConfigState } {
+  if (!validConfigState(state) || !isId(actorId)) throw new Error('Invalid local household configuration');
+  const sequence = (state.versionVector[actorId] ?? 0) + 1;
+  const full = { ...operation, operationId: operationId(actorId, sequence), householdId: state.householdId, actorId, sequence, version: { ...state.versionVector, [actorId]: sequence } } as T;
+  const result = applyHouseholdConfigOperation(state, full);
+  if (!result.accepted) throw new Error(result.error ?? 'Unable to apply local household configuration');
+  return { operation: full, state: result.state };
+}
+
+export const addLocalCategory = (state: HouseholdConfigState, actorId: ActorId, category: SharedCategory) => makeConfigOperation<AddCategoryOperation>(state, actorId, { kind: 'add-category', category });
+export const renameLocalCategory = (state: HouseholdConfigState, actorId: ActorId, categoryId: string, label: string) => makeConfigOperation<RenameCategoryOperation>(state, actorId, { kind: 'rename-category', categoryId, label });
+export const deleteLocalCategory = (state: HouseholdConfigState, actorId: ActorId, categoryId: string) => makeConfigOperation<DeleteCategoryOperation>(state, actorId, { kind: 'delete-category', categoryId });
+export const setLocalCategoryBudget = (state: HouseholdConfigState, actorId: ActorId, categoryId: string, amount: number | null) => makeConfigOperation<SetCategoryBudgetOperation>(state, actorId, { kind: 'set-category-budget', categoryId, amount });
+export const setLocalTotalBudget = (state: HouseholdConfigState, actorId: ActorId, amount: number) => makeConfigOperation<SetTotalBudgetOperation>(state, actorId, { kind: 'set-total-budget', amount });
+export const setLocalCurrency = (state: HouseholdConfigState, actorId: ActorId, currency: Currency) => makeConfigOperation<SetCurrencyOperation>(state, actorId, { kind: 'set-currency', currency });
+
+export function applyHouseholdConfigOperations(state: HouseholdConfigState, operations: readonly unknown[]): ConfigApplyResult {
+  let current = state; let accepted = false;
+  for (const operation of operations) { const result = applyHouseholdConfigOperation(current, operation); current = result.state; accepted ||= result.accepted; }
+  return { state: current, accepted };
 }
 
 /** Create a locally authored add and commit it to the author's replica. */

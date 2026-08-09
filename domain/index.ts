@@ -146,6 +146,27 @@ export {
   type SyncState,
   type SyncApplyResult,
   type SyncValidationError,
+  type SharedCategory,
+  type HouseholdConfigState,
+  type AddCategoryOperation,
+  type RenameCategoryOperation,
+  type DeleteCategoryOperation,
+  type SetCategoryBudgetOperation,
+  type SetTotalBudgetOperation,
+  type SetCurrencyOperation,
+  type HouseholdConfigOperation,
+  type ConfigApplyResult,
+} from './sync';
+export {
+  createHouseholdConfigState,
+  addLocalCategory,
+  renameLocalCategory,
+  deleteLocalCategory,
+  setLocalCategoryBudget,
+  setLocalTotalBudget,
+  setLocalCurrency,
+  applyHouseholdConfigOperation,
+  applyHouseholdConfigOperations,
 } from './sync';
 export {
   pressKey,
