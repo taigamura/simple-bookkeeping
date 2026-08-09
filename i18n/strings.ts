@@ -155,6 +155,11 @@ export interface Strings {
     restore: string;
     noHistory: string;
     nearbyOnly: string;
+    devices: string;
+    thisPhone: string;
+    revokeDevice: string;
+    inviteReplacement: string;
+    deviceLimitWarning: string;
   };
   budgets: {
     title: string;
@@ -341,6 +346,9 @@ export const en: Strings = {
     history: 'Change history', added: 'Added', edited: 'Edited', deleted: 'Deleted',
     by: (actor) => `By ${actor}`, restore: 'Restore version', noHistory: 'No shared changes yet.',
     nearbyOnly: 'Nearby only while both paired phones are open. No background or remote sync.',
+    devices: 'Paired phones', thisPhone: 'This phone', revokeDevice: 'Revoke',
+    inviteReplacement: 'Invite replacement phone',
+    deviceLimitWarning: 'Only two phones can be active. Revoking a lost phone cannot be undone, and creates a fresh key before replacement pairing.',
   },
   budgets: {
     title: 'Budgets',
@@ -537,6 +545,9 @@ export const ja: Strings = {
     history: '変更履歴', added: '追加', edited: '編集', deleted: '削除',
     by: (actor) => `${actor}が変更`, restore: 'この版を復元', noHistory: '共有された変更はまだありません。',
     nearbyOnly: 'ペア済みの2台を開いて近くに置いた間だけ同期します。バックグラウンドやリモート同期はありません。',
+    devices: 'ペア済みの端末', thisPhone: 'この端末', revokeDevice: '失効',
+    inviteReplacement: '交換端末を招待',
+    deviceLimitWarning: '有効な端末は2台までです。紛失した端末の失効は取り消せず、交換端末とのペアリング前に新しい鍵を作成します。',
   },
   budgets: {
     title: '予算',

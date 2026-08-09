@@ -140,6 +140,9 @@ export class NearbySyncCoordinator {
   }
 
   enqueue(operation: unknown): void {
+    // A revoked phone may still have a producer holding this coordinator. Do
+    // not let that producer repopulate the durable queue after revocation.
+    if (!this.isLocalDeviceAuthorized()) return;
     const id = operationId(operation);
     if (id === null || this.pending.some((queued) => operationId(queued) === id)) return;
     this.pending = [...this.pending, operation];
@@ -150,6 +153,14 @@ export class NearbySyncCoordinator {
   }
 
   private async applyForeground(foreground: boolean): Promise<void> {
+    if (foreground && !this.isLocalDeviceAuthorized()) {
+      await this.ensureLoaded();
+      this.pending = [];
+      this.inFlight = null;
+      await this.persist();
+      this.peer = null;
+      return;
+    }
     if (!foreground) {
       this.peer = null;
       if (this.started) {
@@ -187,7 +198,7 @@ export class NearbySyncCoordinator {
   }
 
   private async handleMessage(peer: NearbyPeer, envelope: AuthenticatedEnvelope): Promise<void> {
-    if (!this.foreground || !this.started || !this.isAuthorizedPeer(peer)) return;
+    if (!this.foreground || !this.started || !this.isLocalDeviceAuthorized() || !this.isAuthorizedPeer(peer)) return;
     try {
       if (envelope.senderDeviceId !== peer.deviceId) throw new PairingError('device-not-authorized');
       if (this.seenMessageIds.has(envelope.messageId)) throw new PairingError('replayed-message');
@@ -241,7 +252,8 @@ export class NearbySyncCoordinator {
   }
 
   private async flush(): Promise<void> {
-    if (!this.foreground || !this.started || !this.peer || this.pending.length === 0 || this.flushing) return;
+    if (!this.foreground || !this.started || !this.isLocalDeviceAuthorized()
+      || !this.peer || this.pending.length === 0 || this.flushing) return;
     this.flushing = true;
     try {
       if (!this.inFlight || this.inFlight.peerDeviceId !== this.peer.deviceId) {
@@ -284,6 +296,12 @@ export class NearbySyncCoordinator {
       && this.options.state.devices.some((device) => device.deviceId === peer.deviceId && device.revokedAt === undefined);
   }
 
+  private isLocalDeviceAuthorized(): boolean {
+    return this.options.state.devices.some(
+      (device) => device.deviceId === this.options.deviceId && device.revokedAt === undefined,
+    );
+  }
+
   private report(error: Error): void {
     this.options.onError?.(error);
   }
@@ -299,6 +317,13 @@ export class NearbySyncCoordinator {
         });
         snapshot.seenMessageIds.forEach((id) => this.seenMessageIds.add(id));
         this.inFlight = snapshot.inFlight;
+        // Loading is also a revocation fence. This removes work persisted by a
+        // phone before it was revoked, so it cannot be replayed if the app is
+        // reopened with the old credential.
+        if (!this.isLocalDeviceAuthorized()) {
+          this.pending = [];
+          this.inFlight = null;
+        }
         this.loaded = true;
       }).finally(() => { this.loading = null; });
     }

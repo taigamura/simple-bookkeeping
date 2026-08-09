@@ -2,7 +2,7 @@ import React, { type ComponentType, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { strings } from '../i18n';
-import { syncFailureMessage, type SyncHistoryRow, type SyncStatusModel } from '../domain';
+import { syncFailureMessage, type HouseholdPairingState, type SyncHistoryRow, type SyncStatusModel } from '../domain';
 import { IconButton } from '../nav/IconButton';
 import { metrics, Txt, useTheme } from '../theme';
 
@@ -19,6 +19,13 @@ export interface HouseholdSyncSheetProps {
   onSyncNow: () => void;
   onRestore: (transactionId: string, operationId: string) => void;
   onClose: () => void;
+  /** Optional pairing controls, supplied once the authenticated lifecycle is wired. */
+  pairing?: {
+    state: HouseholdPairingState;
+    deviceId: string;
+    onRevokeDevice: (deviceId: string) => void;
+    onCreateReplacementInvitation: () => void;
+  };
   ScrollContainer?: ComponentType<ScrollContainerProps>;
 }
 
@@ -41,6 +48,7 @@ export function HouseholdSyncSheet({
   onSyncNow,
   onRestore,
   onClose,
+  pairing,
   ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
 }: HouseholdSyncSheetProps) {
   const { colors } = useTheme();
@@ -74,6 +82,38 @@ export function HouseholdSyncSheet({
             <Txt variant="listItem" tone="onPositive">{strings.sync.syncNow}</Txt>
           </Pressable>
         </View>
+
+        {pairing && (
+          <View style={[styles.deviceCard, { backgroundColor: colors.card2 }]} accessibilityRole="summary">
+            <Txt variant="microLabel" tone="dim">{strings.sync.devices}</Txt>
+            <Txt variant="secondary" tone="muted">{strings.sync.deviceLimitWarning}</Txt>
+            {pairing.state.devices.filter((device) => device.revokedAt === undefined).map((device) => (
+              <View key={device.deviceId} style={styles.deviceRow}>
+                <Txt variant="listItem" tone="ink">{device.deviceId === pairing.deviceId ? strings.sync.thisPhone : device.deviceId}</Txt>
+                {device.deviceId !== pairing.deviceId && (
+                  <Pressable
+                    onPress={() => pairing.onRevokeDevice(device.deviceId)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${strings.sync.revokeDevice}: ${device.deviceId}`}
+                    style={[styles.revokeButton, { borderColor: colors.negative }]}
+                  >
+                    <Txt variant="microLabel" tone="negative">{strings.sync.revokeDevice}</Txt>
+                  </Pressable>
+                )}
+              </View>
+            ))}
+            {pairing.state.devices.filter((device) => device.revokedAt === undefined).length === 1 && (
+              <Pressable
+                onPress={pairing.onCreateReplacementInvitation}
+                accessibilityRole="button"
+                accessibilityLabel={strings.sync.inviteReplacement}
+                style={[styles.syncButton, { backgroundColor: colors.positive }]}
+              >
+                <Txt variant="listItem" tone="onPositive">{strings.sync.inviteReplacement}</Txt>
+              </Pressable>
+            )}
+          </View>
+        )}
 
         <Txt variant="microLabel" tone="dim" style={styles.section}>{strings.sync.history}</Txt>
         {history.length === 0 ? (
@@ -112,6 +152,9 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   body: { paddingHorizontal: 20, paddingBottom: 28, gap: 12 },
   statusCard: { borderRadius: metrics.cardRadius, padding: 16, gap: 10 },
+  deviceCard: { borderRadius: metrics.cardRadius, padding: 16, gap: 10 },
+  deviceRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  revokeButton: { minHeight: 36, paddingHorizontal: 10, borderWidth: 1, borderRadius: metrics.iconTileRadius, justifyContent: 'center' },
   statusRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   notice: { lineHeight: 20 },
   syncButton: { minHeight: 44, borderRadius: metrics.iconTileRadius, alignItems: 'center', justifyContent: 'center' },

@@ -26,6 +26,49 @@ function renderSheet(over: Partial<React.ComponentProps<typeof HouseholdSyncShee
 }
 
 describe('HouseholdSyncSheet', () => {
+  it('warns about the two-phone limit and exposes revoke/replacement actions', () => {
+    const onRevokeDevice = jest.fn();
+    const onCreateReplacementInvitation = jest.fn();
+    renderSheet({
+      pairing: {
+        state: {
+          householdId: 'home',
+          devices: [{ deviceId: 'phone-a', authorizedAt: 1 }, { deviceId: 'phone-b', authorizedAt: 2 }],
+          invitations: [],
+        },
+        deviceId: 'phone-a',
+        onRevokeDevice,
+        onCreateReplacementInvitation,
+      },
+    });
+
+    expect(screen.getByText(/Only two phones can be active/)).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Revoke: phone-b'));
+    expect(onRevokeDevice).toHaveBeenCalledWith('phone-b');
+  });
+
+  it('offers a replacement invitation after the peer is revoked', () => {
+    const onCreateReplacementInvitation = jest.fn();
+    renderSheet({
+      pairing: {
+        state: {
+          householdId: 'home',
+          devices: [
+            { deviceId: 'phone-a', authorizedAt: 1 },
+            { deviceId: 'phone-b', authorizedAt: 2, revokedAt: 3 },
+          ],
+          invitations: [],
+        },
+        deviceId: 'phone-a',
+        onRevokeDevice: jest.fn(),
+        onCreateReplacementInvitation,
+      },
+    });
+
+    fireEvent.press(screen.getByLabelText('Invite replacement phone'));
+    expect(onCreateReplacementInvitation).toHaveBeenCalledTimes(1);
+  });
+
   it('shows nearby-only status, last sync, and safe sync action when the partner is absent', () => {
     const onSyncNow = jest.fn();
     renderSheet({ onSyncNow });

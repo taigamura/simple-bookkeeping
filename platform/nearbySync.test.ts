@@ -33,7 +33,7 @@ jest.mock('expo-crypto', () => {
   };
 });
 
-import { createAuthenticatedEnvelope, createHousehold, createInvitation, joinHousehold, openAuthenticatedEnvelope } from '../domain/pairing';
+import { createAuthenticatedEnvelope, createHousehold, createInvitation, joinHousehold, openAuthenticatedEnvelope, revokeDevice } from '../domain/pairing';
 import { NearbySyncCoordinator, nearbyDiscoveryInfo, nearbyDiscoveryTag, type NearbyPeer, type NearbyQueueSnapshot, type NearbyTransport } from './nearbySync';
 
 function transportDouble() {
@@ -62,6 +62,35 @@ function queueStore(initial: NearbyQueueSnapshot = { pending: [], seenMessageIds
 }
 
 describe('foreground nearby sync', () => {
+  it('fences a revoked phone queue before it can reconnect or replay work', async () => {
+    const owner = createHousehold('owner', 1);
+    const invitation = await createInvitation(owner.state, owner.householdKey, 'owner', 1);
+    const joined = await joinHousehold(invitation.state, invitation.qrPayload, invitation.invitation.matchingCode, 'partner', 2);
+    const revoked = revokeDevice(joined.state, 'owner', 'partner', 3);
+    const doubled = transportDouble();
+    const persisted = queueStore({
+      pending: [{ operationId: 'old-credential-op' }],
+      seenMessageIds: [],
+      inFlight: { batchId: 'old-batch', peerDeviceId: 'owner', operationIds: ['old-credential-op'] },
+    });
+    const coordinator = new NearbySyncCoordinator({
+      state: revoked.state,
+      householdKey: revoked.householdKey,
+      deviceId: 'partner',
+      transport: doubled.transport,
+      applyOperation: () => 'applied',
+      queueStore: persisted,
+    });
+
+    coordinator.enqueue({ operationId: 'new-after-revoke' });
+    await coordinator.setForeground(true);
+
+    expect(coordinator.queuedOperationIds).toEqual([]);
+    expect(persisted.snapshot().inFlight).toBeNull();
+    expect(persisted.snapshot().pending).toEqual([]);
+    expect(doubled.sent).toHaveLength(0);
+  });
+
   it('does not discover or send while backgrounded, then queues and flushes after foreground', async () => {
     const owner = createHousehold('owner', 1);
     const invitation = await createInvitation(owner.state, owner.householdKey, 'owner', 1);
