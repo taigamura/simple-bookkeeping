@@ -51,6 +51,7 @@ import {
 } from '../theme';
 import { IconButton } from '../nav/IconButton';
 import { SHEET_CHROME, SHEET_TOP_STRIP, WEB_FRAME_INSET } from '../nav/BottomSheet';
+import { DatePickerBoundary, formatPickerDate } from '../platform/DatePickerBoundary';
 
 interface EntrySheetProps {
   expCats: string[];
@@ -205,9 +206,6 @@ function useCompactScale(): number {
   return Math.max(MIN_COMPACT_SCALE, Math.min(1, budget / NATURAL_FORM_HEIGHT));
 }
 
-const formatDate = ({ y, m, day }: RecurrenceDate): string =>
-  `${String(y).padStart(4, '0')}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
 const parseDate = (value: string): RecurrenceDate | null => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return null;
@@ -277,9 +275,10 @@ export function EntrySheet({
   const [weekendShift, setWeekendShift] = useState<WeekendShift>(
     editing?.occurrence?.weekendShift ?? 'after',
   );
-  const [dateText, setDateText] = useState(() =>
-    formatDate(editing?.occurrence?.scheduled ?? editing ?? { y, m, day }),
+  const [entryDate, setEntryDate] = useState<RecurrenceDate>(
+    editing?.occurrence?.scheduled ?? editing ?? { y, m, day },
   );
+  const [dateText, setDateText] = useState(() => formatPickerDate(entryDate));
 
   const value = amountValue(amountStr);
   const enteredDate = parseDate(dateText);
@@ -427,21 +426,21 @@ export function EntrySheet({
               {strings.entry.dateRowLabel}
             </Txt>
             <View style={styles.dateControls}>
-              <TextInput
-                value={dateText}
-                onChangeText={setDateText}
-                placeholder={strings.entry.datePlaceholder}
-                placeholderTextColor={colors.dim}
-                accessibilityLabel={`${strings.entry.dateRowLabel} ${strings.entry.datePlaceholder}`}
-                accessibilityValue={{ text: dateText }}
-                autoCapitalize="none"
-                autoCorrect={false}
-                maxLength={10}
-                returnKeyType="done"
-                style={[styles.dateInput, { color: colors.ink }]}
+              <DatePickerBoundary
+                value={enteredDate ?? entryDate}
+                today={today}
+                label={`${strings.entry.dateRowLabel} ${strings.entry.datePlaceholder}`}
+                onChange={(nextDate) => {
+                  setEntryDate(nextDate);
+                  setDateText(formatPickerDate(nextDate));
+                }}
+                onTextChange={setDateText}
               />
               <Pressable
-                onPress={() => setDateText(formatDate(today))}
+                onPress={() => {
+                  setEntryDate(today);
+                  setDateText(formatPickerDate(today));
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={strings.entry.useToday}
                 style={({ pressed }) => [styles.todayButton, pressed && { opacity: 0.6 }]}
