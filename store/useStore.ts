@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { DEFAULT_STATE, withIdentitySlices, type AppState } from './schema';
 import { createStore, type LoadIssue, type Store } from './store';
+import { publishQuickEntrySnapshot, reconcileNativeQuickEntries } from '../platform/quickEntrySync';
 
 const defaultStore = createStore();
 
@@ -56,6 +57,7 @@ export function useStore(store: Store = defaultStore): UseStore {
       if (!alive) return;
       stateRef.current = loaded;
       setState(loaded);
+      void publishQuickEntrySnapshot(loaded);
       setShowCorruptNotice(corrupt);
       setHasCorruptStash(stashed);
       setPersistenceNotice(
@@ -91,6 +93,7 @@ export function useStore(store: Store = defaultStore): UseStore {
       return store.save(durableState).then(
         () => {
           setState((current) => ({ ...current, household: durableState.household, device: durableDevice }));
+          void publishQuickEntrySnapshot(durableState);
           setPersistenceNotice((current) => (current === 'save-failed' ? null : current));
           return true;
         },
@@ -106,6 +109,7 @@ export function useStore(store: Store = defaultStore): UseStore {
   const readCorruptStash = useCallback(() => store.readCorruptStash(), [store]);
   const reconcileQuickEntries = useCallback(async () => {
     if (!ready) return;
+    await reconcileNativeQuickEntries(store);
     const result = await store.reconcileQuickEntryCommands(state);
     if (result.state !== state) setState(result.state);
   }, [ready, state, store]);
