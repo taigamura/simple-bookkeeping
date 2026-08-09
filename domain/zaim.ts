@@ -12,6 +12,7 @@ import * as Encoding from 'encoding-japanese';
 import { addCategory } from './categories';
 import { uid } from './entries';
 import { validateFinancialRow } from './financialRow';
+import type { ImportAdapter, AdapterParseResult } from './importPipeline';
 import type { Transaction, TxType } from './types';
 
 /** Zaim's CSV header, in column order — validated against the decoded file. */
@@ -96,6 +97,34 @@ export interface ZaimImportResult {
   incCats: string[];
   skipped: ZaimSkipTally;
 }
+
+/** Provider adapter used by the neutral pipeline. It returns normalized rows,
+ * never persisted Transactions; `parseZaimCsv` remains as the legacy facade. */
+export const zaimImportAdapter: ImportAdapter = {
+  provider: 'zaim',
+  decode: decodeZaimBytes,
+  detect: (source) => hasZaimHeader(source) ? 'match' : 'no-match',
+  parse: (source, sourceId): AdapterParseResult => {
+    const tally: Partial<Record<import('./importPipeline').ImportSkipReason, number>> = {};
+    const rows = parseCsvRecords(source).filter((record) => record.length > 0).slice(1);
+    const normalized = [];
+    for (let i = 0; i < rows.length; i++) {
+      const result = readRow(parseCsvLine(rows[i]));
+      if (result.kind === 'skip') {
+        tally[result.reason] = (tally[result.reason] ?? 0) + 1;
+        continue;
+      }
+      const row = result.row;
+      normalized.push({
+        y: row.y, m: row.m, day: row.day, type: row.type, amount: row.amount,
+        category: row.category, note: composeNote(row),
+        currencyCode: cleanField(parseCsvLine(rows[i])[9]) || undefined,
+        provenance: { provider: 'zaim', sourceId, row: i },
+      });
+    }
+    return { kind: 'rows', rows: normalized, tally };
+  },
+};
 
 /**
  * Parse a decoded Zaim CSV export. Each `payment` row becomes an expense

@@ -188,6 +188,13 @@ function isTimestamp(value: unknown): value is string {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value;
 }
 
+function isImportProvenance(value: unknown): value is NonNullable<Transaction['importProvenance']> {
+  return isRecord(value)
+    && typeof value.provider === 'string' && value.provider.length > 0
+    && typeof value.sourceId === 'string' && value.sourceId.length > 0
+    && isInteger(value.row) && value.row >= 0;
+}
+
 /** Deterministic timestamp for data saved before timestamps were introduced. */
 function legacyTimestamp(y: number, m: number, day: number): string {
   return new Date(Date.UTC(y, m, day, 12)).toISOString();
@@ -227,6 +234,7 @@ function normalizeRecurrenceRule(value: unknown): RecurrenceRule | null {
   if (!isInteger(value.amount) || value.amount <= 0) return null;
   if (typeof value.category !== 'string' || typeof value.note !== 'string') return null;
   if (value.categoryId !== undefined && typeof value.categoryId !== 'string') return null;
+  if (value.importProvenance !== undefined && !isImportProvenance(value.importProvenance)) return null;
   if (!recurringRepeats.includes(value.repeat as RecurrenceRule['repeat'])) return null;
   if (!weekendShifts.includes(value.weekendShift as WeekendShift)) return null;
   if (
@@ -299,6 +307,7 @@ function normalizeTransaction(value: unknown): Transaction | null {
   }
   if (value.accountId !== undefined) normalized.accountId = value.accountId;
   if (typeof value.categoryId === 'string') normalized.categoryId = value.categoryId;
+  if (isImportProvenance(value.importProvenance)) normalized.importProvenance = { ...value.importProvenance };
   return normalized;
 }
 

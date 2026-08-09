@@ -10,6 +10,7 @@ export type {
   Ledger,
   Currency,
   YM,
+  ImportProvenance,
 } from './types';
 export type { CategoryEntity } from './identity';
 export { stableId, legacyCategoryId, categoryEntities, legacyCategoryEntities, categoryIdFor, withCategoryId } from './identity';
@@ -93,6 +94,7 @@ export {
   decodeZaimBytes,
   parseZaimCsv,
   serializeZaimCsv,
+  zaimImportAdapter,
   type ZaimExisting,
   type ZaimImportResult,
   type ZaimSkipReason,
@@ -104,6 +106,21 @@ export {
   type FinancialRowInvalidReason,
   type FinancialRowValidation,
 } from './financialRow';
+export {
+  previewImport,
+  previewImportBytes,
+  applyImport,
+  applyImportPreview,
+  sourceFingerprint,
+  type ImportAdapter,
+  type ImportDetection,
+  type NormalizedImportRow,
+  type AdapterParseResult,
+  type ImportPreview,
+  type ImportState,
+  type ImportSkipReason,
+  type ImportSkipTally,
+} from './importPipeline';
 export {
   createSyncState,
   addLocalTransaction,
