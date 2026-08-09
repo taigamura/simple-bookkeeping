@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 
-import { DEFAULT_STATE, type AppState } from './schema';
+import { DEFAULT_STATE, withIdentitySlices, type AppState } from './schema';
 import { createStore, type LoadIssue, type Store } from './store';
 
 const defaultStore = createStore();
@@ -71,8 +71,21 @@ export function useStore(store: Store = defaultStore): UseStore {
     (patch: Partial<AppState>) => {
       setState((prev) => {
         const next = { ...prev, ...patch };
-        void store.save(next).then(
-          () => setPersistenceNotice((current) => (current === 'save-failed' ? null : current)),
+        const durableDevice = {
+          ...prev.device,
+          ...(patch.theme !== undefined ? { theme: patch.theme } : {}),
+          ...(patch.budgetMode !== undefined ? { budgetMode: patch.budgetMode } : {}),
+          ...(patch.totalBudget !== undefined ? { totalBudget: patch.totalBudget } : {}),
+          ...(patch.calendarView !== undefined ? { calendarView: patch.calendarView } : {}),
+          ...(patch.motion !== undefined ? { motion: patch.motion } : {}),
+          ...(patch.summaryGranularity !== undefined ? { summaryGranularity: patch.summaryGranularity } : {}),
+        };
+        const durableState = withIdentitySlices({ ...next, device: durableDevice }, false, true);
+        void store.save(durableState).then(
+          () => {
+            setState((current) => ({ ...current, household: durableState.household, device: durableDevice }));
+            setPersistenceNotice((current) => (current === 'save-failed' ? null : current));
+          },
           () => setPersistenceNotice('save-failed'),
         );
         return next;

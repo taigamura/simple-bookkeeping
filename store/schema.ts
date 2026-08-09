@@ -31,9 +31,31 @@ import type {
 } from '../domain';
 import { isMotionPreference, type MotionPreference } from '../theme/motion';
 import { isThemePreference, type ThemePreference } from '../theme/tokens';
+import { categoryEntities, categoryIdFor, withCategoryId, type CategoryEntity } from '../domain/identity';
 
 /** Bump when the shape changes incompatibly; `load()` falls back to defaults. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
+
+export interface HouseholdState {
+  entries: Transaction[];
+  recurrenceRules: RecurrenceRule[];
+  categories: CategoryEntity[];
+  /** Category identity → recurring monthly amount. */
+  budgets: Record<string, number>;
+  currency: Currency;
+}
+
+export interface DeviceState {
+  /** Local-only ordering, kept separate from household category entities. */
+  expenseCategoryOrder: string[];
+  incomeCategoryOrder: string[];
+  theme: ThemePreference;
+  budgetMode: 'category' | 'total';
+  totalBudget: number;
+  calendarView: CalendarView;
+  motion: MotionPreference;
+  summaryGranularity: SummaryGranularity;
+}
 
 export interface AppState {
   /** Appearance preference; `system` follows the OS. Blobs written before the
@@ -66,6 +88,10 @@ export interface AppState {
    *  because it is a way of looking at your money, not a transient view state.
    *  Added after v1 blobs shipped — merge-by-known-keys load fills the default. */
   summaryGranularity: SummaryGranularity;
+  /** v2 canonical household payload. Top-level fields remain compatibility projections. */
+  household: HouseholdState;
+  /** v2 device-local payload. Navigation itself remains runtime-only. */
+  device: DeviceState;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -81,6 +107,15 @@ export const DEFAULT_STATE: AppState = {
   calendarView: 'dots',
   motion: 'system',
   summaryGranularity: 'monthly',
+  household: {
+    entries: [], recurrenceRules: [], categories: categoryEntities(DEFAULT_EXP_CATS, DEFAULT_INC_CATS),
+    budgets: {}, currency: DEFAULT_CURRENCY,
+  },
+  device: {
+    expenseCategoryOrder: DEFAULT_EXP_CATS.map((label) => categoryEntities(DEFAULT_EXP_CATS, DEFAULT_INC_CATS).find((c) => c.label === label)!.id),
+    incomeCategoryOrder: DEFAULT_INC_CATS.map((label) => categoryEntities(DEFAULT_EXP_CATS, DEFAULT_INC_CATS).find((c) => c.label === label)!.id),
+    theme: 'system', budgetMode: 'category', totalBudget: 0, calendarView: 'dots', motion: 'system', summaryGranularity: 'monthly',
+  },
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */
@@ -101,6 +136,8 @@ const additiveStateKeys: StateKey[] = [
   'calendarView',
   'motion',
   'summaryGranularity',
+  'household',
+  'device',
 ];
 const txTypes: TxType[] = ['income', 'expense'];
 const repeats: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
@@ -237,6 +274,7 @@ function normalizeTransaction(value: unknown): Transaction | null {
   if (value.accountId !== undefined && typeof value.accountId !== 'string') return null;
   if (value.timestamp !== undefined && !isTimestamp(value.timestamp)) return null;
   if (value.timestampInferred !== undefined && value.timestampInferred !== true) return null;
+  if (value.categoryId !== undefined && typeof value.categoryId !== 'string') return null;
 
   const normalized: Transaction = {
     id: value.id,
@@ -285,6 +323,9 @@ function validateField(key: StateKey, value: unknown): boolean {
       return isMotionPreference(value);
     case 'summaryGranularity':
       return isSummaryGranularity(value);
+    case 'household':
+    case 'device':
+      return isRecord(value);
   }
 }
 
@@ -320,5 +361,30 @@ export function normalizePersistedState(value: unknown): AppState | null {
     if (normalizedField === null) return null;
     (normalized as Record<StateKey, unknown>)[key] = normalizedField;
   }
-  return normalized;
+  return withIdentitySlices(normalized);
+}
+
+/** Build the v2 split payload from the compatibility projection. */
+export function withIdentitySlices(state: AppState, migrateLegacy = false, forceCanonical = false): AppState {
+  const categories = categoryEntities(state.expCats, state.incCats, migrateLegacy ? [] : state.household.categories);
+  const entries = state.entries.map((entry) => migrateLegacy ? withCategoryId(entry, categories) : entry);
+  const recurrenceRules = state.recurrenceRules.map((rule) => ({
+    ...rule,
+    ...(migrateLegacy && !rule.categoryId ? { categoryId: categoryIdFor(rule.category, rule.type, categories) } : {}),
+  }));
+  const budgets = Object.fromEntries(Object.entries(state.budgets).map(([label, amount]) => [
+    categoryIdFor(label, 'expense', categories), amount,
+  ]));
+  const hasPersistedHousehold = forceCanonical || migrateLegacy || state.household.entries.length > 0 || state.household.recurrenceRules.length > 0 || Object.keys(state.household.budgets).length > 0;
+  const household: HouseholdState = hasPersistedHousehold
+    ? { entries, recurrenceRules, categories, budgets, currency: state.currency }
+    : state.household;
+  const hasPersistedDevice = migrateLegacy;
+  const device: DeviceState = hasPersistedDevice ? {
+    expenseCategoryOrder: state.expCats.map((label) => categoryIdFor(label, 'expense', categories)),
+    incomeCategoryOrder: state.incCats.map((label) => categoryIdFor(label, 'income', categories)),
+    theme: state.theme, budgetMode: state.budgetMode, totalBudget: state.totalBudget,
+    calendarView: state.calendarView, motion: state.motion, summaryGranularity: state.summaryGranularity,
+  } : state.device;
+  return { ...state, entries, recurrenceRules, household, device };
 }

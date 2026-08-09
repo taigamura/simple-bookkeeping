@@ -12,6 +12,7 @@ import {
   DEFAULT_STATE,
   SCHEMA_VERSION,
   normalizePersistedState,
+  withIdentitySlices,
   type AppState,
   type PersistedEnvelope,
 } from './schema';
@@ -70,18 +71,25 @@ export function createStore(
 
       try {
         const envelope = JSON.parse(raw) as Partial<PersistedEnvelope>;
-        if (envelope.version !== SCHEMA_VERSION || !envelope.state) {
+        const legacyEnvelope = envelope.version === 1;
+        if ((envelope.version !== SCHEMA_VERSION && !legacyEnvelope) || !envelope.state) {
           return await stashAndDefault(raw);
         }
         const normalized = normalizePersistedState(envelope.state);
         if (!normalized) return await stashAndDefault(raw);
-        return normalized;
+        const migrated = withIdentitySlices(normalized, legacyEnvelope);
+        if (legacyEnvelope) {
+          // Persist the migration immediately so a second boot does not repeat
+          // it, while leaving the original raw blob recoverable on failure.
+          await persistence.write(JSON.stringify({ version: SCHEMA_VERSION, state: migrated }));
+        }
+        return migrated;
       } catch {
         return await stashAndDefault(raw);
       }
     },
     async save(state) {
-      const envelope: PersistedEnvelope = { version: SCHEMA_VERSION, state };
+      const envelope: PersistedEnvelope = { version: SCHEMA_VERSION, state: withIdentitySlices(state, false, true) };
       const write = () => persistence.write(JSON.stringify(envelope));
       saveQueue = saveQueue.then(write, write);
       await saveQueue;

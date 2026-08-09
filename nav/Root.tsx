@@ -23,6 +23,8 @@ import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanima
 
 import {
   activeRecurrences,
+  categoryEntities,
+  categoryIdFor,
   clampDay,
   decodeZaimBytes,
   deleteLedgerItem,
@@ -568,8 +570,13 @@ function Shell({
   // `commit` does the actual persistence once a scope is settled; the check
   // below decides whether that scope needs asking for at all.
   const handleSubmit = (draft: EntryDraft, weekendShift: WeekendShift) => {
+    const categories = categoryEntities(state.expCats, state.incCats, state.household.categories);
+    const identityDraft: EntryDraft = {
+      ...draft,
+      categoryId: categoryIdFor(draft.category, draft.type, categories),
+    };
     const commit = (scope: 'one' | 'future') => {
-      const next = saveLedgerItem(ledger, draft, weekendShift, editing ?? undefined, scope);
+      const next = saveLedgerItem(ledger, identityDraft, weekendShift, editing ?? undefined, scope);
       if (next === ledger) return;
       entrySaved();
       update({

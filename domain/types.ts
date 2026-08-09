@@ -26,6 +26,8 @@ export interface Transaction {
   type: TxType;
   amount: number; // integer, no minor units
   category: string;
+  /** Stable household category identity; `category` remains the display label. */
+  categoryId?: string;
   note: string;
   repeat?: Repeat;
   accountId?: string; // reserved; unused in v1 (decision 1)
@@ -60,6 +62,8 @@ export interface RecurrenceRule {
   type: TxType;
   amount: number;
   category: string;
+  /** Stable household category identity; `category` remains the display label. */
+  categoryId?: string;
   note: string;
   repeat: Exclude<Repeat, 'never'>;
   weekendShift: WeekendShift;

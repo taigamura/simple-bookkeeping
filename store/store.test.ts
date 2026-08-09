@@ -38,6 +38,22 @@ const sampleEntry: Transaction = {
 };
 
 describe('createStore', () => {
+  it('migrates a v1 envelope once and separates household identities from device state', async () => {
+    const { household: _household, device: _device, ...legacyState } = stateWith({ entries: [sampleEntry] });
+    const persistence = createMemoryPersistence(JSON.stringify({ version: 1, state: legacyState }));
+    const store = createStore(persistence);
+
+    const loaded = await store.load();
+    expect(loaded.entries[0].categoryId).toMatch(/^legacy-expense-/);
+    expect(loaded.household.entries[0].categoryId).toBe(loaded.entries[0].categoryId);
+    expect(loaded.device.expenseCategoryOrder).toContain(loaded.household.categories[0].id);
+
+    const migratedBlob = await persistence.read();
+    expect(JSON.parse(migratedBlob!).version).toBe(SCHEMA_VERSION);
+    await store.load();
+    expect(await persistence.read()).toBe(migratedBlob);
+  });
+
   it('round-trips saved state: save then load returns the persisted theme', async () => {
     const store = createStore(createMemoryPersistence());
 

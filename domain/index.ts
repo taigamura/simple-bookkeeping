@@ -11,6 +11,8 @@ export type {
   Currency,
   YM,
 } from './types';
+export type { CategoryEntity } from './identity';
+export { stableId, legacyCategoryId, categoryEntities, categoryIdFor, withCategoryId } from './identity';
 export {
   DEFAULT_EXP_CATS,
   DEFAULT_INC_CATS,

@@ -4,6 +4,7 @@
  * hardcoded-July gate becomes a real `y`/`m` filter so the ledger spans months.
  */
 import { amountValue } from './keypad';
+import { stableId } from './identity';
 import type { Repeat, Transaction, TxType, YM } from './types';
 
 /** Entries belonging to a given year+month. */
@@ -46,6 +47,7 @@ export interface EntryDraft {
   type: TxType;
   amountStr: string;
   category: string;
+  categoryId?: string;
   note?: string;
   y: number;
   m: number;
@@ -56,7 +58,7 @@ export interface EntryDraft {
 
 /** Best-effort unique id (no crypto dependency): time + random suffix. */
 export function uid(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return stableId();
 }
 
 /**
@@ -82,6 +84,7 @@ export function makeEntry(
     type: draft.type,
     amount,
     category: draft.category,
+    ...(draft.categoryId ? { categoryId: draft.categoryId } : {}),
     note,
     repeat: draft.repeat ?? 'never',
   };
