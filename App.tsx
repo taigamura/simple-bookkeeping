@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, Platform, StyleSheet } from 'react-native';
+import { AppState, Linking, Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Root } from './nav';
@@ -10,6 +10,9 @@ import { MotionProvider, ThemeProvider, useTheme } from './theme';
 import { useAppFonts } from './theme/useAppFonts';
 import { SummaryGrowthPrototype } from './screens/SummaryGrowthPrototype';
 import { LoadingScreen } from './ui/LoadingScreen';
+import { quickEntryBridge } from './platform/quickEntryBridge';
+import { parseQuickEntryUrl } from './platform/quickEntryLinks';
+import type { EntryDraft } from './domain';
 
 // Keep the native splash screen (asset + dark background configured via the
 // expo-splash-screen plugin in app.json, #25) from auto-hiding before React is
@@ -27,6 +30,7 @@ SplashScreen.preventAutoHideAsync();
 export default function App() {
   const fontsLoaded = useAppFonts();
   const [openingComplete, setOpeningComplete] = useState(false);
+  const [quickEntryDraft, setQuickEntryDraft] = useState<EntryDraft | null>(null);
   const {
     ready,
     state,
@@ -46,14 +50,37 @@ export default function App() {
     if (appReady) SplashScreen.hideAsync();
   }, [appReady]);
 
+  const handoffDraft = useCallback(async (draft: EntryDraft) => {
+    setQuickEntryDraft(draft);
+  }, []);
+
+  const receiveUrl = useCallback(async (url: string | null) => {
+    if (!url) return;
+    if (quickEntryBridge) {
+      await quickEntryBridge.enqueueDeepLinkAsync(url);
+      if (ready) await reconcileQuickEntries(handoffDraft);
+      return;
+    }
+    if (ready) {
+      const draft = parseQuickEntryUrl(url);
+      if (draft) handoffDraft(draft);
+    }
+  }, [handoffDraft, ready, reconcileQuickEntries]);
+
+  useEffect(() => {
+    const subscription = Linking.addEventListener('url', ({ url }) => { void receiveUrl(url).catch(() => {}); });
+    void Linking.getInitialURL().then(receiveUrl).catch(() => {});
+    return () => subscription.remove();
+  }, [receiveUrl]);
+
   useEffect(() => {
     if (!appReady) return;
-    void reconcileQuickEntries();
+    void Promise.resolve(reconcileQuickEntries(handoffDraft)).catch(() => {});
     const subscription = AppState.addEventListener('change', (next) => {
-      if (next === 'active') void reconcileQuickEntries();
+      if (next === 'active') void Promise.resolve(reconcileQuickEntries(handoffDraft)).catch(() => {});
     });
     return () => subscription.remove();
-  }, [appReady, reconcileQuickEntries]);
+  }, [appReady, handoffDraft, reconcileQuickEntries]);
 
   const finishOpening = useCallback(() => setOpeningComplete(true), []);
 
@@ -103,6 +130,8 @@ export default function App() {
             hasCorruptStash={hasCorruptStash}
             readCorruptStash={readCorruptStash}
             persistenceNotice={persistenceNotice}
+            quickEntryDraft={quickEntryDraft}
+            onQuickEntryDraftConsumed={() => setQuickEntryDraft(null)}
           />
           {!openingComplete ? (
             <LoadingScreen ready onFinished={finishOpening} />

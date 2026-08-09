@@ -19,13 +19,19 @@ export interface QuickEntrySnapshot {
 export function isQuickEntrySnapshot(value: unknown): value is QuickEntrySnapshot {
   if (!value || typeof value !== 'object') return false;
   const snapshot = value as Partial<QuickEntrySnapshot>;
+  const categories = snapshot.categories;
+  const currency = snapshot.currency;
+  const defaults = snapshot.defaults;
+  if (!Array.isArray(categories) || !currency || !defaults || !Array.isArray(defaults.recentCategoryIds)) return false;
   return snapshot.version === 2
-    && Array.isArray(snapshot.categories)
-    && snapshot.categories.every((category) => Boolean(category) && typeof category.id === 'string' && typeof category.name === 'string')
-    && Boolean(snapshot.currency && typeof snapshot.currency.symbol === 'string' && typeof snapshot.currency.code === 'string')
-    && Boolean(snapshot.defaults && (snapshot.defaults.categoryId === null || typeof snapshot.defaults.categoryId === 'string'))
-    && Array.isArray(snapshot.defaults?.recentCategoryIds)
-    && snapshot.defaults.recentCategoryIds.every((id) => typeof id === 'string');
+    && categories.length > 0 && categories.length <= 100
+    && categories.every((category) => Boolean(category) && typeof category.id === 'string' && category.id.length > 0 && typeof category.name === 'string' && category.name.length > 0)
+    && new Set(categories.map((category) => category.id)).size === categories.length
+    && [['¥', 'JPY'], ['$', 'USD'], ['€', 'EUR'], ['£', 'GBP']].some(([symbol, code]) => currency.symbol === symbol && currency.code === code)
+    && (defaults.categoryId === null || (typeof defaults.categoryId === 'string' && categories.some((category) => category.id === defaults.categoryId)))
+    && defaults.recentCategoryIds.length <= 3
+    && new Set(defaults.recentCategoryIds).size === defaults.recentCategoryIds.length
+    && defaults.recentCategoryIds.every((id) => typeof id === 'string' && categories.some((category) => category.id === id));
 }
 
 /** The extension gets a copy, never a writable handle to the ledger. */

@@ -24,4 +24,10 @@ describe('shipped Swift bridge contracts', () => {
     expect(source).toContain('acknowledgeDeepLinkAsync');
     expect(source).not.toContain('removeObject(forKey: self.deepLinks)');
   });
+
+  it('returns null for unreadable files and preserves the bridge contract', () => {
+    expect(source).toContain('[[String: Any]]');
+    expect(source).toContain('NSNull()');
+    expect(source).toContain('validSnapshot');
+  });
 });

@@ -11,14 +11,14 @@ public final class KajiQuickEntryModule: Module {
   public func definition() -> ModuleDefinition {
     Name("KajiQuickEntry")
 
-    AsyncFunction("listInboxAsync") { () throws -> [[String: String]] in
+    AsyncFunction("listInboxAsync") { () throws -> [[String: Any]] in
       let directory = try self.directory(self.inbox)
       return try self.jsonFiles(in: directory).map { url in
         do {
           return ["name": url.lastPathComponent, "contents": try String(contentsOf: url, encoding: .utf8)]
         } catch {
           // Keep the filename visible. JS will quarantine this unreadable file.
-          return ["name": url.lastPathComponent, "contents": ""]
+          return ["name": url.lastPathComponent, "contents": NSNull()]
         }
       }
     }
@@ -56,6 +56,14 @@ public final class KajiQuickEntryModule: Module {
 
     AsyncFunction("acknowledgeDeepLinkAsync") { (id: String) throws in
       try self.remove(id, from: self.deepLinkInbox)
+    }
+
+    AsyncFunction("quarantineDeepLinkAsync") { (id: String) throws in
+      let source = try self.file(id, in: self.deepLinkInbox)
+      let quarantineDirectory = try self.directory(self.quarantine)
+      let target = quarantineDirectory.appendingPathComponent("deep-link-\(id)")
+      do { try FileManager.default.moveItem(at: source, to: target) }
+      catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError { return }
     }
 
     AsyncFunction("writeCommandFileAsync") { (command: String) throws in
@@ -112,14 +120,33 @@ public final class KajiQuickEntryModule: Module {
   }
 
   private func validSnapshot(_ contents: String) -> Bool {
-    guard let data = contents.data(using: .utf8),
-          let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-          object["version"] as? Int == 2,
-          let categories = object["categories"] as? [[String: Any]],
-          let defaults = object["defaults"] as? [String: Any],
-          defaults["recentCategoryIds"] is [String]
-    else { return false }
-    return categories.allSatisfy { $0["id"] is String && $0["name"] is String }
+      guard let data = contents.data(using: .utf8),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            object["version"] as? Int == 2,
+            let categories = object["categories"] as? [[String: Any]],
+            categories.count > 0 && categories.count <= 100,
+            let currency = object["currency"] as? [String: Any],
+            let symbol = currency["symbol"] as? String,
+            let code = currency["code"] as? String,
+            [("¥", "JPY"), ("$", "USD"), ("€", "EUR"), ("£", "GBP")].contains(where: { $0.0 == symbol && $0.1 == code }),
+            let defaults = object["defaults"] as? [String: Any],
+            let categoryIDs = categories.compactMap({ $0["id"] as? String }),
+            categoryIDs.count == categories.count,
+            categoryIDs.allSatisfy({ !$0.isEmpty }),
+            Set(categoryIDs).count == categories.count,
+            let categoryNames = categories.compactMap({ $0["name"] as? String }),
+            categoryNames.count == categories.count,
+            categoryNames.allSatisfy({ !$0.isEmpty }),
+            (defaults["categoryId"] is NSNull || (defaults["categoryId"] as? String) != nil),
+            let recentCategoryIDs = defaults["recentCategoryIds"] as? [String],
+            recentCategoryIDs.count <= 3,
+            Set(recentCategoryIDs).count == recentCategoryIDs.count,
+            recentCategoryIDs.allSatisfy({ categoryIDs.contains($0) })
+      else { return false }
+    if let defaultCategoryID = defaults["categoryId"] as? String {
+      return categoryIDs.contains(defaultCategoryID)
+    }
+    return defaults["categoryId"] is NSNull
   }
 }
 

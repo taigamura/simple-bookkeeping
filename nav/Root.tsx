@@ -77,6 +77,8 @@ interface RootProps {
   hasCorruptStash: boolean;
   readCorruptStash: () => Promise<string | null>;
   persistenceNotice?: UseStore['persistenceNotice'];
+  quickEntryDraft?: EntryDraft | null;
+  onQuickEntryDraftConsumed?: () => void;
   /** Runtime-owned nearby state. Defaults to a truthful unpaired/offline surface. */
   householdSync?: {
     model: SyncStatusModel;
@@ -356,6 +358,8 @@ function Shell({
   hasCorruptStash,
   readCorruptStash,
   persistenceNotice = null,
+  quickEntryDraft = null,
+  onQuickEntryDraftConsumed,
   householdSync = {
     model: householdSyncStatus({ paired: false, foreground: true, partnerPresent: false, queuedOperationCount: 0 }),
     history: [],
@@ -388,6 +392,7 @@ function Shell({
   );
   // Which entry the Entry sheet is editing (#43); null = create mode.
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [activeQuickEntryDraft, setActiveQuickEntryDraft] = useState<EntryDraft | null>(null);
   const [entryContentHeight, setEntryContentHeight] = useState(0);
 
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
@@ -454,8 +459,19 @@ function Shell({
       );
     } else if (persistenceNotice === 'save-failed') {
       notify(strings.persistenceNotice.saveFailedTitle, strings.persistenceNotice.saveFailedMessage);
+    } else if (persistenceNotice === 'quick-entry-cache-failed') {
+      notify('Quick entry unavailable', 'Your ledger save succeeded, but the quick-entry cache could not be updated. Retry when the shared container is available.');
     }
   }, [persistenceNotice]);
+
+  useEffect(() => {
+    if (!quickEntryDraft) return;
+    setActiveQuickEntryDraft(quickEntryDraft);
+    setEditing(null);
+    setEntryContentHeight(0);
+    setSheet('entry');
+    onQuickEntryDraftConsumed?.();
+  }, [onQuickEntryDraftConsumed, quickEntryDraft]);
 
   // Single-sheet-host handlers (#60): the unified sheet host replaces the
   // three separate modals. Sheet state is authoritative; dismissal while a sheet
@@ -470,6 +486,7 @@ function Shell({
 
   // openEntry(): the ＋ button — always create mode (clear any prior editing).
   const openEntry = () => {
+    setActiveQuickEntryDraft(null);
     setEditing(null);
     setEntryContentHeight(0);
     setSheet('entry');
@@ -828,6 +845,7 @@ function Shell({
           sheet={sheet}
           entry={
             <EntrySheet
+            key={activeQuickEntryDraft ? JSON.stringify(activeQuickEntryDraft) : 'new-entry'}
             expCats={state.expCats}
             incCats={state.incCats}
             y={cursor.y}
@@ -836,6 +854,7 @@ function Shell({
             today={todayDate}
             symbol={symbol}
             editing={editing ?? undefined}
+            initialDraft={activeQuickEntryDraft ?? undefined}
             repeatManagement={sheet === 'repeat-entry'}
             onSave={handleSubmit}
             onDelete={handleDelete}

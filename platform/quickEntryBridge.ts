@@ -7,6 +7,7 @@ export interface QuickEntryNativeBridge {
   enqueueDeepLinkAsync(url: string): Promise<void>;
   peekDeepLinksAsync(): Promise<readonly { id: string; url: string }[]>;
   acknowledgeDeepLinkAsync(id: string): Promise<void>;
+  quarantineDeepLinkAsync(id: string): Promise<void>;
   writeCommandFileAsync(command: string): Promise<void>;
   writeSnapshotAsync(snapshot: string): Promise<void>;
 }
@@ -18,6 +19,7 @@ declare class KajiQuickEntryModule extends NativeModule<{}> implements QuickEntr
   enqueueDeepLinkAsync(url: string): Promise<void>;
   peekDeepLinksAsync(): Promise<readonly { id: string; url: string }[]>;
   acknowledgeDeepLinkAsync(id: string): Promise<void>;
+  quarantineDeepLinkAsync(id: string): Promise<void>;
   writeCommandFileAsync(command: string): Promise<void>;
   writeSnapshotAsync(snapshot: string): Promise<void>;
 }

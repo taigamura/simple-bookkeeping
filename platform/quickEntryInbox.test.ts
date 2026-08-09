@@ -76,4 +76,16 @@ describe('quick-entry App Group inbox', () => {
     expect(isQuickEntrySnapshot(snapshot)).toBe(true);
     expect(isQuickEntrySnapshot({ version: 1 })).toBe(false);
   });
+
+  it('rejects snapshots with invalid currency, category identity, defaults, or bounds', () => {
+    const good = makeQuickEntrySnapshot(['Food'], { symbol: '¥', code: 'JPY' }, ['food-id'], ['food-id']);
+    expect(isQuickEntrySnapshot(good)).toBe(true);
+    expect(isQuickEntrySnapshot({ ...good, currency: { symbol: 'x', code: 'JPY' } })).toBe(false);
+    expect(isQuickEntrySnapshot({ ...good, categories: [{ id: '', name: 'Food' }] })).toBe(false);
+    expect(isQuickEntrySnapshot({ ...good, categories: [{ id: 'same', name: 'A' }, { id: 'same', name: 'B' }] })).toBe(false);
+    expect(isQuickEntrySnapshot({ ...good, defaults: { ...good.defaults, categoryId: 'missing' } })).toBe(false);
+    expect(isQuickEntrySnapshot({ ...good, defaults: { ...good.defaults, recentCategoryIds: ['missing'] } })).toBe(false);
+    expect(isQuickEntrySnapshot({ ...good, defaults: { ...good.defaults, recentCategoryIds: ['food-id', 'food-id'] } })).toBe(false);
+    expect(isQuickEntrySnapshot({ ...good, categories: Array.from({ length: 101 }, (_, i) => ({ id: `id-${i}`, name: `C${i}` })) })).toBe(false);
+  });
 });

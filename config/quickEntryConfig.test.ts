@@ -1,6 +1,9 @@
 import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+// xcode ships without TypeScript declarations; this test intentionally parses
+// the generated project through its public runtime parser.
+const xcode: any = require('xcode');
 
 const root = path.resolve(__dirname, '..');
 
@@ -33,10 +36,59 @@ describe('generated quick-entry native configuration', () => {
     fs.symlinkSync(path.join(root, 'node_modules'), path.join(temp, 'node_modules'));
     childProcess.execFileSync(process.execPath, [require.resolve('expo/bin/cli'), 'prebuild', '--no-install', '--platform', 'ios'], { cwd: temp, stdio: 'pipe' });
 
-    const project = fs.readFileSync(path.join(temp, 'ios/Kaji.xcodeproj/project.pbxproj'), 'utf8');
-    expect(project).toContain('KajiQuickEntryExtension');
-    expect(project).toContain('com.taigamura.kaji.quick-entry');
+    const projectPath = path.join(temp, 'ios/Kaji.xcodeproj/project.pbxproj');
+    const project = xcode.project(projectPath);
+    project.parseSync();
+    const targets = project.pbxNativeTargetSection();
+    const host = Object.values(targets).find((target: any) => target.name === 'Kaji');
+    const extension = Object.values(targets).find((target: any) => target.name === '"KajiQuickEntryExtension"');
+    expect(host).toBeDefined();
+    expect(extension).toBeDefined();
+
+    const sourcePhases = project.hash.project.objects.PBXSourcesBuildPhase;
+    const buildFiles = project.pbxBuildFileSection();
+    const references = project.pbxFileReferenceSection();
+    const extensionSourcePhase = Object.entries(sourcePhases).find(([, phase]: any) =>
+      phase.files?.some((file: any) => {
+        const buildFile = buildFiles[file.value];
+        return buildFile && references[buildFile.fileRef]?.path === '"KajiQuickEntryExtension.swift"';
+      }),
+    );
+    expect(extensionSourcePhase).toBeDefined();
+    expect((sourcePhases[extensionSourcePhase![0]] as any).files).toHaveLength(1);
+    expect((extension as any).buildPhases).toEqual([
+      expect.objectContaining({ value: extensionSourcePhase![0] }),
+    ]);
+    const extensionSourceRef = Object.entries(references).find(([, ref]: any) =>
+      ref.path === '"KajiQuickEntryExtension.swift"',
+    )![0];
+    expect((host as any).buildPhases.flatMap((phase: any) => sourcePhases[phase.value]?.files ?? [])
+      .some((file: any) => buildFiles[file.value]?.fileRef === extensionSourceRef)).toBe(false);
+    expect((host as any).dependencies).toEqual([
+      expect.objectContaining({ value: expect.any(String) }),
+    ]);
+    const dependency = project.hash.project.objects.PBXTargetDependency[(host as any).dependencies[0].value];
+    expect(dependency.target).toBe(Object.entries(targets).find(([, target]: any) => target.name === '"KajiQuickEntryExtension"')![0]);
+    const copyPhase = (host as any).buildPhases.find((phase: any) => phase.comment === 'Copy Files');
+    expect(sourcePhases[copyPhase.value]).toBeUndefined();
+    const copyFiles = project.hash.project.objects.PBXCopyFilesBuildPhase[copyPhase.value].files;
+    expect(copyFiles).toEqual([expect.objectContaining({ value: expect.any(String) })]);
+    expect(references[buildFiles[copyFiles[0].value].fileRef].path).toBe('"KajiQuickEntryExtension.appex"');
+    expect(references[Object.entries(references).find(([, ref]: any) => ref.path === '"KajiQuickEntryExtension.swift"')![0]].path)
+      .toBe('"KajiQuickEntryExtension.swift"');
+
+    const extensionBuilds = project.pbxXCBuildConfigurationSection();
+    const extensionConfigList = project.pbxXCConfigurationList()[(extension as any).buildConfigurationList];
+    for (const config of extensionConfigList.buildConfigurations) {
+      const settings = extensionBuilds[config.value].buildSettings;
+      expect(settings.INFOPLIST_FILE).toBe('"KajiQuickEntryExtension/KajiQuickEntryExtension-Info.plist"');
+      expect(settings.CODE_SIGN_ENTITLEMENTS).toBe('"KajiQuickEntryExtension/KajiQuickEntryExtension.entitlements"');
+    }
     expect(fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension.entitlements'), 'utf8')).toContain('group.com.taigamura.kaji');
+    const extensionInfo = fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension-Info.plist'), 'utf8');
+    expect(extensionInfo).toContain('com.apple.widgetkit-extension');
+    expect(extensionInfo).not.toContain('NSExtensionPrincipalClass');
+    expect(fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension.swift'), 'utf8')).toMatch(/import SwiftUI[\s\S]*import WidgetKit[\s\S]*WidgetBundle/);
     expect(fs.readFileSync(path.join(temp, 'ios/Kaji/Info.plist'), 'utf8')).toContain('kaji-quick-entry');
   }, 30_000);
 });

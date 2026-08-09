@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_STATE, withIdentitySlices, type AppState } from './schema';
 import { createStore, type LoadIssue, type Store } from './store';
 import { publishQuickEntrySnapshot, reconcileNativeQuickEntries } from '../platform/quickEntrySync';
+import type { EntryDraft } from '../domain';
 
 const defaultStore = createStore();
 
@@ -29,12 +30,16 @@ export interface UseStore {
   /** Read the stashed raw blob for the "Export unreadable backup" row. */
   readCorruptStash: () => Promise<string | null>;
   /** Non-corrupt persistence failures that need user-visible recovery guidance. */
-  persistenceNotice: Exclude<LoadIssue, 'none' | 'corrupt'> | 'save-failed' | null;
+  persistenceNotice: Exclude<LoadIssue, 'none' | 'corrupt'> | 'save-failed' | 'quick-entry-cache-failed' | null;
+  retryQuickEntrySnapshot: () => Promise<boolean>;
   /** Reconcile queued external commands after boot or foregrounding. */
-  reconcileQuickEntries: () => Promise<void>;
+  reconcileQuickEntries: (handoffDraft?: (draft: EntryDraft) => Promise<void> | void) => Promise<void>;
 }
 
-export function useStore(store: Store = defaultStore): UseStore {
+export function useStore(
+  store: Store = defaultStore,
+  snapshotPublisher: (state: AppState) => Promise<void> = publishQuickEntrySnapshot,
+): UseStore {
   const [ready, setReady] = useState(false);
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const stateRef = useRef(state);
@@ -42,6 +47,16 @@ export function useStore(store: Store = defaultStore): UseStore {
   const [hasCorruptStash, setHasCorruptStash] = useState(false);
   const [persistenceNotice, setPersistenceNotice] = useState<UseStore['persistenceNotice']>(null);
   const operationQueue = useRef<Promise<void>>(Promise.resolve());
+  const publishSnapshot = useCallback(async (next: AppState) => {
+    try {
+      await snapshotPublisher(next);
+      setPersistenceNotice((current) => current === 'quick-entry-cache-failed' ? null : current);
+      return true;
+    } catch {
+      setPersistenceNotice('quick-entry-cache-failed');
+      return false;
+    }
+  }, [snapshotPublisher]);
 
   useEffect(() => {
     let alive = true;
@@ -58,7 +73,6 @@ export function useStore(store: Store = defaultStore): UseStore {
       if (!alive) return;
       stateRef.current = loaded;
       setState(loaded);
-      void publishQuickEntrySnapshot(loaded);
       setShowCorruptNotice(corrupt);
       setHasCorruptStash(stashed);
       setPersistenceNotice(
@@ -69,6 +83,7 @@ export function useStore(store: Store = defaultStore): UseStore {
             : null,
       );
       setReady(true);
+      void publishSnapshot(loaded);
     });
     return () => {
       alive = false;
@@ -95,9 +110,9 @@ export function useStore(store: Store = defaultStore): UseStore {
         };
         const durableState = withIdentitySlices({ ...currentNext, device: durableDevice }, false, true);
         await store.save(durableState);
-        stateRef.current = currentNext;
-        setState(currentNext);
-        void publishQuickEntrySnapshot(durableState);
+        stateRef.current = durableState;
+        setState(durableState);
+        void publishSnapshot(durableState);
       });
       operationQueue.current = run.catch(() => {});
       return run.then(
@@ -115,17 +130,18 @@ export function useStore(store: Store = defaultStore): UseStore {
   );
 
   const readCorruptStash = useCallback(() => store.readCorruptStash(), [store]);
-  const reconcileQuickEntries = useCallback(async () => {
+  const retryQuickEntrySnapshot = useCallback(async () => publishSnapshot(stateRef.current), [publishSnapshot]);
+  const reconcileQuickEntries = useCallback(async (handoffDraft?: (draft: EntryDraft) => Promise<void> | void) => {
     if (!ready) return;
     const run = operationQueue.current.then(async () => {
-      await reconcileNativeQuickEntries(store);
+      await reconcileNativeQuickEntries(store, undefined, handoffDraft);
       const result = await store.reconcileQuickEntryCommands(stateRef.current);
       stateRef.current = result.state;
       setState(result.state);
     });
     operationQueue.current = run.catch(() => {});
     await run;
-  }, [ready, state, store]);
+  }, [ready, store]);
 
   return {
     ready,
@@ -135,6 +151,7 @@ export function useStore(store: Store = defaultStore): UseStore {
     hasCorruptStash,
     readCorruptStash,
     persistenceNotice,
+    retryQuickEntrySnapshot,
     reconcileQuickEntries,
   };
 }

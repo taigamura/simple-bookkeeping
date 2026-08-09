@@ -66,6 +66,7 @@ interface EntrySheetProps {
    * Existing concrete or projected occurrence to edit (#43).
    */
   editing?: Transaction;
+  initialDraft?: EntryDraft;
   /** Settings management route: recurring cadences only and explicit stop copy. */
   repeatManagement?: boolean;
   /** Collects the draft on save; the host stores or splits the corresponding ledger item. */
@@ -213,6 +214,7 @@ export function EntrySheet({
   today,
   symbol,
   editing,
+  initialDraft,
   repeatManagement = false,
   onSave,
   onDelete,
@@ -238,18 +240,18 @@ export function EntrySheet({
   const rowHeight = Math.max(40, Math.round(46 * scale));
   const isEditing = editing != null;
   const catsFor = (t: TxType) => (t === 'income' ? incCats : expCats);
-  const [txType, setTxType] = useState<TxType>(editing?.type ?? 'expense');
-  const [amountStr, setAmountStr] = useState(editing ? String(editing.amount) : '');
+  const [txType, setTxType] = useState<TxType>(initialDraft?.type ?? editing?.type ?? 'expense');
+  const [amountStr, setAmountStr] = useState(initialDraft?.amountStr ?? (editing ? String(editing.amount) : ''));
   const [category, setCategory] = useState(
-    () => editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
+    () => initialDraft?.category ?? editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
   );
-  const [note, setNote] = useState(editing?.note ?? '');
-  const [repeat, setRepeat] = useState<Repeat>(editing?.repeat ?? 'never');
+  const [note, setNote] = useState(initialDraft?.note ?? editing?.note ?? '');
+  const [repeat, setRepeat] = useState<Repeat>(initialDraft?.repeat ?? editing?.repeat ?? 'never');
   const [weekendShift, setWeekendShift] = useState<WeekendShift>(
     editing?.occurrence?.weekendShift ?? 'after',
   );
   const [entryDate, setEntryDate] = useState<RecurrenceDate>(
-    editing?.occurrence?.scheduled ?? editing ?? { y, m, day },
+    initialDraft ? { y: initialDraft.y, m: initialDraft.m, day: initialDraft.day } : editing?.occurrence?.scheduled ?? editing ?? { y, m, day },
   );
   const [dateText, setDateText] = useState(() => formatPickerDate(entryDate));
 
