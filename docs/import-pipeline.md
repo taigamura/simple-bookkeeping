@@ -19,3 +19,9 @@ transaction-detail export. It maps ordinary positive-yen rows, treats only the
 literal `収入` category as income, and rejects wrong currencies, malformed
 records, and unrecognized headers. Because the export has no verified transfer
 or refund marker, it does not infer either semantic from `MEMO` or `PAYMENT`.
+
+`moneyforwardMeImportAdapter` accepts only the verified ten-column MoneyForward
+ME web-monthly export. It validates CP932 bytes (and the UTF-8 synthetic
+fixture), accepts `計算対象=1` and `振替=0` ordinary JPY rows, and maps only
+positive rows whose `大項目` is `収入` as income. Other positive rows are not
+guessed to be refunds or income and are explicitly skipped.
