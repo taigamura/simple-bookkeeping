@@ -108,7 +108,10 @@ describe('SettingsSheet', () => {
   it('renders an "Import data" action that fires its callback', () => {
     const onImportData = jest.fn();
     renderSheet({ onImportData });
-    fireEvent.press(screen.getByLabelText('Import data'));
+    const importData = screen.getByLabelText('Import data');
+    expect(importData.props.accessibilityHint).toContain('MoneyForward ME');
+    expect(importData.props.accessibilityHint).toContain('before your ledger is changed');
+    fireEvent.press(importData);
     expect(onImportData).toHaveBeenCalled();
   });
 

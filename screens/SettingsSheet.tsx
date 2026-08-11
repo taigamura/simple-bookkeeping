@@ -576,6 +576,7 @@ function DataActions({
         onPress={onImportData}
         accessibilityRole="button"
         accessibilityLabel={strings.settings.importData}
+        accessibilityHint={strings.importData.actionHint}
         style={rowStyle}
       >
         <Txt variant="listItem" tone="ink">

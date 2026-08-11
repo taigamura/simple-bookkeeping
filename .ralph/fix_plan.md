@@ -1,5 +1,5 @@
 # Ralph Fix Plan (queue item)
 
 ## Current Task
-- [x] Implement GitHub issue #113
-  - Spec: .ralph/specs/issue-113.md
+- [x] Implement GitHub issue #120
+  - Spec: .ralph/specs/issue-120.md

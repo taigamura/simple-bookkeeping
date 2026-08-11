@@ -240,6 +240,8 @@ export interface Strings {
     skip: ZaimSkipStrings;
   };
   importData: {
+    /** VoiceOver hint for the Settings action that opens the CSV preview flow. */
+    actionHint: string;
     unknownFormatTitle: string;
     unknownFormatMessage: string;
     ambiguousFormatTitle: string;
@@ -467,6 +469,7 @@ export const en: Strings = {
     },
   },
   importData: {
+    actionHint: 'Choose a Zaim, MoneyForward ME, or おカネレコ CSV. Review the preview before your ledger is changed.',
     unknownFormatTitle: 'Unsupported CSV format',
     unknownFormatMessage: 'This file is not a supported Zaim, MoneyForward ME, or おカネレコ export. Your ledger was not changed.',
     ambiguousFormatTitle: 'CSV format is ambiguous',
@@ -707,6 +710,7 @@ export const ja: Strings = {
     },
   },
   importData: {
+    actionHint: 'Zaim、MoneyForward ME、またはおカネレコのCSVを選択します。帳簿を変更する前にプレビューを確認できます。',
     unknownFormatTitle: '未対応のCSV形式です',
     unknownFormatMessage: 'このファイルは、対応するZaim、MoneyForward ME、またはおカネレコのエクスポートではありません。帳簿は変更されていません。',
     ambiguousFormatTitle: 'CSV形式を判別できません',

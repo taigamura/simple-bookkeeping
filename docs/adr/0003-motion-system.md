@@ -353,12 +353,9 @@ and removes the overlay without scheduling an assembly or exit animation.
 
 ## Open
 
-- The bloom is clipped to the Entry sheet's content box. On a very short phone
-  where the sheet opens near its minimum height, the circle reaches full spread
-  before it has visibly travelled. Acceptable, but a height-aware diameter would
-  read better. (The sheet itself no longer overruns short screens — see
-  [ADR-0004](0004-entry-sheet-fits-its-screen.md), a pre-existing layout bug
-  found while verifying this work, not caused by it.)
+- The save wave now belongs to the app-shell canvas, rather than being clipped
+  to EntrySheet (see the 2026-08-10 amendment above). Keep its host within the
+  app safe-area canvas and pointer-transparent whenever this effect changes.
 - `e2e/app.ts`'s `dayIsSelected` probe reads the day tile's own
   `backgroundColor` and assumes unselected cells are transparent. That stopped
   being true when Kippu gave every cell a `card` fill, and the animated
