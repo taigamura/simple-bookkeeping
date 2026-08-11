@@ -113,6 +113,7 @@ describe('generated quick-entry native configuration', () => {
     expect(extensionInfo).not.toContain('WKCompanionAppBundleIdentifier');
     const extensionSource = fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension.swift'), 'utf8');
     expect(extensionSource).toContain('import AppIntents');
+    expect(extensionSource).toContain('import ControlWidget');
     expect(extensionSource).toMatch(/import SwiftUI[\s\S]*import WidgetKit[\s\S]*WidgetBundle/);
     expect(extensionSource).toContain('@available(iOS 17.0, *)');
     expect(extensionSource).toContain('LaunchOnlyView');
@@ -136,6 +137,15 @@ describe('generated quick-entry native configuration', () => {
     expect(extensionSource).toContain('.accessoryRectangular');
     expect(extensionSource).toContain('kaji-quick-entry');
     expect(extensionSource).toContain('family == .systemSmall');
+    expect(extensionSource).toContain('struct KajiQuickEntryControl: ControlWidget');
+    expect(extensionSource).toContain('StaticControlConfiguration(kind: "KajiQuickEntryControl")');
+    expect(extensionSource).toContain('struct OpenQuickEntryControlIntent: AppIntent');
+    expect(extensionSource).toContain('static var openAppWhenRun = true');
+    expect(extensionSource).toContain('try Store.enqueueControlLaunch()');
+    expect(extensionSource).toContain('ControlWidgetButton(action: OpenQuickEntryControlIntent())');
+    expect(extensionSource).toContain('URLQueryItem(name: "launch", value: "control")');
+    expect(extensionSource).toContain('private let deepLinkInboxName = "quick-entry-deep-links"');
+    expect(extensionSource).toContain('if #available(iOS 18.0, *) { KajiQuickEntryControl() }');
     expect(fs.readFileSync(path.join(temp, 'ios/Kaji/Info.plist'), 'utf8')).toContain('kaji-quick-entry');
   }, 30_000);
 });

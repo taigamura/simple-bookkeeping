@@ -71,6 +71,7 @@ const withQuickEntryFiles = (config) => withDangerousMod(config, ['ios', async (
   const extensionRoot = path.join(config.modRequest.platformProjectRoot, EXTENSION_NAME);
   fs.mkdirSync(extensionRoot, { recursive: true });
   fs.writeFileSync(path.join(extensionRoot, `${EXTENSION_NAME}.swift`), String.raw`import AppIntents
+import ControlWidget
 import Foundation
 import SwiftUI
 import WidgetKit
@@ -78,6 +79,7 @@ import WidgetKit
 private let appGroup = "group.com.taigamura.kaji"
 private let snapshotName = "quick-entry-snapshot.json"
 private let inboxName = "quick-entry-inbox"
+private let deepLinkInboxName = "quick-entry-deep-links"
 private let draftKey = "widget-expense-draft-v1"
 
 private struct Category: Codable, Hashable { let id: String; let name: String }
@@ -125,6 +127,22 @@ private enum Store {
     let category = categories(snapshot).first?.name ?? "Expense"
     components.queryItems = [URLQueryItem(name: "launch", value: "widget"), URLQueryItem(name: "category", value: category)]
     return components.url!
+  }
+  static func controlURL() -> URL {
+    var components = URLComponents(); components.scheme = "kaji-quick-entry"; components.host = "new"
+    let category = categories(snapshot()).first?.name ?? "Expense"
+    components.queryItems = [URLQueryItem(name: "launch", value: "control"), URLQueryItem(name: "category", value: category)]
+    return components.url!
+  }
+  static func enqueueControlLaunch() throws {
+    guard let root else { throw NSError(domain: "KajiQuickEntry", code: 3, userInfo: [NSLocalizedDescriptionKey: "App Group is unavailable"]) }
+    let directory = root.appendingPathComponent(deepLinkInboxName, isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let url = controlURL().absoluteString
+    let temporary = directory.appendingPathComponent(".\(UUID().uuidString).tmp")
+    let destination = directory.appendingPathComponent("\(UUID().uuidString).json")
+    try Data(url.utf8).write(to: temporary, options: .atomic)
+    try FileManager.default.moveItem(at: temporary, to: destination)
   }
   static func enqueue(_ draft: ExpenseDraft, snapshot: Snapshot) throws {
     guard let root, let amount = Int(draft.amount), amount > 0,
@@ -203,7 +221,31 @@ private struct KajiQuickEntryWidgetView: View { let entry: KajiQuickEntryWidgetE
 struct KajiQuickEntryWidget: Widget {
   var body: some WidgetConfiguration { StaticConfiguration(kind: "KajiQuickEntryWidget", provider: KajiQuickEntryProvider()) { KajiQuickEntryWidgetView(entry: $0) }.configurationDisplayName(Copy.title).description("Launch-only on iOS 16.4; expense keypad on iOS 17.").supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryCircular, .accessoryRectangular, .accessoryInline]) }
 }
-@main struct KajiQuickEntryExtension: WidgetBundle { var body: some Widget { KajiQuickEntryWidget() } }
+@available(iOS 18.0, *)
+private struct OpenQuickEntryControlIntent: AppIntent {
+  static var title: LocalizedStringResource = "Quick expense"
+  static var openAppWhenRun = true
+  func perform() async throws -> some IntentResult {
+    try Store.enqueueControlLaunch()
+    return .result()
+  }
+}
+@available(iOS 18.0, *)
+private struct KajiQuickEntryControl: ControlWidget {
+  var body: some ControlWidgetConfiguration {
+    StaticControlConfiguration(kind: "KajiQuickEntryControl") {
+      ControlWidgetButton(action: OpenQuickEntryControlIntent()) {
+        Label(Copy.title, systemImage: "plus.circle")
+      }
+    }.displayName(Copy.title).description(Copy.open)
+  }
+}
+@main struct KajiQuickEntryExtension: WidgetBundle {
+  var body: some Widget {
+    KajiQuickEntryWidget()
+    if #available(iOS 18.0, *) { KajiQuickEntryControl() }
+  }
+}
 `);
   fs.writeFileSync(path.join(extensionRoot, `${EXTENSION_NAME}-Info.plist`), `<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string><key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string><key>CFBundleName</key><string>$(PRODUCT_NAME)</string><key>CFBundleInfoDictionaryVersion</key><string>6.0</string><key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string><key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string><key>CFBundlePackageType</key><string>XPC!</string><key>NSExtension</key><dict><key>NSExtensionPointIdentifier</key><string>com.apple.widgetkit-extension</string></dict></dict></plist>`);
   fs.copyFileSync(path.join(config.modRequest.projectRoot, 'config/quick-entry.entitlements'), path.join(extensionRoot, `${EXTENSION_NAME}.entitlements`));

@@ -19,10 +19,22 @@ describe('quick-entry URL intake seam', () => {
     );
   });
 
+  it('opens a blank, unsaved expense sheet for a system control', () => {
+    expect(parseQuickEntryUrl(
+      'kaji-quick-entry://new?launch=control&category=Food',
+      { y: 2026, m: 7, day: 11 },
+    )).toEqual<QuickEntryDraft>({
+      type: 'expense', amountStr: '', category: 'Food', note: '',
+      y: 2026, m: 7, day: 11, repeat: 'never',
+    });
+  });
+
   it.each([
     'https://example.test/new?amount=1&category=Food&date=2026-08-10',
     'kaji-quick-entry://new?amount=0&category=Food&date=2026-08-10',
     'kaji-quick-entry://new?amount=1&category=&date=2026-08-10',
+    'kaji-quick-entry://new?launch=control',
+    'kaji-quick-entry://new?launch=widget&category=Food',
     'kaji-quick-entry://other?amount=1&category=Food&date=2026-08-10',
     'kaji-quick-entry://new?amount=1&category=Food&date=not-a-date',
   ])('rejects malformed links: %s', (url) => {

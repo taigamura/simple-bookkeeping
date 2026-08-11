@@ -76,6 +76,20 @@ describe('native quick-entry reconciliation seam', () => {
     expect(native.deepLinkAcks).toEqual(['link-1']);
   });
 
+  it('hydrates one blank control draft without recording a transaction', async () => {
+    const native = bridge([], ['kaji-quick-entry://new?launch=control&category=Food']);
+    const store = createStore(createMemoryPersistence());
+    const drafts: EntryDraft[] = [];
+
+    await reconcileNativeQuickEntries(store, native, async (draft) => { drafts.push(draft); });
+
+    expect(drafts).toEqual([expect.objectContaining({
+      type: 'expense', amountStr: '', category: 'Food', note: '', repeat: 'never',
+    })]);
+    expect(native.deepLinkAcks).toEqual(['link-1']);
+    expect((await store.load()).entries).toEqual([]);
+  });
+
   it('keeps identical queued links distinct by native identity across reconciles', async () => {
     const native = bridge([], [
       'kaji-quick-entry://new?amount=500&category=Food&date=2026-08-10',
