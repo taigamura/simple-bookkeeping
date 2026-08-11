@@ -24,7 +24,7 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         onOpenRepeats={() => {}}
         onOpenBudgets={() => {}}
         onExportData={() => {}}
-        onImportZaim={() => {}}
+        onImportData={() => {}}
         hasCorruptStash={false}
         onExportCorruptStash={() => {}}
         onDeleteAllData={() => {}}
@@ -87,7 +87,7 @@ describe('SettingsSheet', () => {
           currency={CURRENCIES[0]} expCats={['Food']} incCats={['Salary']}
           onChangeCurrency={() => {}} onChangeExpCats={() => {}} onChangeIncCats={() => {}}
           activeRepeatCount={0} onOpenRepeats={() => {}} onOpenBudgets={() => {}}
-          onExportData={() => {}} onImportZaim={() => {}} hasCorruptStash={false}
+          onExportData={() => {}} onImportData={() => {}} hasCorruptStash={false}
           onExportCorruptStash={() => {}} onDeleteAllData={() => {}} onClose={() => {}}
           nearbySharingPaired
         />
@@ -105,11 +105,11 @@ describe('SettingsSheet', () => {
     expect(onOpenRepeats).toHaveBeenCalled();
   });
 
-  it('renders an "Import from Zaim" action that fires its callback', () => {
-    const onImportZaim = jest.fn();
-    renderSheet({ onImportZaim });
-    fireEvent.press(screen.getByLabelText('Import from Zaim'));
-    expect(onImportZaim).toHaveBeenCalled();
+  it('renders an "Import data" action that fires its callback', () => {
+    const onImportData = jest.fn();
+    renderSheet({ onImportData });
+    fireEvent.press(screen.getByLabelText('Import data'));
+    expect(onImportData).toHaveBeenCalled();
   });
 
   it('renders an "Export data" action that fires its callback', () => {

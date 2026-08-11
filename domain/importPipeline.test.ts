@@ -63,4 +63,24 @@ describe('provider-neutral import pipeline', () => {
     applyImportPreview(existing, preview);
     expect(existing).toEqual(state());
   });
+
+  it('uses exact legacy-row duplicate protection only when requested by the integration', () => {
+    const csv = [HEADER, '2026-07-01,Cash,Food,-,-,-,-,Lunch,-,JPY,-,900,-,-'].join('\n');
+    const legacy = {
+      id: 'legacy-entry', timestamp: '2026-07-01T00:00:00.000Z',
+      y: 2026, m: 6, day: 1, type: 'expense' as const, amount: 900,
+      category: 'Food', note: 'Lunch', repeat: 'never' as const,
+    };
+    const existing = { ...state(), entries: [legacy] };
+
+    const provenanceOnly = previewImport(csv, existing, [zaimImportAdapter]);
+    expect(provenanceOnly.entries).toHaveLength(1);
+
+    const legacySafe = previewImport(csv, existing, [zaimImportAdapter], { matchLegacyRows: true });
+    expect(legacySafe.entries).toHaveLength(0);
+    expect(legacySafe.skipped.duplicate).toBe(1);
+
+    const importedExisting = { ...existing, entries: [{ ...legacy, importProvenance: { provider: 'zaim', sourceId: 'other', row: 0 } }] };
+    expect(previewImport(csv, importedExisting, [zaimImportAdapter], { matchLegacyRows: true }).entries).toHaveLength(1);
+  });
 });

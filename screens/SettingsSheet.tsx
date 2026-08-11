@@ -71,7 +71,7 @@ interface SettingsSheetProps {
   /** Nearby sharing is disabled until a second household phone is paired. */
   nearbySharingPaired?: boolean;
   onExportData: () => void;
-  onImportZaim: () => void;
+  onImportData: () => void;
   onExportHouseholdBackup?: () => void;
   onImportHouseholdBackup?: () => void;
   /** Whether a corrupt-stash blob exists (#28) — gates the recovery row. */
@@ -102,7 +102,7 @@ export function SettingsSheet({
   onOpenHouseholdSync,
   nearbySharingPaired = false,
   onExportData,
-  onImportZaim,
+  onImportData,
   onExportHouseholdBackup,
   onImportHouseholdBackup,
   hasCorruptStash,
@@ -137,7 +137,7 @@ export function SettingsSheet({
         {onOpenHouseholdSync && <HouseholdSyncLink onPress={onOpenHouseholdSync} />}
         <DataActions
           onExportData={onExportData}
-          onImportZaim={onImportZaim}
+          onImportData={onImportData}
           onExportHouseholdBackup={onExportHouseholdBackup}
           onImportHouseholdBackup={onImportHouseholdBackup}
           hasCorruptStash={hasCorruptStash}
@@ -515,13 +515,13 @@ function RepeatsLink({ count, onPress }: { count: number; onPress: () => void })
 }
 
 /**
- * Export/Import-from-Zaim (#24, #12), the conditional unreadable-backup
+ * Export/import-data (#24, #113), the conditional unreadable-backup
  * recovery row (#28), and
  * the Delete all data action (#67). Premium/ads stripped for v1 (#23).
  */
 function DataActions({
   onExportData,
-  onImportZaim,
+  onImportData,
   onExportHouseholdBackup,
   onImportHouseholdBackup,
   hasCorruptStash,
@@ -529,7 +529,7 @@ function DataActions({
   onDeleteAllData,
 }: {
   onExportData: () => void;
-  onImportZaim: () => void;
+  onImportData: () => void;
   onExportHouseholdBackup?: () => void;
   onImportHouseholdBackup?: () => void;
   hasCorruptStash: boolean;
@@ -573,13 +573,13 @@ function DataActions({
       )}
 
       <Pressable
-        onPress={onImportZaim}
+        onPress={onImportData}
         accessibilityRole="button"
-        accessibilityLabel={strings.settings.importFromZaim}
+        accessibilityLabel={strings.settings.importData}
         style={rowStyle}
       >
         <Txt variant="listItem" tone="ink">
-          {strings.settings.importFromZaim}
+          {strings.settings.importData}
         </Txt>
       </Pressable>
 

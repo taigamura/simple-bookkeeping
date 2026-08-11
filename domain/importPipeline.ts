@@ -103,7 +103,7 @@ export function previewImport(
   source: string,
   existing: ImportState,
   adapters: ImportAdapter[],
-  options: { currency?: Currency; sourceId?: string } = {},
+  options: { currency?: Currency; sourceId?: string; matchLegacyRows?: boolean } = {},
 ): ImportPreview {
   const sourceId = options.sourceId ?? sourceFingerprint(source);
   const matches = adapters.filter((adapter) => adapter.detect(source) === 'match');
@@ -138,7 +138,17 @@ export function previewImport(
     if (options.currency && row.currencyCode && row.currencyCode !== options.currency.code) { tallyReason(skipped, 'currencyMismatch'); continue; }
     if (row.unsupportedFields?.length) { tallyReason(skipped, 'unsupportedField'); continue; }
     const key = rowKey(row);
-    if (seen.has(key)) { tallyReason(skipped, 'duplicate'); continue; }
+    // The old Zaim-only flow stored no provenance. Retain its exact-row
+    // duplicate protection only when an integration explicitly requests it;
+    // normal provider imports use source provenance so two identical purchases
+    // stay distinct.
+    const matchesLegacyRow = options.matchLegacyRows && existing.entries.some((entry) =>
+      !entry.importProvenance
+      && entry.y === row.y && entry.m === row.m && entry.day === row.day
+      && entry.type === row.type && entry.amount === row.amount
+      && entry.category === row.category && entry.note === row.note,
+    );
+    if (seen.has(key) || matchesLegacyRow) { tallyReason(skipped, 'duplicate'); continue; }
     seen.add(key);
     const entry: Transaction = {
       id: stableId(), timestamp: new Date().toISOString(), y: validation.row.y,
@@ -158,7 +168,7 @@ export function previewImportBytes(
   bytes: Uint8Array,
   existing: ImportState,
   adapters: ImportAdapter[],
-  options: { currency?: Currency; sourceId?: string } = {},
+  options: { currency?: Currency; sourceId?: string; matchLegacyRows?: boolean } = {},
 ): ImportPreview {
   const decoded = adapters
     .map((adapter) => ({ adapter, source: adapter.decode(bytes) }))

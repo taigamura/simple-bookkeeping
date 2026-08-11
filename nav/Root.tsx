@@ -26,11 +26,14 @@ import {
   categoryEntities,
   categoryIdFor,
   clampDay,
-  decodeZaimBytes,
   deleteLedgerItem,
   entriesForMonth,
   entriesThrough,
-  parseZaimCsv,
+  applyImportPreview,
+  previewImportBytes,
+  zaimImportAdapter,
+  moneyforwardMeImportAdapter,
+  okaneRecoImportAdapter,
   periodMonths,
   promoteCategory,
   pruneBudgets,
@@ -43,7 +46,7 @@ import {
   type Transaction,
   type WeekendShift,
   type YM,
-  type ZaimSkipTally,
+  type ImportSkipTally,
   householdSyncStatus,
   createHouseholdBackup,
   previewHouseholdBackup,
@@ -111,35 +114,59 @@ function notify(title: string, message: string) {
 // " — 12 transfers skipped, 10 malformed rows skipped" (empty when nothing
 // was skipped) so the confirmation shows a breakdown by reason, not just an
 // opaque "some rows were skipped".
-function skipSummary(skipped: ZaimSkipTally): string {
-  const { skip } = strings.zaim;
+function skipSummary(skipped: ImportSkipTally): string {
+  const { skip } = strings.importData;
   const parts: string[] = [];
+  if (skipped.unknownFormat > 0) parts.push(skip.unknownFormat(skipped.unknownFormat));
+  if (skipped.ambiguousFormat > 0) parts.push(skip.ambiguousFormat(skipped.ambiguousFormat));
   if (skipped.transfer > 0) parts.push(skip.transfer(skipped.transfer));
   if (skipped.balanceAdjustment > 0) parts.push(skip.balanceAdjustment(skipped.balanceAdjustment));
   if (skipped.malformed > 0) parts.push(skip.malformedRow(skipped.malformed));
+  if (skipped.currencyMismatch > 0) parts.push(skip.currencyMismatch(skipped.currencyMismatch));
+  if (skipped.unsupportedField > 0) parts.push(skip.unsupportedField(skipped.unsupportedField));
   if (skipped.invalidDate > 0) parts.push(skip.invalidDate(skipped.invalidDate));
   if (skipped.invalidAmount > 0) parts.push(skip.invalidAmount(skipped.invalidAmount));
   if (skipped.emptyCategory > 0) parts.push(skip.emptyCategory(skipped.emptyCategory));
   if (skipped.unsupportedType > 0) parts.push(skip.unsupportedType(skipped.unsupportedType));
   if (skipped.outOfRange > 0) parts.push(skip.outOfRange(skipped.outOfRange));
-  if (skipped.duplicate > 0) parts.push(skip.duplicate(skipped.duplicate));
   return parts.length > 0 ? ` — ${parts.join(', ')}` : '';
 }
 
 function confirm(
   title: string,
   message: string,
-  onConfirm: () => void,
+  onConfirm: () => void | Promise<void>,
   confirmLabel: string = strings.common.import,
   destructive = false,
+  onCancel?: () => void,
 ) {
   if (Platform.OS === 'web') {
-    if (window.confirm(`${title}\n${message}`)) onConfirm();
+    if (window.confirm(`${title}\n${message}`)) void Promise.resolve(onConfirm());
+    else onCancel?.();
   } else {
     Alert.alert(title, message, [
-      { text: strings.common.cancel, style: 'cancel' },
+      { text: strings.common.cancel, style: 'cancel', onPress: onCancel },
       { text: confirmLabel, style: destructive ? 'destructive' : 'default', onPress: onConfirm },
     ]);
+  }
+}
+
+const IMPORT_MIME_TYPES = [
+  'text/csv',
+  'text/comma-separated-values',
+  'application/csv',
+  'application/vnd.ms-excel',
+  '.csv',
+];
+const MAX_IMPORT_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_IMPORT_ROWS = 10_000;
+
+function providerLabel(provider: string): string {
+  switch (provider) {
+    case 'moneyforward-me': return 'MoneyForward ME';
+    case 'okane-reco': return 'おカネレコ';
+    case 'zaim': return 'Zaim';
+    default: return provider;
   }
 }
 
@@ -608,66 +635,82 @@ function Shell({
     }
   };
 
-  // importZaim(): pick a Zaim CSV export → decode (Shift-JIS or UTF-8) →
-  // parse against the current ledger (so re-importing an overlapping export
-  // skips rows already present) → native Import/Cancel confirmation with the
-  // entry count and skip-reason breakdown → merge entries and any new
-  // categories into the ledger through the normal update() path. Canceling
-  // the picker or the confirmation writes nothing.
-  const importZaim = async () => {
+  // importData(): preview exactly one supported provider without writes, then
+  // commit the complete preview in one durable store patch after confirmation.
+  const importData = async () => {
     try {
-      const picked = await DocumentPicker.getDocumentAsync({ type: 'text/csv' });
-      if (picked.canceled) return;
+      const picked = await DocumentPicker.getDocumentAsync({ type: IMPORT_MIME_TYPES });
+      if (picked.canceled) {
+        notify(strings.importData.canceledTitle, strings.importData.canceledMessage);
+        return;
+      }
 
       const asset = picked.assets[0];
+      if (asset.size !== undefined && asset.size > MAX_IMPORT_FILE_BYTES) {
+        notify(strings.importData.fileTooLargeTitle, strings.importData.fileTooLargeMessage);
+        return;
+      }
       const buffer =
         Platform.OS === 'web'
           ? await asset.file!.arrayBuffer()
           : await new File(asset.uri).arrayBuffer();
       const bytes = new Uint8Array(buffer);
-      const text = decodeZaimBytes(bytes);
-      if (!text) {
-        notify(strings.zaim.notZaimTitle, strings.zaim.notZaimMessage);
+      if (bytes.byteLength > MAX_IMPORT_FILE_BYTES) {
+        notify(strings.importData.fileTooLargeTitle, strings.importData.fileTooLargeMessage);
         return;
       }
-
-      const now = new Date();
-      const today = {
-        y: now.getFullYear(),
-        m: now.getMonth(),
-        day: now.getDate(),
-      };
-      const recurringHistory = entriesThrough(
-        { entries: [], recurrenceRules: state.recurrenceRules },
-        today,
-      );
-      const result = parseZaimCsv(text, {
+      // All supported contracts use one physical CSV record per line. Limit
+      // before adapter parsing so a malformed file cannot allocate unbounded
+      // records in the preview path.
+      if (bytes.filter((byte) => byte === 10).length > MAX_IMPORT_ROWS) {
+        notify(strings.importData.fileTooLargeTitle, strings.importData.fileTooLargeMessage);
+        return;
+      }
+      const preview = previewImportBytes(bytes, {
         expCats: state.expCats,
         incCats: state.incCats,
-        // All persisted one-time entries participate in duplicate detection,
-        // including future-dated rows. Infinite rules contribute only their
-        // finite concrete history through today.
-        entries: [...state.entries, ...recurringHistory],
+        entries: state.entries,
+      }, [zaimImportAdapter, moneyforwardMeImportAdapter, okaneRecoImportAdapter], {
+        currency: state.currency,
+        // Preserve the Zaim flow's protection for records saved before import
+        // provenance existed; newly imported rows use source provenance.
+        matchLegacyRows: true,
       });
-      if (result.entries.length === 0) {
+      if (preview.status === 'no-write') {
+        const isAmbiguous = preview.reason === 'ambiguousFormat';
         notify(
-          strings.zaim.noEntriesTitle,
-          `${strings.zaim.noEntriesMessage}${skipSummary(result.skipped)}`,
+          isAmbiguous ? strings.importData.ambiguousFormatTitle : strings.importData.unknownFormatTitle,
+          isAmbiguous ? strings.importData.ambiguousFormatMessage : strings.importData.unknownFormatMessage,
+        );
+        return;
+      }
+      if (preview.entries.length === 0) {
+        notify(
+          strings.importData.noSupportedRowsTitle,
+          `${strings.importData.noSupportedRowsMessage} — ${strings.importData.duplicates(preview.skipped.duplicate)}${skipSummary(preview.skipped)}`,
         );
         return;
       }
 
-      const message = `${strings.zaim.entriesReady(result.entries.length)}${skipSummary(result.skipped)}`;
-      confirm(strings.settings.importFromZaim, message, () => {
-        update({
-          entries: [...state.entries, ...result.entries],
-          expCats: result.expCats,
-          incCats: result.incCats,
-        });
-        setSheet(null);
-      });
+      const provider = providerLabel(preview.provider!);
+      const tally = ` — ${strings.importData.duplicates(preview.skipped.duplicate)}${skipSummary(preview.skipped)}`;
+      const message = `${strings.importData.preview(provider, preview.entries.length)}${tally}`;
+      confirm(strings.settings.importData, message, async () => {
+        try {
+          const applied = applyImportPreview({ entries: state.entries, expCats: state.expCats, incCats: state.incCats }, preview);
+          const persisted = await update(applied);
+          if (persisted === false) {
+            notify(strings.importData.importFailedTitle, strings.importData.importFailedMessage);
+            return;
+          }
+          setSheet(null);
+          notify(strings.importData.completeTitle, `${strings.importData.complete(provider, preview.entries.length)}${tally}`);
+        } catch {
+          notify(strings.importData.importFailedTitle, strings.importData.importFailedMessage);
+        }
+      }, strings.common.import, false, () => notify(strings.importData.canceledTitle, strings.importData.canceledMessage));
     } catch {
-      notify(strings.zaim.importFailedTitle, strings.zaim.importFailedMessage);
+      notify(strings.importData.importFailedTitle, strings.importData.importFailedMessage);
       return;
     }
   };
@@ -952,7 +995,7 @@ function Shell({
             onOpenHouseholdSync={openHouseholdSync}
             nearbySharingPaired={householdSync.model.syncNow !== 'not-paired'}
             onExportData={exportData}
-            onImportZaim={importZaim}
+            onImportData={importData}
             onExportHouseholdBackup={exportHouseholdBackup}
             onImportHouseholdBackup={importHouseholdBackup}
             hasCorruptStash={hasCorruptStash}

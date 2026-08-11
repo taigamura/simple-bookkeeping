@@ -25,3 +25,19 @@ ME web-monthly export. It validates CP932 bytes (and the UTF-8 synthetic
 fixture), accepts `計算対象=1` and `振替=0` ordinary JPY rows, and maps only
 positive rows whose `大項目` is `収入` as income. Other positive rows are not
 guessed to be refunds or income and are explicitly skipped.
+
+## Settings journey
+
+Settings exposes one **Import data** action. The on-device picker accepts safe
+CSV MIME variants and the selected file is bounded to 5 MB and 10,000 physical
+CSV rows before it reaches an adapter. Zaim, MoneyForward ME, and おカネレコ are
+detected from their documented headers. An unknown or ambiguous file, a file
+with no supported rows, cancellation, and every failure leave the ledger
+unchanged and show a localized explanation.
+
+Before confirmation, the app names the detected provider, the number of entries
+to be imported, duplicate count, and every non-zero skip reason. Confirmation
+applies the prepared preview as one store patch; afterward the same tally is
+shown in the completion notice. Older Zaim records without provenance retain
+their legacy exact-row duplicate protection, while all newly imported records
+deduplicate by provider source provenance.

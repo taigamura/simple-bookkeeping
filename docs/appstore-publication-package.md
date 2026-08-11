@@ -40,7 +40,7 @@ Personal expense tracker
 When you create or edit an entry marked as daily, monthly, or yearly, [NAME] continues the series indefinitely from that date. You can edit this and future occurrences, delete one occurrence, or delete this and all future occurrences. Projected repeats are included in monthly budgets and summaries.
 
 **Getting started:**
-Start on the Calendar to add your first entry, or on the Summary to see your monthly totals. Import an existing Zaim CSV to restore a backup. All data is stored privately on your device.
+Start on the Calendar to add your first entry, or on the Summary to see your monthly totals. Import a supported Zaim, MoneyForward ME, or おカネレコ CSV. All data is stored privately on your device.
 
 ### Keywords (comma-separated, ~100 characters total)
 money, expense, budget, personal finance, tracker, local-first
@@ -98,7 +98,7 @@ Standard
 記録を「毎日」「毎月」「毎年」として作成または編集すると、選択した日から終了日なしで繰り返します。繰り返し記録は、この回以降を編集したり、この回だけ、またはこの回以降のすべてを削除したりできます。予算とサマリーには、表示する月の繰り返し記録も含まれます。
 
 **はじめ方：**
-カレンダーで最初の記録を追加するか、サマリーで月の合計を確認してください。既存のZaim CSVを読み込んでバックアップを復元できます。すべてのデータはあなたのデバイスにプライベートに保存されます。
+カレンダーで最初の記録を追加するか、サマリーで月の合計を確認してください。対応するZaim、MoneyForward ME、またはおカネレコのCSVを読み込めます。すべてのデータはあなたのデバイスにプライベートに保存されます。
 
 ### キーワード (Keywords; comma-separated, ~100 characters total)
 家計簿, 支出, 予算, 家計管理, 収支, ローカルファースト
@@ -150,7 +150,7 @@ Standard
 4. **Settings:** Tap Settings to view options. You can toggle the appearance theme, change the currency symbol, manage custom categories, and access import/export.
 5. **CSV import/export:**
    - To export: In Settings, tap "Export data" to save a CSV file using the system share sheet. Repeating occurrences through today are exported as concrete one-time rows because Zaim CSV has no recurrence-rule format.
-   - To import: In Settings, tap "Import from Zaim" to select a CSV file. [NAME] accepts standard Zaim CSV format and UTF-8 or Shift-JIS encoding.
+   - To import: In Settings, tap "Import data" to select a CSV file. [NAME] detects supported Zaim, MoneyForward ME, and おカネレコ exports and previews the provider, import count, duplicates, and skipped rows before confirmation.
 6. **No login, no internet backend:** The app has no account creation, login, or internet service. It does not connect to banks, services, or cloud backends. Nearby household sharing is off until phones are paired, then occurs only directly between paired nearby phones while both apps are open. It must not be described as zero networking or no transmission.
 7. **Locales:** The app respects the device language setting. Change your device language to Japanese to verify the full Japanese UI and copy.
 8. **Delete all data:** In Settings, scroll to "Data" and select "Delete all data" to see a confirmation that clarifies the scope: entries, repeating series, and budgets are deleted, but currency, categories, and settings are preserved.
@@ -158,7 +158,7 @@ Standard
 **Important notes:**
 - The app is fully functional without internet services. Paired nearby sharing uses local peer networking while both apps are open.
 - No account is required to use the app.
-- CSV import is Zaim-compatible and supports both UTF-8 and Shift-JIS encoding.
+- CSV import supports documented Zaim, MoneyForward ME, and おカネレコ formats; encoding support depends on the detected provider.
 - The "symbol-only currency" means the currency display changes (¥, $, €, £) but amounts are never converted or recalculated.
 
 ---
@@ -215,8 +215,8 @@ Each screenshot should show **real app UI** with **fictitious, non-sensitive dat
 **Screenshot 4: Settings (all locales)**
 - Shows Settings view with currency, categories, import/export, and data options visible.
 - Demonstrates theme toggle or lock option if relevant.
-- Caption (EN): "Import Zaim CSV or export to backup. Control theme and optional lock."
-- Caption (JA): "Zaim CSVを読み込み、バックアップを作成。テーマとロックを設定します。"
+- Caption (EN): "Import supported CSV data or export to backup. Control theme and optional lock."
+- Caption (JA): "対応するCSVを読み込み、バックアップを作成。テーマとロックを設定します。"
 
 **Screenshot 5 (optional, recommended): Budgets sheet (all locales)**
 - Shows Budgets view in per-category mode with 3–4 budget amounts and a "Budget left" bar.
