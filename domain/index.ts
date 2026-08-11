@@ -156,6 +156,10 @@ export {
   type ZaimSkipTally,
 } from './zaim';
 export {
+  decodeOkaneRecoBytes,
+  okaneRecoImportAdapter,
+} from './okaneReco';
+export {
   validateFinancialRow,
   type FinancialRow,
   type FinancialRowInvalidReason,

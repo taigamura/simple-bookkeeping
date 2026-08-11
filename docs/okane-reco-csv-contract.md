@@ -1,8 +1,8 @@
 # おカネレコ transaction-detail CSV contract
 
-Status: evidence-backed intake contract, not an adapter specification. This
-document deliberately records unknowns instead of assigning semantics that are
-not present in an export.
+Status: evidence-backed intake contract for the conservative `okane-reco`
+adapter. The adapter deliberately records unknowns instead of assigning
+semantics that are not present in an export.
 
 ## Evidence
 
@@ -59,9 +59,9 @@ as a refund or transfer.
 
 ## Contract boundary for a future adapter
 
-### Fields that can be considered for import
+### Supported import subset
 
-Against the exact observed seven-column header, a conservative adapter may map:
+Against the exact observed seven-column header, the adapter maps:
 
 | Provider field | Kaji field | Condition |
 | --- | --- | --- |
@@ -72,10 +72,9 @@ Against the exact observed seven-column header, a conservative adapter may map:
 | `CURRENCY` | `currencyCode` | Accept only the observed literal `¥` as JPY; reject other symbols/codes pending evidence. |
 
 `TIME` and `PAYMENT` have no direct field in the current normalized import
-boundary. They must either remain provenance/unsupported fields or be omitted
-without claiming that Kaji preserved them. A future adapter must not silently
-discard a field that the user would reasonably expect to survive; preview it as
-unsupported until that policy is decided.
+boundary. The adapter validates their observed basic shape but does not persist
+them or claim to preserve them. A future schema change must surface them rather
+than silently inventing semantics for either field.
 
 ### Rows and semantics that are not established
 
@@ -84,7 +83,9 @@ unsupported until that policy is decided.
   is not a provider ID and will change if the export is reordered.
 - No explicit refund, transfer, balance-adjustment, or reconciliation field is
   documented. A memo, payment method, category, or matching amount is not
-  enough to manufacture one.
+  enough to manufacture one. In particular, a row merely described as a
+  transfer in `MEMO` remains an ordinary expense row: Kaji does not inspect
+  text to claim a transfer was skipped.
 - The official specimen shows positive prices for both ordinary expenses and
   the `CATEGORY=収入` row. Negative and zero values are not established.
 - The official specimen shows `¥`, but other locale/currency values are not
