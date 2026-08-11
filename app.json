@@ -55,7 +55,8 @@
         }
       ],
       "expo-secure-store",
-      "./config/withQuickEntry"
+      "./config/withQuickEntry",
+      "./config/withWatchExpense"
     ],
     "extra": {
       "eas": {
