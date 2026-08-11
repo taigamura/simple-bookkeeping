@@ -1,3 +1,4 @@
+import AppIntents
 import ExpoModulesCore
 import Foundation
 
@@ -161,4 +162,124 @@ public final class KajiQuickEntryModule: Module {
 
 private struct QuickEntryException: Exception {
   let reason: String
+}
+
+/** The App Intent lives in the host app target, not the widget extension. */
+@available(iOS 16.4, *)
+private struct ShortcutCategory: AppEntity, Identifiable {
+  static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Expense category")
+  static var defaultQuery = ShortcutCategoryQuery()
+  let id: String
+  let name: String
+  var displayRepresentation: DisplayRepresentation { DisplayRepresentation(title: "\(name)") }
+}
+
+@available(iOS 16.4, *)
+private struct ShortcutCategoryQuery: EntityStringQuery {
+  private func categories() -> [ShortcutCategory] {
+    guard let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.taigamura.kaji"),
+      let data = try? Data(contentsOf: root.appendingPathComponent("quick-entry-snapshot.json")),
+      let snapshot = try? JSONDecoder().decode(ShortcutSnapshot.self, from: data),
+      snapshot.version == 3 else { return [] }
+    return snapshot.categories.map { ShortcutCategory(id: $0.id, name: $0.name) }
+  }
+
+  func entities(for identifiers: [ShortcutCategory.ID]) async throws -> [ShortcutCategory] {
+    let categoriesByID = Dictionary(uniqueKeysWithValues: categories().map { ($0.id, $0) })
+    return identifiers.compactMap { categoriesByID[$0] }
+  }
+
+  func entities(matching string: String) async throws -> [ShortcutCategory] {
+    categories().filter { $0.name.localizedCaseInsensitiveContains(string) }
+  }
+
+  func suggestedEntities() async throws -> [ShortcutCategory] { categories() }
+}
+
+@available(iOS 16.4, *)
+private struct LogExpenseIntent: AppIntent {
+  static var title: LocalizedStringResource = "Log expense"
+  static var description = IntentDescription("Records a private expense without opening Kaji.")
+  static var openAppWhenRun = false
+
+  @Parameter(title: "Amount", requestValueDialog: "How much did you spend?") var amount: Int
+  @Parameter(title: "Category", requestValueDialog: "Which expense category?") var category: ShortcutCategory
+  @Parameter(title: "Note", default: "") var note: String
+
+  static var parameterSummary: some ParameterSummary {
+    Summary("Log \(\.$amount) in \(\.$category)")
+  }
+
+  init() {
+    amount = 0
+    category = ShortcutCategory(id: "", name: "")
+    note = ""
+  }
+
+  func perform() async throws -> some IntentResult {
+    let categories = try await ShortcutCategoryQuery().entities(for: [category.id])
+    guard amount > 0, note.count <= 512, let savedCategory = categories.first else {
+      throw ShortcutIntentError.invalidParameters
+    }
+    try ShortcutCommandPublisher.publish(amount: amount, category: savedCategory, note: note)
+    return .result()
+  }
+}
+
+@available(iOS 16.4, *)
+private struct KajiAppShortcuts: AppShortcutsProvider {
+  static var appShortcuts: [AppShortcut] {
+    AppShortcut(intent: LogExpenseIntent(), phrases: [
+      "Log an expense in \(.applicationName)",
+      "Add an expense with \(.applicationName)",
+      "\(.applicationName)で支出を記録",
+      "\(.applicationName)に支出を追加",
+    ], shortTitle: "Log expense", systemImageName: "plus.circle")
+  }
+}
+
+@available(iOS 16.4, *)
+private struct ShortcutSnapshot: Decodable {
+  struct Category: Decodable { let id: String; let name: String }
+  let version: Int
+  let categories: [Category]
+}
+
+@available(iOS 16.4, *)
+private enum ShortcutCommandPublisher {
+  static func publish(amount: Int, category: ShortcutCategory, note: String) throws {
+    guard let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.taigamura.kaji") else {
+      throw ShortcutIntentError.appGroupUnavailable
+    }
+    let date = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let payload: [String: Any] = [
+      "version": 1, "source": "shortcut", "id": UUID().uuidString,
+      "timestamp": formatter.string(from: Date()), "amount": amount,
+      "category": category.name, "note": note,
+      "date": ["y": date.year!, "m": date.month! - 1, "day": date.day!],
+    ]
+    let directory = root.appendingPathComponent("quick-entry-inbox", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let temporary = directory.appendingPathComponent(".\(UUID().uuidString).tmp")
+    let destination = directory.appendingPathComponent("\(UUID().uuidString).json")
+    try JSONSerialization.data(withJSONObject: payload).write(to: temporary, options: .atomic)
+    // A visible command is complete. Reconciliation de-duplicates its persisted id
+    // if delivery is retried after the app has been killed or restarted.
+    try FileManager.default.moveItem(at: temporary, to: destination)
+  }
+}
+
+@available(iOS 16.4, *)
+private enum ShortcutIntentError: LocalizedError {
+  case invalidParameters
+  case appGroupUnavailable
+
+  var errorDescription: String? {
+    switch self {
+    case .invalidParameters: return "Enter a positive amount and choose a current category."
+    case .appGroupUnavailable: return "Kaji storage is unavailable."
+    }
+  }
 }

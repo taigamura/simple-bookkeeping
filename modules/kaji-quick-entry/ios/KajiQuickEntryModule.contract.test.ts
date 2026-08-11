@@ -37,4 +37,18 @@ describe('shipped Swift bridge contracts', () => {
     expect(source).toContain('data.count <= maxSnapshotBytes');
     expect(source).toContain('$0.count <= maxSnapshotStringLength');
   });
+
+  it('registers a private JP/EN App Intent that writes an atomic reconciled command', () => {
+    expect(source).toContain('import AppIntents');
+    expect(source).toContain('struct LogExpenseIntent: AppIntent');
+    expect(source).toContain('struct KajiAppShortcuts: AppShortcutsProvider');
+    expect(source).toContain('struct ShortcutCategoryQuery: EntityStringQuery');
+    expect(source).toContain('"Log an expense in \\(.applicationName)"');
+    expect(source).toContain('支出を記録');
+    expect(source).toContain('static var openAppWhenRun = false');
+    expect(source).toContain('"source": "shortcut"');
+    expect(source).toContain('withFractionalSeconds');
+    expect(source).toContain('note.count <= 512');
+    expect(source).toContain('try FileManager.default.moveItem(at: temporary, to: destination)');
+  });
 });

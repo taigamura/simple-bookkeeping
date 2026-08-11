@@ -132,7 +132,17 @@ private enum Store {
     // Clear before publishing so a second Save cannot enqueue the same draft.
     save(ExpenseDraft())
     let date = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-    let payload: [String: Any] = ["version": 1, "source": "widget", "id": UUID().uuidString, "timestamp": ISO8601DateFormatter().string(from: Date()), "amount": amount, "category": category.name, "note": "", "date": ["y": date.year!, "m": date.month! - 1, "day": date.day!]]
+    let payload = try command(amount: amount, category: category)
+    try publish(payload)
+  }
+  static func command(amount: Int, category: Category) throws -> [String: Any] {
+    guard amount > 0 else { throw NSError(domain: "KajiQuickEntry", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid expense parameters"]) }
+    let date = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+    let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return ["version": 1, "source": "widget", "id": UUID().uuidString, "timestamp": formatter.string(from: Date()), "amount": amount, "category": category.name, "note": "", "date": ["y": date.year!, "m": date.month! - 1, "day": date.day!]]
+  }
+  static func publish(_ payload: [String: Any]) throws {
+    guard let root else { throw NSError(domain: "KajiQuickEntry", code: 2, userInfo: [NSLocalizedDescriptionKey: "App Group is unavailable"]) }
     let directory = root.appendingPathComponent(inboxName, isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     let data = try JSONSerialization.data(withJSONObject: payload)
