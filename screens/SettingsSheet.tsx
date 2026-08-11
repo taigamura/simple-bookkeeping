@@ -68,6 +68,8 @@ interface SettingsSheetProps {
   onOpenBudgets: () => void;
   /** Drill into the paired-household status/history sheet (#105). */
   onOpenHouseholdSync?: () => void;
+  /** Nearby sharing is disabled until a second household phone is paired. */
+  nearbySharingPaired?: boolean;
   onExportData: () => void;
   onImportZaim: () => void;
   onExportHouseholdBackup?: () => void;
@@ -98,6 +100,7 @@ export function SettingsSheet({
   onOpenRepeats,
   onOpenBudgets,
   onOpenHouseholdSync,
+  nearbySharingPaired = false,
   onExportData,
   onImportZaim,
   onExportHouseholdBackup,
@@ -130,6 +133,7 @@ export function SettingsSheet({
         />
         <RepeatsLink count={activeRepeatCount} onPress={onOpenRepeats} />
         <BudgetsLink onPress={onOpenBudgets} />
+        <PrivacyDisclosure nearbySharingPaired={nearbySharingPaired} />
         {onOpenHouseholdSync && <HouseholdSyncLink onPress={onOpenHouseholdSync} />}
         <DataActions
           onExportData={onExportData}
@@ -142,6 +146,20 @@ export function SettingsSheet({
         />
       </ScrollContainer>
     </View>
+  );
+}
+
+function PrivacyDisclosure({ nearbySharingPaired }: { nearbySharingPaired: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <Section label={strings.settings.privacy}>
+      <View style={[styles.privacyCard, { backgroundColor: colors.card2 }]} accessibilityRole="summary">
+        <Txt variant="secondary" tone="ink">{strings.settings.internetServices}</Txt>
+        <Txt variant="secondary" tone="muted">
+          {nearbySharingPaired ? strings.settings.nearbySharingPaired : strings.settings.nearbySharingOff}
+        </Txt>
+      </View>
+    </Section>
   );
 }
 
@@ -642,6 +660,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   linkLabel: { flex: 1 },
+  privacyCard: { borderRadius: metrics.iconTileRadius, padding: 14, gap: 6 },
   optRow: { flexDirection: 'row', gap: 8 },
   optBox: {
     flex: 1,

@@ -3,17 +3,17 @@
 /**
  * Enforce Kaji's app-network boundary at source-control time.
  *
- * Kaji has no internet service, backend, account, or telemetry path. If a
- * future household feature needs networking, it must be implemented behind the
- * one explicitly named nearby-transport boundary below. This is an allowlist,
- * not a blanket exemption for networking elsewhere in the app.
+ * Kaji has no public internet service, backend, account, or telemetry path.
+ * Authenticated household transfer is local peer networking and is confined to
+ * the explicitly named native-nearby boundary below. This is an allowlist, not
+ * a blanket exemption for networking elsewhere in the app.
  */
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const ALLOWED_NEARBY_TRANSPORT_FILES = new Set(['platform/nearbyTransport.ts']);
+const ALLOWED_NEARBY_TRANSPORT_FILES = new Set(['platform/nearbyNativeTransport.ts']);
 const APP_DIRECTORIES = ['domain', 'i18n', 'nav', 'platform', 'screens', 'store', 'theme', 'ui'];
 const APP_FILES = ['App.tsx', 'index.ts'];
 const CONFIG_FILES = ['package.json', 'package-lock.json', 'app.json', 'eas.json', 'babel.config.js'];

@@ -950,6 +950,7 @@ function Shell({
             onOpenRepeats={openRepeats}
             onOpenBudgets={openBudgets}
             onOpenHouseholdSync={openHouseholdSync}
+            nearbySharingPaired={householdSync.model.syncNow !== 'not-paired'}
             onExportData={exportData}
             onImportZaim={importZaim}
             onExportHouseholdBackup={exportHouseholdBackup}

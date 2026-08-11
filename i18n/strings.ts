@@ -139,6 +139,10 @@ export interface Strings {
     deleteAllData: string;
     deleteAllDataConfirmMessage: string;
     householdSync: string;
+    privacy: string;
+    internetServices: string;
+    nearbySharingOff: string;
+    nearbySharingPaired: string;
   };
   sync: {
     paired: string;
@@ -344,6 +348,10 @@ export const en: Strings = {
     deleteAllData: 'Delete all data',
     deleteAllDataConfirmMessage: 'This will permanently delete all entries, repeating series, and budgets. Categories, currency, and settings will be preserved.',
     householdSync: 'Household sync',
+    privacy: 'Privacy & sharing',
+    internetServices: 'Internet services: none',
+    nearbySharingOff: 'Nearby household sharing: off until paired',
+    nearbySharingPaired: 'Nearby household sharing: paired',
   },
   sync: {
     paired: 'Paired', offline: 'Offline', syncing: 'Syncing nearby', error: 'Sync error',
@@ -547,6 +555,10 @@ export const ja: Strings = {
     deleteAllData: 'すべてのデータを削除',
     deleteAllDataConfirmMessage: 'すべての記録、繰り返し、および予算が完全に削除されます。カテゴリ、通貨、および設定は保持されます。',
     householdSync: '家庭内同期',
+    privacy: 'プライバシーと共有',
+    internetServices: 'インターネットサービス: なし',
+    nearbySharingOff: '近くの家庭内共有: ペアリングするまでオフ',
+    nearbySharingPaired: '近くの家庭内共有: ペアリング済み',
   },
   sync: {
     paired: 'ペア済み', offline: 'オフライン', syncing: '近くの端末と同期中', error: '同期エラー',

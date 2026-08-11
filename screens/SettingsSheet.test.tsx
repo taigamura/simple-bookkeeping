@@ -76,6 +76,26 @@ describe('SettingsSheet', () => {
     expect(onOpenBudgets).toHaveBeenCalled();
   });
 
+  it('separates no internet services from nearby household-sharing state', () => {
+    const { rerender } = renderSheet();
+    expect(screen.getByText('Internet services: none')).toBeTruthy();
+    expect(screen.getByText('Nearby household sharing: off until paired')).toBeTruthy();
+
+    rerender(
+      <ThemeProvider>
+        <SettingsSheet
+          currency={CURRENCIES[0]} expCats={['Food']} incCats={['Salary']}
+          onChangeCurrency={() => {}} onChangeExpCats={() => {}} onChangeIncCats={() => {}}
+          activeRepeatCount={0} onOpenRepeats={() => {}} onOpenBudgets={() => {}}
+          onExportData={() => {}} onImportZaim={() => {}} hasCorruptStash={false}
+          onExportCorruptStash={() => {}} onDeleteAllData={() => {}} onClose={() => {}}
+          nearbySharingPaired
+        />
+      </ThemeProvider>,
+    );
+    expect(screen.getByText('Nearby household sharing: paired')).toBeTruthy();
+  });
+
   it('always renders a Repeats drill-in row with its active segment count', () => {
     const onOpenRepeats = jest.fn();
     renderSheet({ activeRepeatCount: 2, onOpenRepeats });

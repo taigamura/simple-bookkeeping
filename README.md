@@ -4,8 +4,9 @@ A minimal, iOS-style personal money-in/out tracker. Log daily income and
 expenses against a calendar, set either a total monthly budget or budgets by
 expense category, see monthly totals and category breakdowns, and import or
 export transaction history as Zaim-compatible CSV. There are no
-accounts/wallets, cloud accounts, or sync — the product is intentionally a
-small, local-first app rather than a full personal-finance platform. Built
+accounts/wallets, cloud accounts, or internet services. Optional household
+sharing is authenticated, nearby peer-to-peer transfer between paired phones
+while both apps are open; it is not cloud or remote sync. Built
 with Expo (React Native) + TypeScript and dark by default.
 
 See [`initial-spec.md`](initial-spec.md) for the original scope/stack spec
@@ -158,9 +159,10 @@ Submit uploads a binary to App Store Connect; it does not replace the final
 metadata and App Review submission steps there.
 
 The release build has no crash-reporting, analytics, or telemetry SDK. Run
-`npm run privacy:check` to enforce the no-internet boundary. Authenticated
-nearby peer-to-peer traffic is the only reserved transport exception and must
-remain inside the named `platform/nearbyTransport.ts` boundary.
+`npm run privacy:check` to enforce the no-public-internet boundary. The only
+network capability is authenticated nearby peer-to-peer transfer between paired
+phones, implemented in `platform/nearbyNativeTransport.ts`; it must never be
+described as zero networking.
 
 ### V1 release status (2026-07-13)
 
@@ -182,6 +184,7 @@ The remaining work for a public V1 is tracked in
    then submit that exact build for review.
 
 V1 ships without advertising, purchases, Premium state, analytics, accounts,
-sync, or crash reporting. Its local-only, no-internet privacy posture is
+cloud or remote sync, or crash reporting. It may exchange encrypted changes
+with a paired nearby household phone while both apps are open. Its privacy posture is
 documented in
 [`docs/v1-privacy-mode.md`](docs/v1-privacy-mode.md).
