@@ -29,6 +29,14 @@ provider's current help pages describe the export workflow but do not publish a
 machine-readable schema. The screenshot and workflow are documented in
 [the provider's export article](https://ameblo.jp/okane-reco/entry-12302360885.html).
 
+That official screenshot also shows `YYYY/MM/DD` dates, `HH:MM` times, the yen
+symbol `¥` in `CURRENCY`, unsigned positive integer `PRICE` values, `現金` in
+`PAYMENT`, and an income row represented by `CATEGORY=収入`. An independent
+2020 migration walkthrough corroborates the detailed/summary variant split,
+states that the CSV is UTF-8, and records that おカネレコ did not support
+transfer transactions. The operator's own encoding FAQ also states that its
+CSV export is UTF-8.
+
 ## Synthetic fixture
 
 [`fixtures/okane-reco/transaction-detail.synthetic.csv`](../fixtures/okane-reco/transaction-detail.synthetic.csv)
@@ -43,25 +51,25 @@ identifiers, or personal financial data. It covers:
 | Malformed date | Parser rejection | Reject the row before persistence. |
 | Empty category | Parser rejection | Reject the row before persistence. |
 
-The fixture uses positive `PRICE` values for both expense and income examples
-because the public evidence shows positive-looking prices but does not state
-whether the sign is encoded in `PRICE`, `CATEGORY`, or another convention.
-The fixture therefore does not establish a production sign rule.
+The fixture uses positive `PRICE` values for both expense and income because
+that is what the official specimen shows. `CATEGORY=収入` is the observed
+income discriminator; all other observed categories are expenses. A future
+adapter must still reject negative/zero prices and must not reinterpret a memo
+as a refund or transfer.
 
 ## Contract boundary for a future adapter
 
 ### Fields that can be considered for import
 
-After a current fixture is obtained and the candidate header is confirmed, an
-adapter may consider mapping:
+Against the exact observed seven-column header, a conservative adapter may map:
 
 | Provider field | Kaji field | Condition |
 | --- | --- | --- |
 | `DATE` | `y`, `m`, `day` | Strictly parse a provider date; reject invalid or ambiguous dates. |
-| `CATEGORY` | `category` | Non-empty; expense versus income must be confirmed separately. |
-| `PRICE` | `amount` | Numeric and non-zero; sign convention is still unverified. |
+| `CATEGORY` | `category` | Non-empty; the literal `収入` is income and other values are expenses in the supported subset. |
+| `PRICE` | `amount` | Positive integer; apply direction from the supported category rule and reject zero/negative values. |
 | `MEMO` | `note` | Preserve as text; do not parse merchant, refund, or transfer semantics from it. |
-| `CURRENCY` | `currencyCode` | Only after the exported token-to-currency mapping is verified. A symbol alone is not a stable ISO code. |
+| `CURRENCY` | `currencyCode` | Accept only the observed literal `¥` as JPY; reject other symbols/codes pending evidence. |
 
 `TIME` and `PAYMENT` have no direct field in the current normalized import
 boundary. They must either remain provenance/unsupported fields or be omitted
@@ -77,25 +85,21 @@ unsupported until that policy is decided.
 - No explicit refund, transfer, balance-adjustment, or reconciliation field is
   documented. A memo, payment method, category, or matching amount is not
   enough to manufacture one.
-- The evidence does not establish whether expenses are negative, whether
-  income is positive, or whether `CATEGORY` carries the type. This must be
-  measured from a controlled export containing one known expense and one known
-  income.
-- The evidence does not establish whether `CURRENCY` contains a symbol, ISO
-  code, localized name, or a mixture across app versions/locales. Do not map
-  `¥` to JPY without a verified current export and user-visible currency
-  setting.
+- The official specimen shows positive prices for both ordinary expenses and
+  the `CATEGORY=収入` row. Negative and zero values are not established.
+- The official specimen shows `¥`, but other locale/currency values are not
+  established. Support only the literal observed token as JPY and quarantine
+  every other token.
 - The provider offers both detailed and daily/category-summary exports. The
   summary format is not a transaction format and must not be detected as one.
 
 ## Encoding and export-access assumptions
 
 The current help page recommends CSV for Mac and warns that CSV can be
-unreadable or become mojibake on Windows/Chromebook. This is operational
-guidance, not a byte-level encoding guarantee. The adapter must detect/decode
-the actual bytes, and a fixture from each supported encoding must be added
-before claiming support for it. Until then, UTF-8 and Shift-JIS are
-**unverified**, not interchangeable assumptions.
+unreadable or become mojibake on Windows/Chromebook. The operator's encoding
+FAQ and an independent export walkthrough both identify the CSV as UTF-8.
+Support UTF-8 strictly; do not silently fall back to Shift-JIS. BOM, newline,
+quote escaping, and multiline memo behavior remain unverified.
 
 CSV export is documented as a premium feature and is delivered through the
 device's mail flow. Kaji must not promise direct account access, cloud access,
@@ -121,6 +125,11 @@ Obtain a fresh, consented export from the current app version containing:
 5. the exact bytes and app/platform/version metadata, with all personal values
    replaced by synthetic values before committing.
 
-Only after these observations should issue #97's provider adapter claim a
-detected format, an encoding, a sign rule, currency mapping, or supported row
-set.
+These observations are still required before broadening the conservative
+seven-column UTF-8 subset or claiming support for additional app versions,
+currencies, quoting behavior, refunds, or transfer-like records.
+
+## Additional sources
+
+- Smart Idea Inc., [「Excelエクスポート機能」で出力するファイルは、どのソフト、アプリで開けますか？](https://smart-idea.jp/346). The operator identifies the CSV encoding as UTF-8.
+- たこぶつの家計簿アプリ研究所, [おカネレコ（有料版）のデータを、他の家計簿アプリ向けに変換する](https://takobutsu.blogspot.com/2020/05/okanereco03.html), 2020-05-11. It corroborates UTF-8, the detail/summary variants, field roles, and the absence of transfer support in the observed app.

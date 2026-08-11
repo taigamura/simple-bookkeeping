@@ -1,7 +1,7 @@
-計算対象,日付,内容,金額（円）,保有金融機関,大項目,中項目,メモ,振替,ID
-対象,2026/07/01,SYNTHETIC grocery,-1200,SYNTHETIC bank,食費,食料品,SYNTHETIC expense,,SYNTHETIC-EXPENSE-001
-対象,2026/07/02,SYNTHETIC salary,250000,SYNTHETIC bank,収入,給与,SYNTHETIC income,,SYNTHETIC-INCOME-001
-対象,2026/07/03,SYNTHETIC internal move,-5000,SYNTHETIC bank,その他,その他,,振替,SYNTHETIC-TRANSFER-001
-対象,2026/07/04,SYNTHETIC refund-like row,1200,SYNTHETIC card,その他,その他,SYNTHETIC title only,,SYNTHETIC-REFUND-001
-対象外,2026/07/05,SYNTHETIC excluded row,-99,SYNTHETIC bank,その他,その他,SYNTHETIC calculation excluded,,SYNTHETIC-EXCLUDED-001
-対象,not-a-date,SYNTHETIC malformed date,100,SYNTHETIC bank,その他,その他,SYNTHETIC invalid row,,SYNTHETIC-INVALID-001
+"計算対象","日付","内容","金額（円）","保有金融機関","大項目","中項目","メモ","振替","ID"
+"1","2026/07/01","SYNTHETIC grocery","-1200","SYNTHETIC bank","食費","食料品","SYNTHETIC expense","0","SYNTHETIC-EXPENSE-001"
+"1","2026/07/02","SYNTHETIC salary","250000","SYNTHETIC bank","収入","給与","SYNTHETIC income","0","SYNTHETIC-INCOME-001"
+"1","2026/07/03","SYNTHETIC internal move","-5000","SYNTHETIC bank","その他","その他","SYNTHETIC unsupported transfer","1","SYNTHETIC-TRANSFER-001"
+"1","2026/07/04","SYNTHETIC refund-like row","1200","SYNTHETIC card","その他","その他","SYNTHETIC unsupported refund","0","SYNTHETIC-REFUND-001"
+"0","2026/07/05","SYNTHETIC excluded row","-99","SYNTHETIC bank","その他","その他","SYNTHETIC calculation excluded","0","SYNTHETIC-EXCLUDED-001"
+"1","not-a-date","SYNTHETIC malformed date","100","SYNTHETIC bank","その他","その他","SYNTHETIC invalid row","0","SYNTHETIC-INVALID-001"

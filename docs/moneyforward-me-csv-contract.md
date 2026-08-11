@@ -3,7 +3,7 @@
 Status: contract research only. Kaji does not implement a MoneyForward adapter
 from this document.
 
-Research date: 2026-08-10
+Research date: 2026-08-11
 
 ## Executive conclusion
 
@@ -13,10 +13,12 @@ for PayPay transaction-history files, and that other data uploads are not
 supported. The app's transaction-history download is a premium feature and can
 export one selected year. The web export is a different, monthly download.
 
-Therefore Kaji may safely accept a future adapter only after it has a captured,
-versioned provider fixture and an explicit mapping review. It must not infer an
-adapter from the provider name, from the PayPay import format, or from the
-synthetic fixture in this repository.
+The current official header list is corroborated by multiple independently
+published web exports from 2022 through 2024. Those observations establish a
+safe subset for an adapter: fully quoted CP932 comma CSV, `YYYY/MM/DD` dates,
+negative expenses, positive income, `計算対象=1`, and `振替=0` ordinary rows.
+Transfers, refunds, and ID stability remain deliberately unsupported because
+the public specimens do not establish their complete semantics.
 
 ## Evidence-backed surface
 
@@ -37,12 +39,12 @@ adapter from silently fabricating financial meaning.
 | Field / concern | Current finding | Confidence |
 | --- | --- | --- |
 | Header names | The ten web-export names in the table above are explicitly listed by the official support page. | Verified for the documented web export; app header names are not established. |
-| Delimiter and quoting | CSV is stated, but delimiter, quote/escape rules, newline convention, and whether a UTF-8 BOM is emitted are not stated in the text source. | Unknown. The fixture uses ordinary comma CSV and UTF-8 only as a test artifact. |
-| Encoding | No encoding is specified by the cited support pages. Japanese text makes an encoding probe mandatory. | Unknown. Do not assume UTF-8, Shift_JIS, or CP932 in an adapter. |
-| Date | A `日付` field is documented. Exact format, zero-padding, timezone, and whether posting/use date is used are not specified by the CSV contract. | Field verified; representation unknown. |
-| Amount | `金額（円）` is documented as a yen amount. The published text does not establish whether expense rows are negative, income rows positive, or both use an unsigned amount plus another indicator. | Currency field meaning verified as yen; sign convention unknown. |
-| Income / expense | The support UI documentation describes both支出 and収入 records, but does not specify how their direction is encoded in the CSV. | Unknown for CSV. Never infer from a title or category. |
-| Transfers | `振替` is a documented column. The source explains that transfers represent movement between the user's own assets, but does not specify every CSV value or whether both sides are exported. | Transfer concept verified; values/cardinality unknown. A future adapter must skip or model explicitly until captured. |
+| Delimiter and quoting | Independently published exports show comma-delimited rows with every field double quoted. | Verified for the observed web-monthly exports. Embedded quotes/newlines and newline convention remain unverified. |
+| Encoding | Two independent reports that processed downloaded files identify the web export as CP932/SJIS; one demonstrates mojibake followed by successful `iconv -f SJIS`, and another reads it as `cp932`. | CP932 is the supported observed encoding. Detection must fail closed rather than silently substituting characters. BOM behavior remains unverified. |
+| Date | Published exports from 2022, 2023, and 2024 consistently use zero-padded `YYYY/MM/DD`. | Verified for observed web-monthly exports. The provider does not document timezone or posting-date semantics. |
+| Amount | Real published rows show expenses as negative integers and income as positive integers. | Verified for ordinary JPY expense and income rows. Zero and refund-like positive rows remain unsupported. |
+| Income / expense | A published positive salary row uses `大項目=収入`, `中項目=給与`; published purchase rows are negative and use expense categories. | Direction is safely determined from the amount sign for the supported ordinary subset, with category retained as source data. |
+| Transfers | Ordinary published rows use `振替=0`. The source explains that transfers represent movement between the user's own assets, but public specimens do not establish the full transfer representation or cardinality. | Import only `振替=0`; quarantine every other value. The synthetic `1` row is a rejection case, not an observed export. |
 | Refunds | No refund marker or refund-specific field is documented. A positive amount with a refund-like title cannot be safely distinguished from income. | Unsupported until a source fixture and policy exist. |
 | Currency | The documented amount column is explicitly yen (`円`) and no currency-code column is listed. | Treat as JPY-only if the exact web variant is verified; reject or quarantine any non-JPY variant. Do not add FX semantics. |
 | Stable IDs | `ID` is a documented field. The source does not promise stability across edits, re-downloads, account relinking, or export variants. | Presence verified; deduplication stability unknown. Do not use it as a stable identity without a captured repeat-export test. |
@@ -58,29 +60,31 @@ could mistake an identifier for a real one.
 The fixture covers:
 
 - the ten documented web headers;
-- ordinary expense/income-shaped rows, without declaring the sign convention;
+- ordinary expense/income rows using the observed sign convention;
 - a transfer-marked row;
 - a refund-shaped title, deliberately marked as semantically unresolved;
-- a non-calculation row and a blank/invalid row for adapter rejection tests;
+- a non-calculation row and an invalid-date row for adapter rejection tests;
 - a yen-only amount column and synthetic IDs.
 
-The fixture's signs and values are **test cases, not observations**. In
-particular, the `SYNTHETIC-REFUND` row must not be imported as income merely
-because its amount is positive, and the transfer row must not become a normal
-expense. The fixture does not establish encoding, date parsing, transfer values,
-refund semantics, or stable-ID guarantees.
+The ordinary fixture rows mirror the observed quoting, `1`/`0` flags, date
+representation, and amount signs, while retaining synthetic values. The
+`SYNTHETIC-REFUND` row must not be imported as income merely because its amount
+is positive, and the synthetic `振替=1` row is a rejection test rather than a
+claim about a captured transfer. The checked-in fixture is UTF-8 for repository
+ergonomics; adapter byte tests must generate an equivalent CP932 byte fixture.
 
 ## Proposed import boundary
 
-Until a real export is available, Kaji can make only these claims:
+Kaji can safely make only these claims:
 
-1. It can document the candidate web header set above.
-2. It can build a preview-only adapter against a captured fixture once the
-   encoding, date representation, amount direction, transfer values, and ID
-   repeatability have been verified.
-3. It cannot claim to import the app's annual CSV, because its headers and byte
+1. It can detect the exact ten-column web header and decode CP932.
+2. It can preview ordinary `計算対象=1`, `振替=0` rows with valid
+   `YYYY/MM/DD` dates and non-zero signed integer JPY amounts.
+3. It must quarantine excluded, transfer, zero, malformed, and refund-ambiguous
+   rows and must not treat provider `ID` as a stable deduplication key.
+4. It cannot claim to import the app's annual CSV, because its headers and byte
    contract are not published in the cited text.
-4. It cannot claim MoneyForward round-trip support. MoneyForward's current
+5. It cannot claim MoneyForward round-trip support. MoneyForward's current
    upload support is PayPay-specific.
 
 The first real-data-free follow-up should be a paired export test: export the
@@ -94,3 +98,6 @@ the redacted fixture and a checksum/observation note.
 - MoneyForward ME support, [家計簿データはダウンロードできますか](https://support.me.moneyforward.com/hc/ja/articles/49505374073497-%E5%AE%B6%E8%A8%88%E7%B0%BF%E3%83%87%E3%83%BC%E3%82%BF%E3%81%AF%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89%E3%81%A7%E3%81%8D%E3%81%BE%E3%81%99%E3%81%8B), updated 2026-04-03. It documents the app annual CSV and the web monthly field list.
 - MoneyForward ME support, [CSV、Excelによるデータのアップロードはできますか](https://support.me.moneyforward.com/hc/ja/articles/900003501806-CSV-Excel%E3%81%AB%E3%82%88%E3%82%8B%E3%83%87%E3%83%BC%E3%82%BF%E3%81%AE%E3%82%A2%E3%83%83%E3%83%97%E3%83%AD%E3%83%BC%E3%83%89%E3%81%AF%E3%81%A7%E3%81%8D%E3%81%BE%E3%81%99%E3%81%8B), updated 2026-01-29. It says CSV reading currently supports PayPay data only and other uploads are unsupported.
 - MoneyForward ME support, [「入出金」画面の表示を知ろう！](https://support.me.moneyforward.com/hc/ja/articles/24478005732889--%E5%85%A5%E5%87%BA%E9%87%91-%E7%94%BB%E9%9D%A2%E3%81%AE%E8%A1%A8%E7%A4%BA%E3%82%92%E7%9F%A5%E3%82%8D%E3%81%86), updated 2026-04-28. It describes the provider's expense/income/transfer concepts and the premium download surface, but does not define CSV signs or encodings.
+- Froglog, [現実の CSV ファイルのデータを BigQuery に load する仕組みを作るという泥臭い作業を dlt でやってみる](https://soonraah.github.io/posts/load-csv-data-into-bq-by-dlt/), 2023-12-20. It publishes redacted expense and income rows and identifies the downloaded encoding as CP932.
+- takadappara/moneyforward, [MoneyForward ME CSV download notes](https://github.com/takadappara/moneyforward), observed 2023-04. It shows raw-download mojibake, successful SJIS conversion, quoted rows, dates, negative expenses, flags, and opaque IDs.
+- azuki774/mf-importer, [public 2024 web-export specimen](https://github.com/azuki774/mf-importer/blob/a6ae3dbda8da044731e83fd65d2c5938c94248c3/test/cf.csv). It corroborates the unchanged ten-column quoted schema and ordinary-row representation in 2024.
