@@ -68,10 +68,11 @@ describe('quick-entry App Group inbox', () => {
     expect(Object.isFrozen(snapshot.categories)).toBe(true);
     expect(Object.isFrozen(snapshot.currency)).toBe(true);
     expect(snapshot).toEqual({
-      version: 2,
+      version: 3,
       categories: [{ id: 'food-id', name: 'Food' }],
       currency: { symbol: '¥', code: 'JPY' },
       defaults: { categoryId: 'food-id', recentCategoryIds: ['food-id'] },
+      allowance: { status: 'no-budget', amount: null },
     });
     expect(isQuickEntrySnapshot(snapshot)).toBe(true);
     expect(isQuickEntrySnapshot({ version: 1 })).toBe(false);

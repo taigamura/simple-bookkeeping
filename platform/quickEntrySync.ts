@@ -1,4 +1,4 @@
-import { validateQuickEntryCommand } from '../domain';
+import { getTodayAllowance, validateQuickEntryCommand } from '../domain';
 import type { Store } from '../store/store';
 import { quickEntryBridge, type QuickEntryNativeBridge } from './quickEntryBridge';
 import { isQuickEntrySnapshot, makeQuickEntrySnapshot } from './quickEntryConfig';
@@ -52,11 +52,20 @@ export async function reconcileNativeQuickEntries(
 export async function publishQuickEntrySnapshot(state: AppState, bridge: QuickEntryNativeBridge | null = quickEntryBridge): Promise<void> {
   if (!bridge) return;
   const categoryIds = state.expCats.map((name) => categoryIdFor(name, 'expense', state.household.categories));
+  const now = new Date();
+  const allowance = getTodayAllowance(
+    state.budgetMode, state.budgets, state.totalBudget, state.entries,
+    { y: now.getFullYear(), m: now.getMonth() },
+    { y: now.getFullYear(), m: now.getMonth(), day: now.getDate() },
+  );
   const snapshot = makeQuickEntrySnapshot(
     state.expCats,
     state.currency,
     categoryIds,
-    state.device.expenseCategoryOrder.length ? state.device.expenseCategoryOrder : categoryIds,
+    // `expCats` is promoted after each saved expense, so its first entry is
+    // the last-used category and the next three are its recent companions.
+    categoryIds.slice(1, 4),
+    { status: allowance.status, amount: allowance.amount },
   );
   if (!isQuickEntrySnapshot(snapshot)) throw new Error('Invalid quick-entry snapshot');
   await bridge.writeSnapshotAsync(JSON.stringify(snapshot));

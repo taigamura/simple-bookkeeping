@@ -125,7 +125,7 @@ public final class KajiQuickEntryModule: Module {
       guard let data = contents.data(using: .utf8),
             data.count <= maxSnapshotBytes,
             let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            object["version"] as? Int == 2,
+            object["version"] as? Int == 3,
             let categories = object["categories"] as? [[String: Any]],
             categories.count > 0 && categories.count <= 100,
             let currency = object["currency"] as? [String: Any],
@@ -133,6 +133,9 @@ public final class KajiQuickEntryModule: Module {
             let code = currency["code"] as? String,
             [("¥", "JPY"), ("$", "USD"), ("€", "EUR"), ("£", "GBP")].contains(where: { $0.0 == symbol && $0.1 == code }),
             let defaults = object["defaults"] as? [String: Any],
+            let allowance = object["allowance"] as? [String: Any],
+            let allowanceStatus = allowance["status"] as? String,
+            ["available", "no-budget", "overspent"].contains(allowanceStatus),
             let categoryIDs = categories.compactMap({ $0["id"] as? String }),
             categoryIDs.count == categories.count,
             categoryIDs.allSatisfy({ !$0.isEmpty && $0.count <= maxSnapshotStringLength }),
@@ -146,6 +149,9 @@ public final class KajiQuickEntryModule: Module {
             Set(recentCategoryIDs).count == recentCategoryIDs.count,
             recentCategoryIDs.allSatisfy({ categoryIDs.contains($0) })
       else { return false }
+    if allowanceStatus == "available" {
+      guard let amount = allowance["amount"] as? Int, amount >= 0 else { return false }
+    } else if !(allowance["amount"] is NSNull) { return false }
     if let defaultCategoryID = defaults["categoryId"] as? String {
       return categoryIDs.contains(defaultCategoryID)
     }
