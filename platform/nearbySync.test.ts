@@ -105,14 +105,32 @@ describe('foreground nearby sync', () => {
     const doubled = transportDouble();
     const commits: unknown[][] = [];
     const successes: string[] = [];
+    let resolveCommit!: () => void;
+    const commitApplied = new Promise<void>((resolve) => { resolveCommit = resolve; });
+    let releaseSend!: () => void;
+    const sendMayFinish = new Promise<void>((resolve) => { releaseSend = resolve; });
+    const send = doubled.transport.send;
+    doubled.transport.send = async (target, envelope) => {
+      await sendMayFinish;
+      await send(target, envelope);
+    };
+    let resolveSuccess!: (timestamp: string) => void;
+    const successReported = new Promise<string>((resolve) => { resolveSuccess = resolve; });
     const coordinator = new NearbySyncCoordinator({
       state: joined.state,
       householdKey: joined.householdKey,
       deviceId: 'owner',
       transport: doubled.transport,
       applyOperation: () => 'rejected',
-      applyOperations: async (operations) => { commits.push([...operations]); return true; },
-      onSyncSuccess: (timestamp) => successes.push(timestamp),
+      applyOperations: async (operations) => {
+        commits.push([...operations]);
+        resolveCommit();
+        return true;
+      },
+      onSyncSuccess: (timestamp) => {
+        successes.push(timestamp);
+        resolveSuccess(timestamp);
+      },
       queueStore: queueStore(),
     });
     await coordinator.setForeground(true);
@@ -123,7 +141,10 @@ describe('foreground nearby sync', () => {
       joined.householdKey, joined.state, 'partner', 'batch-atomic',
     );
     doubled.handlers()!.onMessage(remote, batch);
-    await new Promise((resolve) => setTimeout(resolve, 25));
+    await commitApplied;
+    expect(successes).toHaveLength(0);
+    releaseSend();
+    await expect(successReported).resolves.toEqual(expect.any(String));
     expect(commits).toHaveLength(1);
     expect(commits[0]).toHaveLength(2);
     expect(successes).toHaveLength(1);
