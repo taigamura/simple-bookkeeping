@@ -205,6 +205,44 @@ describe('foreground nearby sync', () => {
     expect(coordinator.queuedOperationIds).toEqual(['persisted-op', 'op-1']);
   });
 
+  it('commits a locally-authored operation to the outbox before sending it', async () => {
+    const owner = createHousehold('owner', 1);
+    const invitation = await createInvitation(owner.state, owner.householdKey, 'owner', 1);
+    const joined = await joinHousehold(invitation.state, invitation.qrPayload, invitation.invitation.matchingCode, 'partner', 2);
+    const doubled = transportDouble();
+    let saved: NearbyQueueSnapshot = { pending: [], seenMessageIds: [], inFlight: null };
+    let resolveSave!: () => void;
+    const saveMayFinish = new Promise<void>((resolve) => { resolveSave = resolve; });
+    let signalSaveStarted!: () => void;
+    const saveStarted = new Promise<void>((resolve) => { signalSaveStarted = resolve; });
+    const persisted = {
+      load: async () => saved,
+      save: async (snapshot: NearbyQueueSnapshot) => {
+        signalSaveStarted();
+        await saveMayFinish;
+        saved = snapshot;
+      },
+    };
+    const coordinator = new NearbySyncCoordinator({
+      state: joined.state,
+      householdKey: joined.householdKey,
+      deviceId: 'owner',
+      transport: doubled.transport,
+      applyOperation: () => 'applied',
+      queueStore: persisted,
+    });
+
+    await coordinator.setForeground(true);
+    doubled.handlers()!.onPeer(peer(await nearbyDiscoveryTag(joined.householdKey)));
+    const queued = coordinator.enqueueDurably([{ operationId: 'durable-before-send', kind: 'add-transaction' }]);
+    await saveStarted;
+    expect(doubled.sent).toHaveLength(0);
+
+    resolveSave();
+    await queued;
+    expect(doubled.sent).toHaveLength(1);
+  });
+
   it('rejects unpaired or wrong-household peers without exposing financial metadata', async () => {
     const owner = createHousehold('owner', 1);
     const doubled = transportDouble();

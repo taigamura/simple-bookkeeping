@@ -132,6 +132,10 @@ export class NearbySyncCoordinator {
   private loading: Promise<void> | null = null;
   private flushing = false;
   private lifecycle: Promise<void> = Promise.resolve();
+  /** Serializes durable outbox writes so a later enqueue cannot overwrite an earlier one. */
+  private queueWrites: Promise<void> = Promise.resolve();
+  /** Never transmit a newly-authored operation until its outbox snapshot is committed. */
+  private pendingDurabilityDirty = false;
   private lastSyncedAt?: string;
 
   constructor(options: NearbySyncCoordinatorOptions) {
@@ -144,6 +148,8 @@ export class NearbySyncCoordinator {
   }
 
   get isForeground(): boolean { return this.foreground; }
+  /** Live presence is intentionally only exposed as a boolean to the UI. */
+  get hasPartner(): boolean { return this.peer !== null; }
   get lastSyncTimestamp(): string | undefined { return this.lastSyncedAt; }
 
   /** Rebind live membership and key material after revocation or rotation. */
@@ -185,16 +191,42 @@ export class NearbySyncCoordinator {
   }
 
   enqueue(operation: unknown): void {
-    // A revoked phone may still have a producer holding this coordinator. Do
-    // not let that producer repopulate the durable queue after revocation.
-    if (!this.isLocalDeviceAuthorized()) return;
-    const id = operationId(operation);
-    if (id === null || this.pending.some((queued) => operationId(queued) === id)) return;
-    this.pending = [...this.pending, operation];
-    void this.ensureLoaded()
-      .then(() => this.persist())
-      .then(() => this.flush())
-      .catch((error) => this.report(asError(error)));
+    void this.enqueueDurably([operation]).catch((error) => this.report(asError(error)));
+  }
+
+  /**
+   * Commit local operations to the outbox before they are eligible for a send.
+   * This is intentionally awaitable for ledger callers: their sync checkpoint
+   * must not advance past an operation that can disappear on process death.
+   */
+  enqueueDurably(operations: readonly unknown[]): Promise<void> {
+    const candidates = operations.filter((operation) => operationId(operation) !== null);
+    if (candidates.length === 0 || !this.isLocalDeviceAuthorized()) return Promise.resolve();
+
+    const write = this.queueWrites.then(async () => {
+      await this.ensureLoaded();
+      // A revocation can have completed while this write waited its turn.
+      if (!this.isLocalDeviceAuthorized()) return;
+      const newOperations = candidates.filter((operation) => {
+        const id = operationId(operation);
+        return id !== null && !this.pending.some((queued) => operationId(queued) === id);
+      });
+      if (this.pending.length + newOperations.length > 5000) {
+        throw new Error('Nearby operation queue is full');
+      }
+      if (newOperations.length > 0) {
+        this.pending = [...this.pending, ...newOperations];
+        this.pendingDurabilityDirty = true;
+      }
+      // Retrying an already-in-memory operation after a storage failure must
+      // still retry the write, rather than treating it as a harmless duplicate.
+      await this.persist();
+      this.pendingDurabilityDirty = false;
+    });
+    // Keep the serialization chain alive after a failed write so a foreground
+    // retry (or a later local edit) can durably repair the outbox.
+    this.queueWrites = write.catch(() => undefined);
+    return write.then(() => this.flush());
   }
 
   private async applyForeground(foreground: boolean): Promise<void> {
@@ -305,7 +337,7 @@ export class NearbySyncCoordinator {
   }
 
   private async flush(): Promise<void> {
-    if (!this.foreground || !this.started || !this.isLocalDeviceAuthorized()
+    if (this.pendingDurabilityDirty || !this.foreground || !this.started || !this.isLocalDeviceAuthorized()
       || !this.peer || this.pending.length === 0 || this.flushing) return;
     this.flushing = true;
     try {

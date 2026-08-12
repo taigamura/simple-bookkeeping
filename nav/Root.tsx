@@ -56,6 +56,7 @@ import {
   type HouseholdBackupStore,
   type SyncHistoryRow,
   type SyncStatusModel,
+  type HouseholdPairingState,
 } from '../domain';
 import { strings } from '../i18n';
 import { entrySaved } from '../platform/haptics';
@@ -95,6 +96,13 @@ interface RootProps {
     history: SyncHistoryRow[];
     onSyncNow: () => void;
     onRestore: (transactionId: string, operationId: string) => void;
+    pairing?: {
+      state: HouseholdPairingState;
+      deviceId: string;
+      onRevokeDevice: (deviceId: string) => void;
+      onExportRecovery: (passphrase: string) => Promise<string>;
+      onRestoreRecovery: (pack: string, passphrase: string) => Promise<boolean>;
+    };
   };
 }
 
@@ -149,6 +157,16 @@ function confirm(
       { text: confirmLabel, style: destructive ? 'destructive' : 'default', onPress: onConfirm },
     ]);
   }
+}
+
+function requestPassphrase(title: string, message: string, confirmLabel: string): Promise<string | null> {
+  if (Platform.OS === 'web') return Promise.resolve(window.prompt(`${title}\n${message}`));
+  return new Promise((resolve) => {
+    Alert.prompt(title, message, [
+      { text: strings.common.cancel, style: 'cancel', onPress: () => resolve(null) },
+      { text: confirmLabel, onPress: (value: string | undefined) => resolve(value ?? null) },
+    ], 'secure-text');
+  });
 }
 
 const IMPORT_MIME_TYPES = [
@@ -596,6 +614,21 @@ function Shell({
     },
   };
   const exportHouseholdBackup = async () => {
+    if (householdSync.pairing) {
+      const passphrase = await requestPassphrase(
+        strings.sync.recoveryExportTitle,
+        strings.sync.recoveryPassphrasePrompt,
+        strings.settings.exportHouseholdBackup,
+      );
+      if (!passphrase) return;
+      try {
+        const pack = await householdSync.pairing.onExportRecovery(passphrase);
+        await shareTextFile('kaji-household-recovery.kaji', pack);
+      } catch {
+        notify(strings.sync.recoveryFailedTitle, strings.sync.recoveryFailed);
+      }
+      return;
+    }
     try {
       await shareTextFile('kaji-household-backup.json', createHouseholdBackup(householdBackupPayload()));
     } catch {
@@ -608,6 +641,20 @@ function Shell({
       if (picked.canceled) return;
       const asset = picked.assets[0];
       const text = Platform.OS === 'web' ? await asset.file!.text() : await new File(asset.uri).text();
+      if (householdSync.pairing) {
+        const passphrase = await requestPassphrase(
+          strings.sync.recoveryRestoreTitle,
+          strings.sync.recoveryPassphrasePrompt,
+          strings.common.import,
+        );
+        if (!passphrase) return;
+        try {
+          await householdSync.pairing.onRestoreRecovery(text, passphrase);
+        } catch {
+          notify(strings.sync.recoveryFailedTitle, strings.sync.recoveryFailed);
+        }
+        return;
+      }
       const preview = previewHouseholdBackup(text);
       confirm(
         strings.settings.importHouseholdBackup,
@@ -1025,6 +1072,15 @@ function Shell({
               history={householdSync.history}
               onSyncNow={householdSync.onSyncNow}
               onRestore={householdSync.onRestore}
+              pairing={householdSync.pairing ? {
+                state: householdSync.pairing.state,
+                deviceId: householdSync.pairing.deviceId,
+                onRevokeDevice: (deviceId) => confirm(
+                  strings.sync.revokeDevice,
+                  strings.sync.deviceLimitWarning,
+                  () => householdSync.pairing?.onRevokeDevice(deviceId),
+                ),
+              } : undefined}
               onClose={backToSettings}
               ScrollContainer={BottomSheetScrollView}
             />

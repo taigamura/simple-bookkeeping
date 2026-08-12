@@ -26,9 +26,8 @@ function renderSheet(over: Partial<React.ComponentProps<typeof HouseholdSyncShee
 }
 
 describe('HouseholdSyncSheet', () => {
-  it('warns about the two-phone limit and exposes revoke/replacement actions', () => {
+  it('warns about the two-phone limit and exposes revocation', () => {
     const onRevokeDevice = jest.fn();
-    const onCreateReplacementInvitation = jest.fn();
     renderSheet({
       pairing: {
         state: {
@@ -38,7 +37,6 @@ describe('HouseholdSyncSheet', () => {
         },
         deviceId: 'phone-a',
         onRevokeDevice,
-        onCreateReplacementInvitation,
       },
     });
 
@@ -47,8 +45,7 @@ describe('HouseholdSyncSheet', () => {
     expect(onRevokeDevice).toHaveBeenCalledWith('phone-b');
   });
 
-  it('offers a replacement invitation after the peer is revoked', () => {
-    const onCreateReplacementInvitation = jest.fn();
+  it('does not offer incomplete replacement onboarding after the peer is revoked', () => {
     renderSheet({
       pairing: {
         state: {
@@ -61,12 +58,10 @@ describe('HouseholdSyncSheet', () => {
         },
         deviceId: 'phone-a',
         onRevokeDevice: jest.fn(),
-        onCreateReplacementInvitation,
       },
     });
 
-    fireEvent.press(screen.getByLabelText('Invite replacement phone'));
-    expect(onCreateReplacementInvitation).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText('Invite another phone')).toBeNull();
   });
 
   it('shows nearby-only status, last sync, and safe sync action when the partner is absent', () => {

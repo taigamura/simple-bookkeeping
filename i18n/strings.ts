@@ -174,8 +174,18 @@ export interface Strings {
     thisPhone: string;
     revokeDevice: string;
     inviteReplacement: string;
+    invitePhone: string;
     deviceLimitWarning: string;
     recoveryLimitNotice: string;
+    invitationCreatedTitle: string;
+    invitationCreated: (code: string) => string;
+    invitationFailedTitle: string;
+    invitationFailed: string;
+    recoveryExportTitle: string;
+    recoveryRestoreTitle: string;
+    recoveryPassphrasePrompt: string;
+    recoveryFailedTitle: string;
+    recoveryFailed: string;
   };
   budgets: {
     title: string;
@@ -392,9 +402,18 @@ export const en: Strings = {
     by: (actor) => `By ${actor}`, restore: 'Restore version', noHistory: 'No shared changes yet.',
     nearbyOnly: 'Nearby only while both paired phones are open. No background or remote sync.',
     devices: 'Paired phones', thisPhone: 'This phone', revokeDevice: 'Revoke',
-    inviteReplacement: 'Invite replacement phone',
+    inviteReplacement: 'Invite replacement phone', invitePhone: 'Invite another phone',
     deviceLimitWarning: 'Only two phones can be active. Revoking a lost phone cannot be undone, and creates a fresh key before replacement pairing.',
     recoveryLimitNotice: 'If both phones are lost, recovery is impossible without a surviving phone or a valid recovery pack.',
+    invitationCreatedTitle: 'Invitation ready',
+    invitationCreated: (code) => `Share the invitation file with the replacement phone. Confirm matching code ${code} on both phones.`,
+    invitationFailedTitle: 'Could not create invitation',
+    invitationFailed: 'Your paired household was not changed. Try again with only one active phone.',
+    recoveryExportTitle: 'Export encrypted recovery pack',
+    recoveryRestoreTitle: 'Restore encrypted recovery pack',
+    recoveryPassphrasePrompt: 'Enter a passphrase of at least 8 characters. Kaji does not store or transmit it.',
+    recoveryFailedTitle: 'Recovery pack was not changed',
+    recoveryFailed: 'Your live data was kept. Check the passphrase and pack, then try again.',
   },
   budgets: {
     title: 'Budgets',
@@ -634,9 +653,18 @@ export const ja: Strings = {
     by: (actor) => `${actor}が変更`, restore: 'この版を復元', noHistory: '共有された変更はまだありません。',
     nearbyOnly: 'ペア済みの2台を開いて近くに置いた間だけ同期します。バックグラウンドやリモート同期はありません。',
     devices: 'ペア済みの端末', thisPhone: 'この端末', revokeDevice: '失効',
-    inviteReplacement: '交換端末を招待',
+    inviteReplacement: '交換端末を招待', invitePhone: 'もう1台の端末を招待',
     deviceLimitWarning: '有効な端末は2台までです。紛失した端末の失効は取り消せず、交換端末とのペアリング前に新しい鍵を作成します。',
     recoveryLimitNotice: '2台の端末を両方失った場合、生き残っている端末または有効なリカバリーパックがなければ復旧できません。',
+    invitationCreatedTitle: '招待の準備ができました',
+    invitationCreated: (code) => `招待ファイルを交換端末と共有し、両方の端末で照合コード ${code} を確認してください。`,
+    invitationFailedTitle: '招待を作成できませんでした',
+    invitationFailed: '家庭内ペアリングは変更されていません。有効な端末が1台だけの状態で再試行してください。',
+    recoveryExportTitle: '暗号化されたリカバリーパックを書き出す',
+    recoveryRestoreTitle: '暗号化されたリカバリーパックを復元する',
+    recoveryPassphrasePrompt: '8文字以上のパスフレーズを入力してください。Kajiは保存も送信もしません。',
+    recoveryFailedTitle: 'リカバリーパックは変更されていません',
+    recoveryFailed: '現在のデータは保持されています。パスフレーズとパックを確認して再試行してください。',
   },
   budgets: {
     title: '予算',

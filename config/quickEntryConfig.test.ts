@@ -32,7 +32,7 @@ describe('generated quick-entry native configuration', () => {
 
   it('generates the extension target and native files during Expo prebuild', () => {
     const temp = fs.mkdtempSync('/tmp/kaji-config-test-');
-    for (const file of ['app.json', 'package.json', 'package-lock.json']) fs.copyFileSync(path.join(root, file), path.join(temp, file));
+    for (const file of ['app.json', 'app.config.js', 'package.json', 'package-lock.json']) fs.copyFileSync(path.join(root, file), path.join(temp, file));
     for (const directory of ['config', 'modules', 'assets']) fs.cpSync(path.join(root, directory), path.join(temp, directory), { recursive: true });
     fs.symlinkSync(path.join(root, 'node_modules'), path.join(temp, 'node_modules'));
     childProcess.execFileSync(process.execPath, [require.resolve('expo/bin/cli'), 'prebuild', '--no-install', '--platform', 'ios'], { cwd: temp, stdio: 'pipe' });
@@ -80,12 +80,16 @@ describe('generated quick-entry native configuration', () => {
 
     const extensionBuilds = project.pbxXCBuildConfigurationSection();
     const extensionConfigList = project.pbxXCConfigurationList()[(extension as any).buildConfigurationList];
+    const hostConfigList = project.pbxXCConfigurationList()[(host as any).buildConfigurationList];
     for (const config of extensionConfigList.buildConfigurations) {
       const settings = extensionBuilds[config.value].buildSettings;
+      const hostConfig = hostConfigList.buildConfigurations.find((candidate: any) =>
+        extensionBuilds[candidate.value].name === extensionBuilds[config.value].name,
+      );
       expect(settings.INFOPLIST_FILE).toBe('"KajiQuickEntryExtension/KajiQuickEntryExtension-Info.plist"');
       expect(settings.CODE_SIGN_ENTITLEMENTS).toBe('"KajiQuickEntryExtension/KajiQuickEntryExtension.entitlements"');
-      expect(settings.CURRENT_PROJECT_VERSION).toBe(1);
-      expect(settings.MARKETING_VERSION).toBe('0.1.0');
+      expect(settings.CURRENT_PROJECT_VERSION).toBe(extensionBuilds[hostConfig.value].buildSettings.CURRENT_PROJECT_VERSION);
+      expect(settings.MARKETING_VERSION).toBe(extensionBuilds[hostConfig.value].buildSettings.MARKETING_VERSION);
     }
     expect(fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension.entitlements'), 'utf8')).toContain('group.com.taigamura.kaji');
     const extensionInfo = fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension-Info.plist'), 'utf8');
@@ -113,7 +117,7 @@ describe('generated quick-entry native configuration', () => {
     expect(extensionInfo).not.toContain('WKCompanionAppBundleIdentifier');
     const extensionSource = fs.readFileSync(path.join(temp, 'ios/KajiQuickEntryExtension/KajiQuickEntryExtension.swift'), 'utf8');
     expect(extensionSource).toContain('import AppIntents');
-    expect(extensionSource).toContain('import ControlWidget');
+    expect(extensionSource).not.toContain('import ControlWidget');
     expect(extensionSource).toMatch(/import SwiftUI[\s\S]*import WidgetKit[\s\S]*WidgetBundle/);
     expect(extensionSource).toContain('@available(iOS 17.0, *)');
     expect(extensionSource).toContain('LaunchOnlyView');

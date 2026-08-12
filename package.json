@@ -51,8 +51,8 @@
     "start": "expo start",
     "icons": "node scripts/generate-icons.mjs && node scripts/check-icons.mjs",
     "icons:check": "node scripts/check-icons.mjs",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "jest",
@@ -61,7 +61,8 @@
     "e2e:test": "playwright test",
     "e2e:test:firefox": "node e2e/run-firefox.mjs",
     "e2e": "npm run e2e:export && npm run e2e:test",
-    "privacy:check": "node scripts/check-privacy-boundary.mjs"
+    "privacy:test": "node scripts/check-privacy-boundary.test.mjs",
+    "privacy:check": "npm run privacy:test && node scripts/check-privacy-boundary.mjs"
   },
   "private": true
 }

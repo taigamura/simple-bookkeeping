@@ -29,6 +29,14 @@ jest.mock('./nav', () => ({
   },
 }));
 jest.mock('./screens/SummaryGrowthPrototype', () => ({ SummaryGrowthPrototype: () => null }));
+jest.mock('./platform/householdRuntime', () => ({
+  HouseholdRuntime: class {
+    ready = false;
+    start = jest.fn(async () => undefined);
+    dispose = jest.fn();
+    observeEntries = jest.fn(async () => undefined);
+  },
+}));
 jest.mock('./ui/LoadingScreen', () => ({
   LoadingScreen: ({ ready, onFinished }: { ready: boolean; onFinished: () => void }) => {
     const { Button, Text, View } = require('react-native');

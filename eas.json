@@ -6,10 +6,16 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "KAJI_ENABLE_WATCH_EXPENSE": "1"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "KAJI_ENABLE_WATCH_EXPENSE": "1"
+      }
     },
     "production": {
       "autoIncrement": true

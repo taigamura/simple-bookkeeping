@@ -12,7 +12,10 @@ import { SummaryGrowthPrototype } from './screens/SummaryGrowthPrototype';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { quickEntryBridge } from './platform/quickEntryBridge';
 import { parseQuickEntryUrl } from './platform/quickEntryLinks';
-import type { EntryDraft } from './domain';
+import { householdKeychain } from './platform/householdKeychain';
+import { HouseholdRuntime } from './platform/householdRuntime';
+import { deviceAuthenticator } from './platform/deviceAuthentication';
+import { householdSyncStatus, type EntryDraft } from './domain';
 
 // Keep the native splash screen (asset + dark background configured via the
 // expo-splash-screen plugin in app.json, #25) from auto-hiding before React is
@@ -32,6 +35,7 @@ export default function App() {
   const [openingComplete, setOpeningComplete] = useState(false);
   const [quickEntryDraft, setQuickEntryDraft] = useState<EntryDraft | null>(null);
   const [quickEntryPresentationToken, setQuickEntryPresentationToken] = useState(0);
+  const [householdRuntimeVersion, setHouseholdRuntimeVersion] = useState(0);
   const {
     ready,
     state,
@@ -44,6 +48,9 @@ export default function App() {
     reconcileQuickEntries,
   } = useStore();
   const appReady = fontsLoaded && ready;
+  const householdRuntime = useRef<HouseholdRuntime | null>(null);
+  const updateRef = useRef(update);
+  updateRef.current = update;
 
   useEffect(() => {
     // Keep the native splash as the readiness cover. Providers must not mount
@@ -130,6 +137,34 @@ export default function App() {
     return () => subscription.remove();
   }, [appReady, persistenceNotice, retryQuickEntrySnapshot]);
 
+  // The pairing checkpoint contains only IDs, membership, and sync history.
+  // The household encryption key is read/written exclusively by Keychain.
+  useEffect(() => {
+    // Nearby household transport is currently an iOS native module. Keep web,
+    // Android, Expo Go, and tests on the explicit unpaired presentation.
+    if (!appReady || Platform.OS !== 'ios') return;
+    const runtime = new HouseholdRuntime({
+      keychain: householdKeychain,
+      applyIncomingEntries: async (entries) => updateRef.current({ entries }),
+      onChange: () => setHouseholdRuntimeVersion((version) => version + 1),
+    });
+    householdRuntime.current = runtime;
+    void runtime.start(state.entries).catch(() => setHouseholdRuntimeVersion((version) => version + 1));
+    return () => {
+      if (householdRuntime.current === runtime) householdRuntime.current = null;
+      runtime.dispose();
+    };
+    // The runtime captures the hydrated ledger exactly once. Subsequent ledger
+    // changes flow through the observation effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appReady]);
+
+  useEffect(() => {
+    const runtime = householdRuntime.current;
+    if (!runtime?.ready) return;
+    void runtime.observeEntries(state.entries).catch(() => setHouseholdRuntimeVersion((version) => version + 1));
+  }, [state.entries, householdRuntimeVersion]);
+
   const finishOpening = useCallback(() => setOpeningComplete(true), []);
 
   // THROWAWAY UI PROTOTYPE. Development web only; production always mounts
@@ -181,6 +216,24 @@ export default function App() {
             quickEntryDraft={quickEntryDraft}
             quickEntryPresentationToken={quickEntryPresentationToken}
             onQuickEntryDraftDisposition={disposeDraft}
+            householdSync={householdRuntime.current?.ready ? {
+              model: householdRuntime.current.model,
+              history: householdRuntime.current.history,
+              onSyncNow: () => { void householdRuntime.current?.syncNow(); },
+              onRestore: (transactionId, operationId) => { void householdRuntime.current?.restore(transactionId, operationId); },
+              pairing: householdRuntime.current.pairingState && householdRuntime.current.deviceId ? {
+                state: householdRuntime.current.pairingState,
+                deviceId: householdRuntime.current.deviceId,
+                onRevokeDevice: (deviceId) => { void householdRuntime.current?.revoke(deviceId); },
+                onExportRecovery: (passphrase) => householdRuntime.current!.exportRecovery(state, passphrase, deviceAuthenticator),
+                onRestoreRecovery: (pack, passphrase) => householdRuntime.current!.restoreRecovery(
+                  state, pack, passphrase, deviceAuthenticator, (next) => updateRef.current(next),
+                ),
+              } : undefined,
+            } : {
+              model: householdSyncStatus({ paired: false, foreground: true, partnerPresent: false, queuedOperationCount: 0 }),
+              history: [], onSyncNow: () => {}, onRestore: () => {},
+            }}
           />
           {!openingComplete ? (
             <LoadingScreen ready onFinished={finishOpening} />

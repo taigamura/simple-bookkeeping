@@ -24,7 +24,6 @@ export interface HouseholdSyncSheetProps {
     state: HouseholdPairingState;
     deviceId: string;
     onRevokeDevice: (deviceId: string) => void;
-    onCreateReplacementInvitation: () => void;
   };
   ScrollContainer?: ComponentType<ScrollContainerProps>;
 }
@@ -103,16 +102,6 @@ export function HouseholdSyncSheet({
                 )}
               </View>
             ))}
-            {pairing.state.devices.filter((device) => device.revokedAt === undefined).length === 1 && (
-              <Pressable
-                onPress={pairing.onCreateReplacementInvitation}
-                accessibilityRole="button"
-                accessibilityLabel={strings.sync.inviteReplacement}
-                style={[styles.syncButton, { backgroundColor: colors.positive }]}
-              >
-                <Txt variant="listItem" tone="onPositive">{strings.sync.inviteReplacement}</Txt>
-              </Pressable>
-            )}
           </View>
         )}
 

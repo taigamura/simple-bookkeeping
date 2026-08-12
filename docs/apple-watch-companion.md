@@ -5,6 +5,11 @@ expense amount entry, a small list of recent categories, an explicit Save
 action, and the current allowance payload. It intentionally does not expose
 income, notes, recurrence, or date editing.
 
+It is opt-in: `KAJI_ENABLE_WATCH_EXPENSE=1` enables the Expo config plugin.
+The `development` and `preview` EAS profiles set that flag; `production` does
+not, so release archives do not embed the uncertified Watch app. Do not enable
+it for production until the certification gate below has been completed.
+
 Saving creates a versioned `source: watch` quick-entry command with a UUID.
 The Watch keeps that command locally and retries it through WatchConnectivity
 until the paired iPhone returns the exact `watch:<UUID>` acknowledgement. The

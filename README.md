@@ -36,12 +36,13 @@ npm install
 ```bash
 npm run web       # expo start --web — fastest loop, primary dev target
 npm run start      # expo start — Metro bundler, QR code for Expo Go
-npm run ios        # expo start --ios (requires macOS/simulator)
-npm run android    # expo start --android (requires Android SDK/emulator)
+npm run ios        # expo run:ios (requires macOS/Xcode; builds local native modules)
+npm run android    # expo run:android (requires Android SDK/emulator; builds local native modules)
 ```
 
 Web is the primary validation target during development (see build
-decisions doc); native platforms are exercised via Expo Go / EAS builds
+decisions doc); native household/extension features require a development build
+(`npm run ios`, `npm run android`, or EAS) and are unavailable in Expo Go
 before any App Store submission.
 
 > **WSL2 note:** the standalone React Native DevTools debugger can fail with

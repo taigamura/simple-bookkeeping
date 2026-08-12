@@ -1,4 +1,4 @@
-import { NativeModule, requireNativeModule } from 'expo';
+import { NativeModule, requireOptionalNativeModule } from 'expo';
 import type { KajiNearbyModuleEvents } from './KajiNearby.types';
 
 declare class KajiNearbyModule extends NativeModule<KajiNearbyModuleEvents> {
@@ -7,4 +7,7 @@ declare class KajiNearbyModule extends NativeModule<KajiNearbyModuleEvents> {
   sendAsync(peerDeviceId: string, envelope: string): Promise<void>;
 }
 
-export default requireNativeModule<KajiNearbyModule>('KajiNearby');
+// Optional at module load so web, Jest, and Expo Go can render the app. The
+// concrete transport reports an explicit unavailable error if it is started
+// without the development-build native module.
+export default requireOptionalNativeModule<KajiNearbyModule>('KajiNearby');

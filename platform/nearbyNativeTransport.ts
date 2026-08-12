@@ -32,6 +32,7 @@ export function createNativeNearbyTransport(): NearbyTransport {
   let subscriptions: Array<{ remove(): void }> = [];
   return {
     async start({ serviceType, deviceId, discoveryInfo, handlers }) {
+      if (!KajiNearbyModule) throw new Error('KajiNearby native module is unavailable');
       subscriptions.forEach((subscription) => subscription.remove());
       subscriptions = [
         KajiNearbyModule.addListener('onPeer', (event) => handlers.onPeer(peerFromEvent(event))),
@@ -60,9 +61,10 @@ export function createNativeNearbyTransport(): NearbyTransport {
     async stop() {
       subscriptions.forEach((subscription) => subscription.remove());
       subscriptions = [];
-      await KajiNearbyModule.stopAsync();
+      await KajiNearbyModule?.stopAsync();
     },
     send(peer, envelope) {
+      if (!KajiNearbyModule) return Promise.reject(new Error('KajiNearby native module is unavailable'));
       return KajiNearbyModule.sendAsync(peer.deviceId, JSON.stringify(envelope));
     },
   };

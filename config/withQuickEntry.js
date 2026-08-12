@@ -8,14 +8,12 @@ const APP_GROUP = 'group.com.taigamura.kaji';
 const EXTENSION_NAME = 'KajiQuickEntryExtension';
 const EXTENSION_BUNDLE_ID = `${APP_BUNDLE_ID}.quick-entry`;
 const SCHEME = 'kaji-quick-entry';
-const EXTENSION_MARKETING_VERSION = '0.1.0';
-const EXTENSION_PROJECT_VERSION = '1';
 
 if (extensionSpec.bundleIdentifier !== EXTENSION_BUNDLE_ID || extensionSpec.appGroup !== APP_GROUP || extensionSpec.urlScheme !== SCHEME) {
   throw new Error('Quick-entry extension identifiers must derive from the Kaji app namespace');
 }
 
-function addExtensionTarget(project) {
+function addExtensionTarget(project, config = {}) {
   const targets = project.pbxNativeTargetSection();
   const existing = Object.entries(targets).find(([, target]) => target.name === `"${EXTENSION_NAME}"`);
   const target = existing ? { uuid: existing[0], pbxNativeTarget: existing[1] } : project.addTarget(
@@ -23,22 +21,32 @@ function addExtensionTarget(project) {
   );
   const nativeTarget = target.pbxNativeTarget;
   const host = project.getFirstTarget();
-  if (host && !host.firstTarget.dependencies.some((dependency) => dependency.value === target.uuid)) {
+  if (host) {
     project.hash.project.objects.PBXTargetDependency ??= {};
     project.hash.project.objects.PBXContainerItemProxy ??= {};
-    project.addTargetDependency(host.uuid, [target.uuid]);
+    const dependencies = project.hash.project.objects.PBXTargetDependency;
+    const exists = host.firstTarget.dependencies.some((dependency) => dependencies[dependency.value]?.target === target.uuid);
+    if (!exists) project.addTargetDependency(host.uuid, [target.uuid]);
   }
   const configurations = project.pbxXCConfigurationList()[nativeTarget.buildConfigurationList];
+  const hostConfigurations = project.pbxXCConfigurationList()[host.firstTarget.buildConfigurationList];
+  const hostSettings = new Map((hostConfigurations.buildConfigurations ?? []).map((entry) => {
+    const build = project.pbxXCBuildConfigurationSection()[entry.value];
+    return [build.name.replace(/^"|"$/g, ''), build.buildSettings ?? {}];
+  }));
   for (const entry of configurations.buildConfigurations ?? []) {
     const build = project.pbxXCBuildConfigurationSection()[entry.value];
     if (!build) continue;
+    const hostBuild = hostSettings.get(build.name.replace(/^"|"$/g, '')) ?? {};
     build.buildSettings.PRODUCT_BUNDLE_IDENTIFIER = `"${EXTENSION_BUNDLE_ID}"`;
     build.buildSettings.INFOPLIST_FILE = `"${EXTENSION_NAME}/${EXTENSION_NAME}-Info.plist"`;
     build.buildSettings.CODE_SIGN_ENTITLEMENTS = `"${EXTENSION_NAME}/${EXTENSION_NAME}.entitlements"`;
     build.buildSettings.SWIFT_VERSION = '5.0';
     build.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = '16.4';
-    build.buildSettings.CURRENT_PROJECT_VERSION = EXTENSION_PROJECT_VERSION;
-    build.buildSettings.MARKETING_VERSION = EXTENSION_MARKETING_VERSION;
+    // Use the values already resolved for the host target, including EAS's
+    // remote version/build-number source, instead of independent constants.
+    build.buildSettings.CURRENT_PROJECT_VERSION = hostBuild.CURRENT_PROJECT_VERSION ?? config.ios?.buildNumber;
+    build.buildSettings.MARKETING_VERSION = hostBuild.MARKETING_VERSION ?? config.version;
   }
   const files = project.pbxFileReferenceSection();
   const sourcePhase = nativeTarget.buildPhases.find((phase) => phase.comment === 'Sources')
@@ -71,7 +79,6 @@ const withQuickEntryFiles = (config) => withDangerousMod(config, ['ios', async (
   const extensionRoot = path.join(config.modRequest.platformProjectRoot, EXTENSION_NAME);
   fs.mkdirSync(extensionRoot, { recursive: true });
   fs.writeFileSync(path.join(extensionRoot, `${EXTENSION_NAME}.swift`), String.raw`import AppIntents
-import ControlWidget
 import Foundation
 import SwiftUI
 import WidgetKit
@@ -256,7 +263,7 @@ const withQuickEntry = (config) => {
   config = withInfoPlist(config, (info) => ({ ...info, CFBundleURLTypes: [{ CFBundleURLSchemes: [SCHEME] }] }));
   config = withEntitlementsPlist(config, (entitlements) => ({ ...entitlements, 'com.apple.security.application-groups': [APP_GROUP] }));
   config = withXcodeProject(config, (config) => {
-    config.modResults = addExtensionTarget(config.modResults);
+    config.modResults = addExtensionTarget(config.modResults, config);
     return config;
   });
   return withQuickEntryFiles(config);
