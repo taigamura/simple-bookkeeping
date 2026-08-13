@@ -234,7 +234,7 @@ export const en: Strings = {
     delete: 'Delete',
   },
   a11y: {
-    loadingKaji: 'Loading Kaji',
+    loadingKaji: 'Loading Suito',
     selected: 'Selected',
     notSelected: 'Not selected',
     textInput: 'Text input',
@@ -451,7 +451,7 @@ export const ja: Strings = {
     delete: '削除',
   },
   a11y: {
-    loadingKaji: 'Kajiを読み込み中',
+    loadingKaji: 'Suitoを読み込み中',
     selected: '選択中',
     notSelected: '未選択',
     textInput: 'テキスト入力',
