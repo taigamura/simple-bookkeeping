@@ -8,17 +8,20 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "KAJI_ENABLE_WATCH_EXPENSE": "1"
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "KAJI_ENABLE_WATCH_EXPENSE": "1"
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
     }
   },
   "submit": {

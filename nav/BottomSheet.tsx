@@ -54,8 +54,6 @@ import { useTheme, metrics } from '../theme';
 export interface BottomSheetProps {
   visible: boolean;
   onClose: () => void;
-  /** Allow the current body to start a sheet drag from safe, non-control surfaces. */
-  enableContentPanningGesture?: boolean;
   /** Content-specific opening height; Settings-style sheets use the 80% default. */
   defaultHeightRatio?: number;
   /** Intrinsic non-scrollable body height used as a floor for the opening detent. */
@@ -171,31 +169,6 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const DRAG_DISMISS_DISTANCE = 48;
-
-function isInteractiveSurfaceTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    Boolean(target.closest('button,input,textarea,select,[role="button"],[contenteditable="true"]'))
-  );
-}
-
-function scrollableAncestorAtOffset(target: EventTarget | null): HTMLElement | null {
-  if (!(target instanceof HTMLElement)) return null;
-  let node: HTMLElement | null = target;
-  while (node) {
-    const style = window.getComputedStyle(node);
-    if (
-      (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
-      node.scrollHeight > node.clientHeight
-    ) {
-      return node;
-    }
-    node = node.parentElement;
-  }
-  return null;
-}
-
 /**
  * Custom sheet handle: forgiving touch target (#69). Wraps gorhom's default
  * indicator pill (same visual size) inside a full-sheet-width, ~40px-tall
@@ -263,7 +236,6 @@ function SheetBackdrop({
 export function BottomSheet({
   visible,
   onClose,
-  enableContentPanningGesture = false,
   defaultHeightRatio = 0.8,
   contentHeight = 0,
   children,
@@ -364,62 +336,6 @@ export function BottomSheet({
     return () => root.classList.remove(INERT_SHEET_CLASS);
   }, [phase]);
 
-  // RNGH owns this gesture on native. On web, its content pan detector cannot
-  // receive a reliable pointer stream through react-native-web's nested
-  // Pressables, so mirror the same narrow contract at the surface boundary.
-  // Controls and scrolled content opt out before a drag can claim the pointer.
-  useEffect(() => {
-    if (Platform.OS !== 'web' || !enableContentPanningGesture || phase !== 'open') {
-      return;
-    }
-    const surface = document.querySelector<HTMLElement>(
-      `[aria-label="${SHEET_SURFACE_LABEL}"]`,
-    );
-    if (!surface) return;
-    const gestureTarget = surface.querySelector<HTMLElement>('[data-testid]') ?? surface;
-
-    let startX = 0;
-    let startY = 0;
-    let pointerId: number | null = null;
-    let eligible = false;
-    let dismissed = false;
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (isInteractiveSurfaceTarget(event.target)) return;
-      const scrollable = scrollableAncestorAtOffset(event.target);
-      if (scrollable && scrollable.scrollTop > 0) return;
-      startX = event.clientX;
-      startY = event.clientY;
-      pointerId = event.pointerId;
-      eligible = true;
-      dismissed = false;
-    };
-    const onPointerMove = (event: PointerEvent) => {
-      if (!eligible || event.pointerId !== pointerId || dismissed) return;
-      const dx = event.clientX - startX;
-      const dy = event.clientY - startY;
-      if (Math.abs(dx) > 12 || dy < DRAG_DISMISS_DISTANCE) return;
-      dismissed = true;
-      event.preventDefault();
-      onClose();
-    };
-    const onPointerEnd = () => {
-      eligible = false;
-      pointerId = null;
-    };
-
-    gestureTarget.addEventListener('pointerdown', onPointerDown);
-    gestureTarget.addEventListener('pointermove', onPointerMove);
-    gestureTarget.addEventListener('pointerup', onPointerEnd);
-    gestureTarget.addEventListener('pointercancel', onPointerEnd);
-    return () => {
-      gestureTarget.removeEventListener('pointerdown', onPointerDown);
-      gestureTarget.removeEventListener('pointermove', onPointerMove);
-      gestureTarget.removeEventListener('pointerup', onPointerEnd);
-      gestureTarget.removeEventListener('pointercancel', onPointerEnd);
-    };
-  }, [enableContentPanningGesture, onClose, phase]);
-
   // gorhom fires onDismiss only when the dismiss animation finishes — long after
   // nav changed, possibly after the user reopened. So this must never blindly
   // re-close: it flips phase to 'closed', letting the effect above re-present if
@@ -454,12 +370,7 @@ export function BottomSheet({
       enableDynamicSizing={false}
       enablePanDownToClose
       enableHandlePanningGesture
-      enableContentPanningGesture={Platform.OS !== 'web' && enableContentPanningGesture}
-      // Do not let a small tap or a horizontal scroll claim the sheet gesture.
-      // Once a vertical drag is meaningful, gorhom coordinates it with the
-      // active BottomSheetScrollView and only closes from offset zero.
-      activeOffsetY={12}
-      failOffsetX={[-12, 12]}
+      enableContentPanningGesture={false}
       topInset={insets.top}
       snapPoints={snapPoints}
       animationConfigs={animationConfigs}

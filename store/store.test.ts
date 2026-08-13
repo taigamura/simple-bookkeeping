@@ -17,7 +17,6 @@ import {
   type RecurrenceRule,
   type Transaction,
 } from '../domain';
-import { QUICK_ENTRY_COMMAND_VERSION, type QuickEntryCommand } from '../domain';
 
 /** A full AppState with the given overrides, so tests state only what matters. */
 const stateWith = (over: Partial<AppState> = {}): AppState => ({
@@ -38,109 +37,7 @@ const sampleEntry: Transaction = {
   repeat: 'never',
 };
 
-const quickCommand: QuickEntryCommand = {
-  version: QUICK_ENTRY_COMMAND_VERSION,
-  source: 'widget',
-  id: 'coffee-1',
-  timestamp: '2026-08-10T00:00:00.000Z',
-  amount: 500,
-  category: 'Food',
-  note: 'Coffee',
-  date: { y: 2026, m: 7, day: 10 },
-};
-
 describe('createStore', () => {
-  it('reconciles concurrent and retried quick-entry commands exactly once', async () => {
-    const persistence = createMemoryPersistence();
-    const store = createStore(persistence);
-    await Promise.all([
-      store.queueQuickEntryCommand(quickCommand),
-      store.queueQuickEntryCommand(quickCommand),
-    ]);
-
-    const first = await store.reconcileQuickEntryCommands(stateWith());
-    const second = await store.reconcileQuickEntryCommands(first.state);
-
-    expect(first.state.entries).toEqual([expect.objectContaining({ id: 'quick:widget:coffee-1' })]);
-    expect(second.state).toBe(first.state);
-    expect(await persistence.readQuickEntryQueue!()).toBe('[]');
-  });
-
-  it('quarantines malformed commands while allowing valid commands to recover', async () => {
-    const persistence = createMemoryPersistence();
-    const store = createStore(persistence);
-    await store.queueQuickEntryCommand({ ...quickCommand, amount: 0 });
-    await store.queueQuickEntryCommand(quickCommand);
-
-    const result = await store.reconcileQuickEntryCommands(stateWith());
-
-    expect(result.quarantined).toBe(1);
-    expect(result.state.entries).toHaveLength(1);
-    expect(JSON.parse((await store.readQuickEntryQuarantine())!)).toEqual([
-      expect.objectContaining({ amount: 0 }),
-    ]);
-  });
-
-  it('migrates a v1 envelope once and separates household identities from device state', async () => {
-    const { household: _household, device: _device, ...legacyState } = stateWith({ entries: [sampleEntry] });
-    const persistence = createMemoryPersistence(JSON.stringify({ version: 1, state: legacyState }));
-    const store = createStore(persistence);
-
-    const loaded = await store.load();
-    expect(loaded.entries[0].categoryId).toMatch(/^legacy-expense-/);
-    expect(loaded.household.entries[0].categoryId).toBe(loaded.entries[0].categoryId);
-    expect(loaded.device.expenseCategoryOrder).toContain(loaded.household.categories[0].id);
-
-    const migratedBlob = await persistence.read();
-    expect(JSON.parse(migratedBlob!).version).toBe(SCHEMA_VERSION);
-    await store.load();
-    expect(await persistence.read()).toBe(migratedBlob);
-  });
-
-  it('migrates the complete legacy envelope without losing household or device data', async () => {
-    const legacyEntry = { ...sampleEntry, category: 'Groceries' };
-    const legacyRule: RecurrenceRule = {
-      id: 'r1', timestamp: '2026-07-01T00:00:00.000Z', start: { y: 2026, m: 6, day: 1 },
-      anchorDay: 1, type: 'expense', amount: 1200, category: 'Groceries', note: 'weekly',
-      repeat: 'monthly', weekendShift: 'off', exceptions: [],
-    };
-    const { household: _household, device: _device, ...legacyState } = stateWith({
-      entries: [legacyEntry], recurrenceRules: [legacyRule], expCats: ['Groceries'], incCats: ['Salary'],
-      budgets: { Groceries: 30000 }, currency: { symbol: '$', code: 'USD' }, theme: 'light',
-      budgetMode: 'total', totalBudget: 50000, calendarView: 'numbers', motion: 'reduced', summaryGranularity: 'annual',
-    });
-    const persistence = createMemoryPersistence(JSON.stringify({ version: 1, state: legacyState }));
-
-    const loaded = await createStore(persistence).load();
-
-    expect(loaded.household.entries).toEqual([expect.objectContaining({ category: 'Groceries', categoryId: expect.any(String) })]);
-    expect(loaded.household.recurrenceRules).toEqual([expect.objectContaining({ category: 'Groceries', categoryId: expect.any(String) })]);
-    expect(loaded.household.budgets).toEqual({ [loaded.household.categories[0].id]: 30000 });
-    expect(loaded.household.currency).toEqual({ symbol: '$', code: 'USD' });
-    expect(loaded.device).toMatchObject({ theme: 'light', budgetMode: 'total', totalBudget: 50000, calendarView: 'numbers', motion: 'reduced', summaryGranularity: 'annual' });
-    expect(loaded.device.expenseCategoryOrder).toEqual([loaded.household.categories[0].id]);
-  });
-
-  it('stashes structurally invalid household or device payloads', async () => {
-    const blob = JSON.stringify({ version: SCHEMA_VERSION, state: { ...stateWith(), household: { entries: [] }, device: stateWith().device } });
-    const store = createStore(createMemoryPersistence(blob));
-
-    await expect(store.load()).resolves.toEqual(DEFAULT_STATE);
-    expect(await store.readCorruptStash()).toBe(blob);
-  });
-
-  it('keeps persisted category references during normalization', async () => {
-    const categoryId = 'category-1';
-    const blob = JSON.stringify({ version: SCHEMA_VERSION, state: stateWith({
-      entries: [{ ...sampleEntry, categoryId }],
-      household: { ...DEFAULT_STATE.household, entries: [{ ...sampleEntry, categoryId }] },
-    }) });
-    const loaded = await createStore(createMemoryPersistence(blob)).load();
-
-    expect(loaded.entries[0].categoryId).toBe(categoryId);
-    expect(loaded.household.entries[0].categoryId).toBe(categoryId);
-  });
-
   it('round-trips saved state: save then load returns the persisted theme', async () => {
     const store = createStore(createMemoryPersistence());
 

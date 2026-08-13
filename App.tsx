@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Linking, Platform, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Root } from './nav';
@@ -10,12 +10,6 @@ import { MotionProvider, ThemeProvider, useTheme } from './theme';
 import { useAppFonts } from './theme/useAppFonts';
 import { SummaryGrowthPrototype } from './screens/SummaryGrowthPrototype';
 import { LoadingScreen } from './ui/LoadingScreen';
-import { quickEntryBridge } from './platform/quickEntryBridge';
-import { parseQuickEntryUrl } from './platform/quickEntryLinks';
-import { householdKeychain } from './platform/householdKeychain';
-import { HouseholdRuntime } from './platform/householdRuntime';
-import { deviceAuthenticator } from './platform/deviceAuthentication';
-import { householdSyncStatus, type EntryDraft } from './domain';
 
 // Keep the native splash screen (asset + dark background configured via the
 // expo-splash-screen plugin in app.json, #25) from auto-hiding before React is
@@ -33,9 +27,6 @@ SplashScreen.preventAutoHideAsync();
 export default function App() {
   const fontsLoaded = useAppFonts();
   const [openingComplete, setOpeningComplete] = useState(false);
-  const [quickEntryDraft, setQuickEntryDraft] = useState<EntryDraft | null>(null);
-  const [quickEntryPresentationToken, setQuickEntryPresentationToken] = useState(0);
-  const [householdRuntimeVersion, setHouseholdRuntimeVersion] = useState(0);
   const {
     ready,
     state,
@@ -44,13 +35,8 @@ export default function App() {
     hasCorruptStash,
     readCorruptStash,
     persistenceNotice,
-    retryQuickEntrySnapshot,
-    reconcileQuickEntries,
   } = useStore();
   const appReady = fontsLoaded && ready;
-  const householdRuntime = useRef<HouseholdRuntime | null>(null);
-  const updateRef = useRef(update);
-  updateRef.current = update;
 
   useEffect(() => {
     // Keep the native splash as the readiness cover. Providers must not mount
@@ -58,112 +44,6 @@ export default function App() {
     // wait for the hydrated theme/motion values before the React handoff.
     if (appReady) SplashScreen.hideAsync();
   }, [appReady]);
-
-  const pendingDraft = useRef<{ draft: EntryDraft; token: number; resolve: () => void } | null>(null);
-  const presentationToken = useRef(0);
-  const readyRef = useRef(ready);
-  const reconcileRef = useRef(reconcileQuickEntries);
-  const handoffRef = useRef<((draft: EntryDraft) => Promise<void>) | undefined>(undefined);
-  readyRef.current = ready;
-  reconcileRef.current = reconcileQuickEntries;
-  const handoffDraft = useCallback((draft: EntryDraft) => new Promise<void>((resolve) => {
-    const token = ++presentationToken.current;
-    pendingDraft.current = { draft, token, resolve };
-    setQuickEntryDraft(draft);
-    setQuickEntryPresentationToken(token);
-  }), []);
-  handoffRef.current = handoffDraft;
-  const reconcileRunning = useRef(false);
-  const reconcileAgain = useRef(false);
-  const requestReconcile = useCallback(() => {
-    if (!readyRef.current) return;
-    reconcileAgain.current = true;
-    if (reconcileRunning.current) {
-      return;
-    }
-    reconcileRunning.current = true;
-    void (async () => {
-      try {
-        while (reconcileAgain.current) {
-          reconcileAgain.current = false;
-          try {
-            await reconcileRef.current(handoffRef.current);
-          } catch {
-            // A pending request is still allowed one drain turn after a failure.
-          }
-        }
-      } finally {
-        reconcileRunning.current = false;
-        if (reconcileAgain.current) requestReconcile();
-      }
-    })();
-  }, []);
-  const disposeDraft = useCallback((draft: EntryDraft, token: number) => {
-    if (pendingDraft.current?.draft !== draft || pendingDraft.current.token !== token) return;
-    pendingDraft.current.resolve();
-    pendingDraft.current = null;
-    setQuickEntryDraft((current) => current === draft ? null : current);
-    requestReconcile();
-  }, [requestReconcile]);
-
-  const receiveUrl = useCallback(async (url: string | null) => {
-    if (!url) return;
-    if (quickEntryBridge) {
-      await quickEntryBridge.enqueueDeepLinkAsync(url);
-      requestReconcile();
-      return;
-    }
-    if (readyRef.current) {
-      const draft = parseQuickEntryUrl(url);
-      const handoff = handoffRef.current;
-      if (draft && handoff) await handoff(draft);
-    }
-  }, []);
-
-  useEffect(() => {
-    const subscription = Linking.addEventListener('url', ({ url }) => { void receiveUrl(url).catch(() => {}); });
-    void Promise.resolve(Linking.getInitialURL()).then(receiveUrl).catch(() => {});
-    return () => subscription?.remove?.();
-  }, [receiveUrl]);
-
-  useEffect(() => {
-    if (!appReady) return;
-    requestReconcile();
-    const subscription = AppState.addEventListener('change', (next) => {
-      if (next !== 'active') return;
-      if (persistenceNotice === 'quick-entry-cache-failed') void retryQuickEntrySnapshot().catch(() => {});
-      requestReconcile();
-    });
-    return () => subscription.remove();
-  }, [appReady, persistenceNotice, retryQuickEntrySnapshot]);
-
-  // The pairing checkpoint contains only IDs, membership, and sync history.
-  // The household encryption key is read/written exclusively by Keychain.
-  useEffect(() => {
-    // Nearby household transport is currently an iOS native module. Keep web,
-    // Android, Expo Go, and tests on the explicit unpaired presentation.
-    if (!appReady || Platform.OS !== 'ios') return;
-    const runtime = new HouseholdRuntime({
-      keychain: householdKeychain,
-      applyIncomingEntries: async (entries) => updateRef.current({ entries }),
-      onChange: () => setHouseholdRuntimeVersion((version) => version + 1),
-    });
-    householdRuntime.current = runtime;
-    void runtime.start(state.entries).catch(() => setHouseholdRuntimeVersion((version) => version + 1));
-    return () => {
-      if (householdRuntime.current === runtime) householdRuntime.current = null;
-      runtime.dispose();
-    };
-    // The runtime captures the hydrated ledger exactly once. Subsequent ledger
-    // changes flow through the observation effect below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appReady]);
-
-  useEffect(() => {
-    const runtime = householdRuntime.current;
-    if (!runtime?.ready) return;
-    void runtime.observeEntries(state.entries).catch(() => setHouseholdRuntimeVersion((version) => version + 1));
-  }, [state.entries, householdRuntimeVersion]);
 
   const finishOpening = useCallback(() => setOpeningComplete(true), []);
 
@@ -213,27 +93,6 @@ export default function App() {
             hasCorruptStash={hasCorruptStash}
             readCorruptStash={readCorruptStash}
             persistenceNotice={persistenceNotice}
-            quickEntryDraft={quickEntryDraft}
-            quickEntryPresentationToken={quickEntryPresentationToken}
-            onQuickEntryDraftDisposition={disposeDraft}
-            householdSync={householdRuntime.current?.ready ? {
-              model: householdRuntime.current.model,
-              history: householdRuntime.current.history,
-              onSyncNow: () => { void householdRuntime.current?.syncNow(); },
-              onRestore: (transactionId, operationId) => { void householdRuntime.current?.restore(transactionId, operationId); },
-              pairing: householdRuntime.current.pairingState && householdRuntime.current.deviceId ? {
-                state: householdRuntime.current.pairingState,
-                deviceId: householdRuntime.current.deviceId,
-                onRevokeDevice: (deviceId) => { void householdRuntime.current?.revoke(deviceId); },
-                onExportRecovery: (passphrase) => householdRuntime.current!.exportRecovery(state, passphrase, deviceAuthenticator),
-                onRestoreRecovery: (pack, passphrase) => householdRuntime.current!.restoreRecovery(
-                  state, pack, passphrase, deviceAuthenticator, (next) => updateRef.current(next),
-                ),
-              } : undefined,
-            } : {
-              model: householdSyncStatus({ paired: false, foreground: true, partnerPresent: false, queuedOperationCount: 0 }),
-              history: [], onSyncNow: () => {}, onRestore: () => {},
-            }}
           />
           {!openingComplete ? (
             <LoadingScreen ready onFinished={finishOpening} />

@@ -9,13 +9,6 @@
  */
 export type TxType = 'income' | 'expense';
 
-/** Identity of the provider row that produced an imported ledger item. */
-export interface ImportProvenance {
-  provider: string;
-  sourceId: string;
-  row: number;
-}
-
 export type Repeat = 'never' | 'daily' | 'monthly' | 'yearly';
 
 /** Weekend shift for recurrence (slice #6): Monday / Friday / keep. */
@@ -33,8 +26,6 @@ export interface Transaction {
   type: TxType;
   amount: number; // integer, no minor units
   category: string;
-  /** Stable household category identity; `category` remains the display label. */
-  categoryId?: string;
   note: string;
   repeat?: Repeat;
   accountId?: string; // reserved; unused in v1 (decision 1)
@@ -42,8 +33,6 @@ export interface Transaction {
    * are persisted. The scheduled date stays stable when weekend handling moves
    * the displayed transaction into another month. */
   occurrence?: RecurrenceOccurrence;
-  /** Present when this transaction came from an import adapter. */
-  importProvenance?: ImportProvenance;
 }
 
 export interface RecurrenceDate {
@@ -71,8 +60,6 @@ export interface RecurrenceRule {
   type: TxType;
   amount: number;
   category: string;
-  /** Stable household category identity; `category` remains the display label. */
-  categoryId?: string;
   note: string;
   repeat: Exclude<Repeat, 'never'>;
   weekendShift: WeekendShift;

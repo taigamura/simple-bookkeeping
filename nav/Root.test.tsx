@@ -51,80 +51,6 @@ import { ThemeProvider } from '../theme';
 import { Root } from './Root';
 
 describe('Root unified sheet host (#60)', () => {
-  it('disposes identical queued drafts only after each exact presentation closes', async () => {
-    const onDisposition = jest.fn();
-    const first = {
-      type: 'expense' as const, amountStr: '500', category: 'Food', note: '',
-      y: 2026, m: 7, day: 10, repeat: 'never' as const,
-    };
-    const second = { ...first };
-    const view = render(
-      <ThemeProvider>
-        <Root
-          state={DEFAULT_STATE}
-          update={jest.fn()}
-          showCorruptNotice={false}
-          hasCorruptStash={false}
-          readCorruptStash={async () => null}
-          quickEntryDraft={first}
-          quickEntryPresentationToken={1}
-          onQuickEntryDraftDisposition={onDisposition}
-        />
-      </ThemeProvider>,
-    );
-
-    expect(onDisposition).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByLabelText(strings.nav.close));
-    expect(onDisposition).toHaveBeenCalledWith(first, 1);
-    view.rerender(
-      <ThemeProvider>
-        <Root
-          state={DEFAULT_STATE}
-          update={jest.fn()}
-          showCorruptNotice={false}
-          hasCorruptStash={false}
-          readCorruptStash={async () => null}
-          quickEntryDraft={second}
-          quickEntryPresentationToken={2}
-          onQuickEntryDraftDisposition={onDisposition}
-        />
-      </ThemeProvider>,
-    );
-
-    expect(onDisposition).toHaveBeenCalledTimes(1);
-    fireEvent.press(screen.getByLabelText(strings.nav.close));
-    expect(onDisposition).toHaveBeenCalledWith(second, 2);
-    expect(onDisposition).toHaveBeenCalledTimes(2);
-  });
-
-  it('does not dispose a quick entry when its persistence fails', async () => {
-    const onDisposition = jest.fn();
-    const update = jest.fn(async () => false);
-    const draft = {
-      type: 'expense' as const, amountStr: '500', category: 'Food', note: '',
-      y: 2026, m: 7, day: 10, repeat: 'never' as const,
-    };
-    render(
-      <ThemeProvider>
-        <Root
-          state={DEFAULT_STATE}
-          update={update}
-          showCorruptNotice={false}
-          hasCorruptStash={false}
-          readCorruptStash={async () => null}
-          quickEntryDraft={draft}
-          quickEntryPresentationToken={7}
-          onQuickEntryDraftDisposition={onDisposition}
-        />
-      </ThemeProvider>,
-    );
-
-    fireEvent.press(screen.getByLabelText(strings.entry.addExpense));
-    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
-    expect(onDisposition).not.toHaveBeenCalled();
-    expect(screen.getByTestId('entry-sheet')).toBeTruthy();
-  });
-
   it('renders successfully with default state', () => {
     const { root } = render(
       <ThemeProvider>
@@ -1028,12 +954,12 @@ describe('Root CSV backup flow (#75)', () => {
     const { update } = renderBackupRoot({ state: { ...DEFAULT_STATE, entries: [] } });
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importData));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
 
     await waitFor(() =>
       expect(alert).toHaveBeenCalledWith(
-        strings.settings.importData,
-        `${strings.importData.preview('Zaim', 2)} — ${strings.importData.duplicates(0)}`,
+        strings.settings.importFromZaim,
+        strings.zaim.entriesReady(2),
         expect.any(Array),
       ),
     );
@@ -1075,12 +1001,12 @@ describe('Root CSV backup flow (#75)', () => {
     const { update } = renderBackupRoot({ state: { ...DEFAULT_STATE, entries: ledger } });
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importData));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
 
     await waitFor(() =>
       expect(alert).toHaveBeenCalledWith(
-        strings.importData.noSupportedRowsTitle,
-        `${strings.importData.noSupportedRowsMessage} — ${strings.importData.duplicates(2)}`,
+        strings.zaim.noEntriesTitle,
+        `${strings.zaim.noEntriesMessage} — ${strings.zaim.skip.duplicate(2)}`,
       ),
     );
     expect(update).not.toHaveBeenCalled();
@@ -1101,12 +1027,12 @@ describe('Root CSV backup flow (#75)', () => {
     });
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importData));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
 
     await waitFor(() =>
       expect(alert).toHaveBeenCalledWith(
-        strings.importData.noSupportedRowsTitle,
-        `${strings.importData.noSupportedRowsMessage} — ${strings.importData.duplicates(1)}`,
+        strings.zaim.noEntriesTitle,
+        `${strings.zaim.noEntriesMessage} — ${strings.zaim.skip.duplicate(1)}`,
       ),
     );
     expect(update).not.toHaveBeenCalled();
@@ -1119,11 +1045,11 @@ describe('Root CSV backup flow (#75)', () => {
     const { update } = renderBackupRoot();
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importData));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
 
     await waitFor(() => expect(DocumentPicker.getDocumentAsync).toHaveBeenCalled());
     expect(update).not.toHaveBeenCalled();
-    expect(alert).toHaveBeenCalledWith(strings.importData.canceledTitle, strings.importData.canceledMessage);
+    expect(alert).not.toHaveBeenCalled();
     alert.mockRestore();
   });
 
@@ -1137,10 +1063,10 @@ describe('Root CSV backup flow (#75)', () => {
     const { update } = renderBackupRoot();
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importData));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
 
     await waitFor(() =>
-      expect(alert).toHaveBeenCalledWith(strings.importData.importFailedTitle, strings.importData.importFailedMessage),
+      expect(alert).toHaveBeenCalledWith(strings.zaim.importFailedTitle, strings.zaim.importFailedMessage),
     );
     expect(update).not.toHaveBeenCalled();
     alert.mockRestore();
@@ -1156,10 +1082,10 @@ describe('Root CSV backup flow (#75)', () => {
     const { update } = renderBackupRoot();
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importData));
+    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
 
     await waitFor(() =>
-      expect(alert).toHaveBeenCalledWith(strings.importData.unknownFormatTitle, strings.importData.unknownFormatMessage),
+      expect(alert).toHaveBeenCalledWith(strings.zaim.notZaimTitle, strings.zaim.notZaimMessage),
     );
     expect(update).not.toHaveBeenCalled();
     alert.mockRestore();

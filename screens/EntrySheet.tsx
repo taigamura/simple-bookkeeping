@@ -49,8 +49,7 @@ import {
   type Tone,
 } from '../theme';
 import { IconButton } from '../nav/IconButton';
-import { SHEET_CHROME, WEB_FRAME_INSET } from '../nav/BottomSheet';
-import { DatePickerBoundary, formatPickerDate } from '../platform/DatePickerBoundary';
+import { SHEET_CHROME, SHEET_TOP_STRIP, WEB_FRAME_INSET } from '../nav/BottomSheet';
 
 interface EntrySheetProps {
   expCats: string[];
@@ -66,7 +65,6 @@ interface EntrySheetProps {
    * Existing concrete or projected occurrence to edit (#43).
    */
   editing?: Transaction;
-  initialDraft?: EntryDraft;
   /** Settings management route: recurring cadences only and explicit stop copy. */
   repeatManagement?: boolean;
   /** Collects the draft on save; the host stores or splits the corresponding ledger item. */
@@ -131,19 +129,6 @@ const FOOTER_BUDGET = metrics.ctaHeight + 14;
 const NATIVE_BOTTOM_ALLOWANCE = 34;
 
 /**
- * Resolve the body's compact factor from the available window height.
- *
- * `SHEET_CHROME` already includes the top backdrop strip, handle, and sheet
- * padding. Keeping that accounting in one place is important: subtracting the
- * strip again makes ordinary phones compact earlier than necessary and turns
- * the scroll fallback into the default instead of the last resort.
- */
-export function entryCompactScale(windowHeight: number, chrome: number): number {
-  const budget = windowHeight - chrome - SHEET_CHROME - FOOTER_BUDGET;
-  return Math.max(MIN_COMPACT_SCALE, Math.min(1, budget / NATURAL_FORM_HEIGHT));
-}
-
-/**
  * How much the form shrinks to fit the screen it was opened on.
  *
  * The Entry sheet is a fixed-form layout with no scroll by design — you should
@@ -180,11 +165,16 @@ function useCompactScale(): number {
   // is reachable, so precision here buys nothing.
   const chrome =
     Platform.OS === 'web' ? WEB_FRAME_INSET : metrics.statusOffset + NATIVE_BOTTOM_ALLOWANCE;
-  // Entry opens at the host's expanded detent. Reserve the pinned footer
-  // before scaling the scrollable body; otherwise the form can still be just
-  // tall enough to push 0/00 below the fold even though the sheet is fullscreen.
-  return entryCompactScale(windowHeight, chrome);
+  // Entry opens at the host's expanded detent. Account for the host's dimmed
+  // top strip and reserve the pinned footer before scaling the scrollable body;
+  // otherwise the form can still be just tall enough to push 0/00 below the
+  // fold even though the sheet itself is fullscreen.
+  const budget = windowHeight - chrome - SHEET_TOP_STRIP - SHEET_CHROME - FOOTER_BUDGET;
+  return Math.max(MIN_COMPACT_SCALE, Math.min(1, budget / NATURAL_FORM_HEIGHT));
 }
+
+const formatDate = ({ y, m, day }: RecurrenceDate): string =>
+  `${String(y).padStart(4, '0')}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
 const parseDate = (value: string): RecurrenceDate | null => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -205,6 +195,43 @@ const parseDate = (value: string): RecurrenceDate | null => {
   return { y, m, day };
 };
 
+const formatTime = (date: Date): string =>
+  `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+const parseTime = (value: string): { hours: number; minutes: number } | null => {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return { hours, minutes };
+};
+
+const dateTimeFromParts = (date: RecurrenceDate, time: { hours: number; minutes: number }) =>
+  new Date(date.y, date.m, date.day, time.hours, time.minutes, 0, 0);
+
+const initialDateTime = (
+  source: RecurrenceDate,
+  timestamp?: string,
+): Date => {
+  const parsed = timestamp ? new Date(timestamp) : null;
+  const hours = parsed && !Number.isNaN(parsed.getTime()) ? parsed.getHours() : new Date().getHours();
+  const minutes =
+    parsed && !Number.isNaN(parsed.getTime()) ? parsed.getMinutes() : new Date().getMinutes();
+  return dateTimeFromParts(source, { hours, minutes });
+};
+
+const NativeDateTimePicker =
+  Platform.OS === 'ios' && process.env.NODE_ENV !== 'test'
+    ? (require('@react-native-community/datetimepicker').default as ComponentType<{
+        value: Date;
+        mode: 'datetime';
+        display: 'spinner';
+        onChange: (_event: unknown, date?: Date) => void;
+        style?: StyleProp<ViewStyle>;
+      }>)
+    : null;
+
 export function EntrySheet({
   expCats,
   incCats,
@@ -214,7 +241,6 @@ export function EntrySheet({
   today,
   symbol,
   editing,
-  initialDraft,
   repeatManagement = false,
   onSave,
   onDelete,
@@ -238,30 +264,36 @@ export function EntrySheet({
   // keypad keys do — below that a tap row stops being a comfortable target.
   const gap = Math.max(8, Math.round(14 * scale));
   const rowHeight = Math.max(40, Math.round(46 * scale));
+  // Latch so a double-tap cannot save twice while the host processes the save
+  // and dismisses the sheet.
+  const [saving, setSaving] = useState(false);
   const isEditing = editing != null;
   const catsFor = (t: TxType) => (t === 'income' ? incCats : expCats);
-  const [txType, setTxType] = useState<TxType>(initialDraft?.type ?? editing?.type ?? 'expense');
-  const [amountStr, setAmountStr] = useState(initialDraft?.amountStr ?? (editing ? String(editing.amount) : ''));
+  const [txType, setTxType] = useState<TxType>(editing?.type ?? 'expense');
+  const [amountStr, setAmountStr] = useState(editing ? String(editing.amount) : '');
   const [category, setCategory] = useState(
-    () => initialDraft?.category ?? editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
+    () => editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
   );
-  const [note, setNote] = useState(initialDraft?.note ?? editing?.note ?? '');
-  const [repeat, setRepeat] = useState<Repeat>(initialDraft?.repeat ?? editing?.repeat ?? 'never');
+  const [note, setNote] = useState(editing?.note ?? '');
+  const [repeat, setRepeat] = useState<Repeat>(editing?.repeat ?? 'never');
   const [weekendShift, setWeekendShift] = useState<WeekendShift>(
     editing?.occurrence?.weekendShift ?? 'after',
   );
-  const [entryDate, setEntryDate] = useState<RecurrenceDate>(
-    initialDraft ? { y: initialDraft.y, m: initialDraft.m, day: initialDraft.day } : editing?.occurrence?.scheduled ?? editing ?? { y, m, day },
-  );
-  const [dateText, setDateText] = useState(() => formatPickerDate(entryDate));
+  const initialDate = editing?.occurrence?.scheduled ?? editing ?? { y, m, day };
+  const [dateTime, setDateTime] = useState(() => initialDateTime(initialDate, editing?.timestamp));
+  const [dateText, setDateText] = useState(() => formatDate(initialDate));
+  const [timeText, setTimeText] = useState(() => formatTime(dateTime));
 
   const value = amountValue(amountStr);
   const enteredDate = parseDate(dateText);
-  const showDelete = isEditing && onDelete != null;
+  const enteredTime = parseTime(timeText);
+  const enteredDateTime =
+    enteredDate && enteredTime ? dateTimeFromParts(enteredDate, enteredTime) : null;
   const categoryIsCurrent = catsFor(txType).includes(category);
   const canSave =
     value > 0 &&
     enteredDate !== null &&
+    enteredTime !== null &&
     (!repeatManagement || categoryIsCurrent);
   const heroText = yen(value, symbol);
   const showWeekend = repeat === 'monthly' || repeat === 'yearly';
@@ -293,8 +325,17 @@ export function EntrySheet({
   };
 
   const save = () => {
-    if (!enteredDate) return;
-    const draft = { type: txType, amountStr, category, note, ...enteredDate, repeat };
+    if (!enteredDate || !enteredDateTime || saving) return;
+    const draft = {
+      type: txType,
+      amountStr,
+      category,
+      note,
+      ...enteredDate,
+      timestamp: enteredDateTime.toISOString(),
+      repeat,
+    };
+    setSaving(true);
     onSave(draft, weekendShift);
   };
 
@@ -357,35 +398,76 @@ export function EntrySheet({
             <Txt variant="optionLabel" tone="dim">
               {strings.entry.dateRowLabel}
             </Txt>
-            <View style={styles.dateControls}>
-              <DatePickerBoundary
-                value={enteredDate ?? entryDate}
-                today={today}
-                label={`${strings.entry.dateRowLabel} ${strings.entry.datePlaceholder}`}
-                onChange={(nextDate) => {
-                  setEntryDate(nextDate);
-                  setDateText(formatPickerDate(nextDate));
+            {NativeDateTimePicker ? (
+              <NativeDateTimePicker
+                value={dateTime}
+                mode="datetime"
+                display="spinner"
+                onChange={(_event, nextDate) => {
+                  if (!nextDate) return;
+                  setDateTime(nextDate);
+                  setDateText(formatDate({
+                    y: nextDate.getFullYear(),
+                    m: nextDate.getMonth(),
+                    day: nextDate.getDate(),
+                  }));
+                  setTimeText(formatTime(nextDate));
                 }}
-                onTextChange={setDateText}
+                style={styles.nativeDatePicker}
               />
-              <Pressable
-                onPress={() => {
-                  setEntryDate(today);
-                  setDateText(formatPickerDate(today));
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={strings.entry.useToday}
-                style={({ pressed }) => [styles.todayButton, pressed && { opacity: 0.6 }]}
-              >
-                <Txt variant="optionLabel" tone="positive">
-                  {strings.entry.today}
-                </Txt>
-              </Pressable>
-            </View>
+            ) : (
+              <View style={styles.dateControls}>
+                <TextInput
+                  value={dateText}
+                  onChangeText={setDateText}
+                  placeholder={strings.entry.datePlaceholder}
+                  placeholderTextColor={colors.dim}
+                  accessibilityLabel={`${strings.entry.dateRowLabel} ${strings.entry.datePlaceholder}`}
+                  accessibilityValue={{ text: dateText }}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={10}
+                  returnKeyType="done"
+                  style={[styles.dateInput, { color: colors.ink }]}
+                />
+                <TextInput
+                  value={timeText}
+                  onChangeText={setTimeText}
+                  placeholder="HH:MM"
+                  placeholderTextColor={colors.dim}
+                  accessibilityLabel="Time HH:MM"
+                  accessibilityValue={{ text: timeText }}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={5}
+                  returnKeyType="done"
+                  style={[styles.timeInput, { color: colors.ink }]}
+                />
+                <Pressable
+                  onPress={() => {
+                    const now = new Date();
+                    const nextDate = dateTimeFromParts(today, {
+                      hours: now.getHours(),
+                      minutes: now.getMinutes(),
+                    });
+                    setDateTime(nextDate);
+                    setDateText(formatDate(today));
+                    setTimeText(formatTime(nextDate));
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={strings.entry.useToday}
+                  style={({ pressed }) => [styles.todayButton, pressed && { opacity: 0.6 }]}
+                >
+                  <Txt variant="optionLabel" tone="positive">
+                    {strings.entry.today}
+                  </Txt>
+                </Pressable>
+              </View>
+            )}
           </View>
-          {!enteredDate && (
+          {(!enteredDate || !enteredTime) && (
             <Txt variant="secondary" tone="negative" style={styles.dateWarning}>
-              {strings.entry.invalidDate}
+              {!enteredDate ? strings.entry.invalidDate : 'Enter a valid time.'}
             </Txt>
           )}
         </View>
@@ -458,9 +540,12 @@ export function EntrySheet({
         <PressScale
           scale="surface"
           onPress={save}
-          disabled={!canSave}
+          disabled={!canSave || saving}
           accessibilityRole="button"
           accessibilityLabel={ctaLabel}
+          // Reports only the *form's* validity, not the mid-save latch: a screen
+          // reader announcing "dimmed" for 170ms after a successful save would be
+          // describing an animation, which is not information.
           accessibilityState={{ disabled: !canSave }}
           style={[
             styles.cta,
@@ -596,6 +681,18 @@ const styles = StyleSheet.create({
     fontFamily: mono.semibold,
     fontSize: 14.5,
     textAlign: 'right',
+  },
+  timeInput: {
+    width: 58,
+    minHeight: 44,
+    paddingHorizontal: 0,
+    fontFamily: mono.semibold,
+    fontSize: 14.5,
+    textAlign: 'right',
+  },
+  nativeDatePicker: {
+    width: 230,
+    height: 104,
   },
   todayButton: {
     minHeight: 44,

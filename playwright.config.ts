@@ -40,10 +40,7 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['github']] : 'list',
   use: {
     ...devices[BROWSER],
-    // In the WSL/Linux agent environment, an unopened IPv4 loopback socket can
-    // take minutes to reject a probe. The IPv6 loopback rejects immediately,
-    // so Playwright can start the configured web server without a false stall.
-    baseURL: 'http://[::1]:4173',
+    baseURL: 'http://localhost:4173',
     // Phone-shaped viewport: the web AppShell centers a maxWidth-402 frame
     // (24px backdrop padding), so 430 wide renders the app at full phone width.
     viewport: { width: 430, height: 932 },
@@ -55,7 +52,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'node e2e/serve.mjs',
-    url: 'http://[::1]:4173',
+    url: 'http://localhost:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },

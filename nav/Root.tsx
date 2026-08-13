@@ -23,17 +23,12 @@ import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanima
 
 import {
   activeRecurrences,
-  categoryEntities,
-  categoryIdFor,
   clampDay,
+  decodeZaimBytes,
   deleteLedgerItem,
   entriesForMonth,
   entriesThrough,
-  applyImportPreview,
-  previewImportBytes,
-  zaimImportAdapter,
-  moneyforwardMeImportAdapter,
-  okaneRecoImportAdapter,
+  parseZaimCsv,
   periodMonths,
   promoteCategory,
   pruneBudgets,
@@ -46,17 +41,7 @@ import {
   type Transaction,
   type WeekendShift,
   type YM,
-  type ImportSkipTally,
-  householdSyncStatus,
-  createHouseholdBackup,
-  previewHouseholdBackup,
-  restoreHouseholdBackup,
-  createSyncState,
-  type HouseholdBackupPayload,
-  type HouseholdBackupStore,
-  type SyncHistoryRow,
-  type SyncStatusModel,
-  type HouseholdPairingState,
+  type ZaimSkipTally,
 } from '../domain';
 import { strings } from '../i18n';
 import { entrySaved } from '../platform/haptics';
@@ -67,7 +52,6 @@ import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
 import { RepeatsSheet } from '../screens/RepeatsSheet';
 import { SettingsSheet } from '../screens/SettingsSheet';
-import { HouseholdSyncSheet } from '../screens/HouseholdSyncSheet';
 import { SummaryScreen } from '../screens/SummaryScreen';
 import type { AppState, UseStore } from '../store';
 import { easings, metrics, useMotion, useTheme, withAppDelay, withAppTiming } from '../theme';
@@ -79,31 +63,13 @@ import type { Sheet, Tab } from './types';
 
 interface RootProps {
   state: AppState;
-  /** Resolves true only after the patch is durably persisted. */
-  update: (patch: Partial<AppState>) => Promise<boolean> | void;
+  update: (patch: Partial<AppState>) => void;
   /** True for this session if boot's load() stashed an unreadable blob (#28). */
   showCorruptNotice: boolean;
   /** Whether a corrupt-stash blob exists — gates the Settings recovery row. */
   hasCorruptStash: boolean;
   readCorruptStash: () => Promise<string | null>;
   persistenceNotice?: UseStore['persistenceNotice'];
-  quickEntryDraft?: EntryDraft | null;
-  quickEntryPresentationToken?: number;
-  onQuickEntryDraftDisposition?: (draft: EntryDraft, token: number) => void;
-  /** Runtime-owned nearby state. Defaults to a truthful unpaired/offline surface. */
-  householdSync?: {
-    model: SyncStatusModel;
-    history: SyncHistoryRow[];
-    onSyncNow: () => void;
-    onRestore: (transactionId: string, operationId: string) => void;
-    pairing?: {
-      state: HouseholdPairingState;
-      deviceId: string;
-      onRevokeDevice: (deviceId: string) => void;
-      onExportRecovery: (passphrase: string) => Promise<string>;
-      onRestoreRecovery: (pack: string, passphrase: string) => Promise<boolean>;
-    };
-  };
 }
 
 // RN Web's Alert.alert is a no-op stub (react-native-web has no dialog
@@ -122,69 +88,30 @@ function notify(title: string, message: string) {
 // " — 12 transfers skipped, 10 malformed rows skipped" (empty when nothing
 // was skipped) so the confirmation shows a breakdown by reason, not just an
 // opaque "some rows were skipped".
-function skipSummary(skipped: ImportSkipTally): string {
-  const { skip } = strings.importData;
+function skipSummary(skipped: ZaimSkipTally): string {
+  const { skip } = strings.zaim;
   const parts: string[] = [];
-  if (skipped.unknownFormat > 0) parts.push(skip.unknownFormat(skipped.unknownFormat));
-  if (skipped.ambiguousFormat > 0) parts.push(skip.ambiguousFormat(skipped.ambiguousFormat));
   if (skipped.transfer > 0) parts.push(skip.transfer(skipped.transfer));
   if (skipped.balanceAdjustment > 0) parts.push(skip.balanceAdjustment(skipped.balanceAdjustment));
   if (skipped.malformed > 0) parts.push(skip.malformedRow(skipped.malformed));
-  if (skipped.currencyMismatch > 0) parts.push(skip.currencyMismatch(skipped.currencyMismatch));
-  if (skipped.unsupportedField > 0) parts.push(skip.unsupportedField(skipped.unsupportedField));
-  if (skipped.invalidDate > 0) parts.push(skip.invalidDate(skipped.invalidDate));
-  if (skipped.invalidAmount > 0) parts.push(skip.invalidAmount(skipped.invalidAmount));
-  if (skipped.emptyCategory > 0) parts.push(skip.emptyCategory(skipped.emptyCategory));
-  if (skipped.unsupportedType > 0) parts.push(skip.unsupportedType(skipped.unsupportedType));
-  if (skipped.outOfRange > 0) parts.push(skip.outOfRange(skipped.outOfRange));
+  if (skipped.duplicate > 0) parts.push(skip.duplicate(skipped.duplicate));
   return parts.length > 0 ? ` — ${parts.join(', ')}` : '';
 }
 
 function confirm(
   title: string,
   message: string,
-  onConfirm: () => void | Promise<void>,
+  onConfirm: () => void,
   confirmLabel: string = strings.common.import,
   destructive = false,
-  onCancel?: () => void,
 ) {
   if (Platform.OS === 'web') {
-    if (window.confirm(`${title}\n${message}`)) void Promise.resolve(onConfirm());
-    else onCancel?.();
+    if (window.confirm(`${title}\n${message}`)) onConfirm();
   } else {
     Alert.alert(title, message, [
-      { text: strings.common.cancel, style: 'cancel', onPress: onCancel },
+      { text: strings.common.cancel, style: 'cancel' },
       { text: confirmLabel, style: destructive ? 'destructive' : 'default', onPress: onConfirm },
     ]);
-  }
-}
-
-function requestPassphrase(title: string, message: string, confirmLabel: string): Promise<string | null> {
-  if (Platform.OS === 'web') return Promise.resolve(window.prompt(`${title}\n${message}`));
-  return new Promise((resolve) => {
-    Alert.prompt(title, message, [
-      { text: strings.common.cancel, style: 'cancel', onPress: () => resolve(null) },
-      { text: confirmLabel, onPress: (value: string | undefined) => resolve(value ?? null) },
-    ], 'secure-text');
-  });
-}
-
-const IMPORT_MIME_TYPES = [
-  'text/csv',
-  'text/comma-separated-values',
-  'application/csv',
-  'application/vnd.ms-excel',
-  '.csv',
-];
-const MAX_IMPORT_FILE_BYTES = 5 * 1024 * 1024;
-const MAX_IMPORT_ROWS = 10_000;
-
-function providerLabel(provider: string): string {
-  switch (provider) {
-    case 'moneyforward-me': return 'MoneyForward ME';
-    case 'okane-reco': return 'おカネレコ';
-    case 'zaim': return 'Zaim';
-    default: return provider;
   }
 }
 
@@ -410,20 +337,12 @@ function Shell({
   hasCorruptStash,
   readCorruptStash,
   persistenceNotice = null,
-  quickEntryDraft = null,
-  quickEntryPresentationToken = 0,
-  onQuickEntryDraftDisposition,
-  householdSync = {
-    model: householdSyncStatus({ paired: false, foreground: true, partnerPresent: false, queuedOperationCount: 0 }),
-    history: [],
-    onSyncNow: () => {},
-    onRestore: () => {},
-  },
 }: RootProps) {
   const [tab, setTab] = useState<Tab>('calendar');
   const [sheet, setSheet] = useState<Sheet>(null);
   const { enabled: motionEnabled } = useMotion();
   const { colors } = useTheme();
+  const [saveWave, setSaveWave] = useState(0);
   // Which day just received a saved entry, and a bump counter so two saves onto
   // the *same* day still each play the landing pulse. The Calendar screen
   // forwards this to the matching day cell; nothing else reads it.
@@ -431,7 +350,6 @@ function Shell({
     day: 0,
     nonce: 0,
   });
-  const [saveWaveNonce, setSaveWaveNonce] = useState(0);
   // Fires the pulse after the sheet's own dismiss animation clears the screen
   // (see `handleSubmit`) rather than the instant a save happens. Dropped on
   // unmount so a save right before navigating away can't set state on a torn
@@ -445,8 +363,6 @@ function Shell({
   );
   // Which entry the Entry sheet is editing (#43); null = create mode.
   const [editing, setEditing] = useState<Transaction | null>(null);
-  const [activeQuickEntryDraft, setActiveQuickEntryDraft] = useState<EntryDraft | null>(null);
-  const activeQuickEntryToken = quickEntryPresentationToken;
   const [entryContentHeight, setEntryContentHeight] = useState(0);
 
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
@@ -513,46 +429,21 @@ function Shell({
       );
     } else if (persistenceNotice === 'save-failed') {
       notify(strings.persistenceNotice.saveFailedTitle, strings.persistenceNotice.saveFailedMessage);
-    } else if (persistenceNotice === 'quick-entry-cache-failed') {
-      notify('Quick entry unavailable', 'Your ledger save succeeded, but the quick-entry cache could not be updated. Retry when the shared container is available.');
     }
   }, [persistenceNotice]);
-
-  useEffect(() => {
-    if (!quickEntryDraft) return;
-    setActiveQuickEntryDraft(quickEntryDraft);
-    setEditing(null);
-    setEntryContentHeight(0);
-    setSheet('entry');
-  }, [quickEntryDraft, quickEntryPresentationToken]);
-
-  const disposeQuickEntry = () => {
-    if (!activeQuickEntryDraft || !quickEntryDraft) return false;
-    const draft = activeQuickEntryDraft;
-    setActiveQuickEntryDraft(null);
-    setSheet(null);
-    onQuickEntryDraftDisposition?.(draft, activeQuickEntryToken);
-    return true;
-  };
 
   // Single-sheet-host handlers (#60): the unified sheet host replaces the
   // three separate modals. Sheet state is authoritative; dismissal while a sheet
   // is still requested gets reconciled by re-presenting.
-  const closeSheet = () => {
-    if (sheet === 'entry' && disposeQuickEntry()) return;
-    setSheet(null);
-  };
+  const closeSheet = () => setSheet(null);
 
   const openSettings = () => setSheet('settings');
   const openRepeats = () => setSheet('repeats');
   const openBudgets = () => setSheet('budgets');
-  const openHouseholdSync = () => setSheet('household-sync');
   const backToSettings = () => setSheet('settings');
 
   // openEntry(): the ＋ button — always create mode (clear any prior editing).
   const openEntry = () => {
-    if (activeQuickEntryDraft) return;
-    setActiveQuickEntryDraft(null);
     setEditing(null);
     setEntryContentHeight(0);
     setSheet('entry');
@@ -590,87 +481,6 @@ function Shell({
     }
   };
 
-  // Local household backup is deliberately separate from the portable CSV.
-  // This app currently has one local household projection, so its identity is
-  // loaded from the same checkpoint used by restore rather than accepted from
-  // the picker/caller. No device preferences or pairing key material enter it.
-  const householdBackupPayload = (): HouseholdBackupPayload => ({
-    household: state.household,
-    sync: createSyncState('local-household', state.household.entries),
-  });
-  const householdBackupStore: HouseholdBackupStore = {
-    load: async () => householdBackupPayload(),
-    save: async (payload) => {
-      const saved = await update({
-        entries: payload.household.entries,
-        recurrenceRules: payload.household.recurrenceRules,
-        expCats: payload.household.categories.filter((category) => category.type === 'expense').map((category) => category.label),
-        incCats: payload.household.categories.filter((category) => category.type === 'income').map((category) => category.label),
-        budgets: payload.household.budgets,
-        currency: payload.household.currency,
-        household: payload.household,
-      });
-      if (saved === false) throw new Error('backup restore save failed');
-    },
-  };
-  const exportHouseholdBackup = async () => {
-    if (householdSync.pairing) {
-      const passphrase = await requestPassphrase(
-        strings.sync.recoveryExportTitle,
-        strings.sync.recoveryPassphrasePrompt,
-        strings.settings.exportHouseholdBackup,
-      );
-      if (!passphrase) return;
-      try {
-        const pack = await householdSync.pairing.onExportRecovery(passphrase);
-        await shareTextFile('kaji-household-recovery.kaji', pack);
-      } catch {
-        notify(strings.sync.recoveryFailedTitle, strings.sync.recoveryFailed);
-      }
-      return;
-    }
-    try {
-      await shareTextFile('kaji-household-backup.json', createHouseholdBackup(householdBackupPayload()));
-    } catch {
-      notify(strings.zaim.exportFailedTitle, strings.zaim.exportFailedMessage);
-    }
-  };
-  const importHouseholdBackup = async () => {
-    try {
-      const picked = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
-      if (picked.canceled) return;
-      const asset = picked.assets[0];
-      const text = Platform.OS === 'web' ? await asset.file!.text() : await new File(asset.uri).text();
-      if (householdSync.pairing) {
-        const passphrase = await requestPassphrase(
-          strings.sync.recoveryRestoreTitle,
-          strings.sync.recoveryPassphrasePrompt,
-          strings.common.import,
-        );
-        if (!passphrase) return;
-        try {
-          await householdSync.pairing.onRestoreRecovery(text, passphrase);
-        } catch {
-          notify(strings.sync.recoveryFailedTitle, strings.sync.recoveryFailed);
-        }
-        return;
-      }
-      const preview = previewHouseholdBackup(text);
-      confirm(
-        strings.settings.importHouseholdBackup,
-        `${preview.entries} entries, ${preview.recurrenceRules} repeating rules, ${preview.categories} categories, and ${preview.budgets} budgets will replace this household.`,
-        () => {
-          void restoreHouseholdBackup(householdBackupStore, text, { confirm: true }).catch(() => {
-            notify(strings.zaim.importFailedTitle, strings.zaim.importFailedMessage);
-          });
-        },
-        strings.common.import,
-      );
-    } catch {
-      notify(strings.zaim.importFailedTitle, strings.zaim.importFailedMessage);
-    }
-  };
-
   // exportCorruptStash(): share the raw unreadable blob kept by the #28 safety
   // net, so a stuck user can get their pre-corruption data off the device.
   const exportCorruptStash = async () => {
@@ -682,82 +492,66 @@ function Shell({
     }
   };
 
-  // importData(): preview exactly one supported provider without writes, then
-  // commit the complete preview in one durable store patch after confirmation.
-  const importData = async () => {
+  // importZaim(): pick a Zaim CSV export → decode (Shift-JIS or UTF-8) →
+  // parse against the current ledger (so re-importing an overlapping export
+  // skips rows already present) → native Import/Cancel confirmation with the
+  // entry count and skip-reason breakdown → merge entries and any new
+  // categories into the ledger through the normal update() path. Canceling
+  // the picker or the confirmation writes nothing.
+  const importZaim = async () => {
     try {
-      const picked = await DocumentPicker.getDocumentAsync({ type: IMPORT_MIME_TYPES });
-      if (picked.canceled) {
-        notify(strings.importData.canceledTitle, strings.importData.canceledMessage);
-        return;
-      }
+      const picked = await DocumentPicker.getDocumentAsync({ type: 'text/csv' });
+      if (picked.canceled) return;
 
       const asset = picked.assets[0];
-      if (asset.size !== undefined && asset.size > MAX_IMPORT_FILE_BYTES) {
-        notify(strings.importData.fileTooLargeTitle, strings.importData.fileTooLargeMessage);
-        return;
-      }
       const buffer =
         Platform.OS === 'web'
           ? await asset.file!.arrayBuffer()
           : await new File(asset.uri).arrayBuffer();
       const bytes = new Uint8Array(buffer);
-      if (bytes.byteLength > MAX_IMPORT_FILE_BYTES) {
-        notify(strings.importData.fileTooLargeTitle, strings.importData.fileTooLargeMessage);
+      const text = decodeZaimBytes(bytes);
+      if (!text) {
+        notify(strings.zaim.notZaimTitle, strings.zaim.notZaimMessage);
         return;
       }
-      // All supported contracts use one physical CSV record per line. Limit
-      // before adapter parsing so a malformed file cannot allocate unbounded
-      // records in the preview path.
-      if (bytes.filter((byte) => byte === 10).length > MAX_IMPORT_ROWS) {
-        notify(strings.importData.fileTooLargeTitle, strings.importData.fileTooLargeMessage);
-        return;
-      }
-      const preview = previewImportBytes(bytes, {
+
+      const now = new Date();
+      const today = {
+        y: now.getFullYear(),
+        m: now.getMonth(),
+        day: now.getDate(),
+      };
+      const recurringHistory = entriesThrough(
+        { entries: [], recurrenceRules: state.recurrenceRules },
+        today,
+      );
+      const result = parseZaimCsv(text, {
         expCats: state.expCats,
         incCats: state.incCats,
-        entries: state.entries,
-      }, [zaimImportAdapter, moneyforwardMeImportAdapter, okaneRecoImportAdapter], {
-        currency: state.currency,
-        // Preserve the Zaim flow's protection for records saved before import
-        // provenance existed; newly imported rows use source provenance.
-        matchLegacyRows: true,
+        // All persisted one-time entries participate in duplicate detection,
+        // including future-dated rows. Infinite rules contribute only their
+        // finite concrete history through today.
+        entries: [...state.entries, ...recurringHistory],
       });
-      if (preview.status === 'no-write') {
-        const isAmbiguous = preview.reason === 'ambiguousFormat';
+      if (result.entries.length === 0) {
         notify(
-          isAmbiguous ? strings.importData.ambiguousFormatTitle : strings.importData.unknownFormatTitle,
-          isAmbiguous ? strings.importData.ambiguousFormatMessage : strings.importData.unknownFormatMessage,
-        );
-        return;
-      }
-      if (preview.entries.length === 0) {
-        notify(
-          strings.importData.noSupportedRowsTitle,
-          `${strings.importData.noSupportedRowsMessage} — ${strings.importData.duplicates(preview.skipped.duplicate)}${skipSummary(preview.skipped)}`,
+          strings.zaim.noEntriesTitle,
+          `${strings.zaim.noEntriesMessage}${skipSummary(result.skipped)}`,
         );
         return;
       }
 
-      const provider = providerLabel(preview.provider!);
-      const tally = ` — ${strings.importData.duplicates(preview.skipped.duplicate)}${skipSummary(preview.skipped)}`;
-      const message = `${strings.importData.preview(provider, preview.entries.length)}${tally}`;
-      confirm(strings.settings.importData, message, async () => {
-        try {
-          const applied = applyImportPreview({ entries: state.entries, expCats: state.expCats, incCats: state.incCats }, preview);
-          const persisted = await update(applied);
-          if (persisted === false) {
-            notify(strings.importData.importFailedTitle, strings.importData.importFailedMessage);
-            return;
-          }
-          setSheet(null);
-          notify(strings.importData.completeTitle, `${strings.importData.complete(provider, preview.entries.length)}${tally}`);
-        } catch {
-          notify(strings.importData.importFailedTitle, strings.importData.importFailedMessage);
-        }
-      }, strings.common.import, false, () => notify(strings.importData.canceledTitle, strings.importData.canceledMessage));
+      const message = `${strings.zaim.entriesReady(result.entries.length)}${skipSummary(result.skipped)}`;
+      confirm(strings.settings.importFromZaim, message, () => {
+        update({
+          entries: [...state.entries, ...result.entries],
+          expCats: result.expCats,
+          incCats: result.incCats,
+        });
+        setSheet(null);
+      });
     } catch {
-      notify(strings.importData.importFailedTitle, strings.importData.importFailedMessage);
+      notify(strings.zaim.importFailedTitle, strings.zaim.importFailedMessage);
       return;
     }
   };
@@ -776,28 +570,21 @@ function Shell({
   // projected occurrence splits its rule so past history remains unchanged —
   // `commit` does the actual persistence once a scope is settled; the check
   // below decides whether that scope needs asking for at all.
-  const handleSubmit = async (draft: EntryDraft, weekendShift: WeekendShift): Promise<boolean> => {
-    const categories = categoryEntities(state.expCats, state.incCats, state.household.categories);
-    const identityDraft: EntryDraft = {
-      ...draft,
-      categoryId: categoryIdFor(draft.category, draft.type, categories),
-    };
-    const commit = async (scope: 'one' | 'future'): Promise<boolean> => {
-      const next = saveLedgerItem(ledger, identityDraft, weekendShift, editing ?? undefined, scope);
-      if (next === ledger) return false;
-      const persisted = update({
+  const handleSubmit = (draft: EntryDraft, weekendShift: WeekendShift) => {
+    const commit = (scope: 'one' | 'future') => {
+      const next = saveLedgerItem(ledger, draft, weekendShift, editing ?? undefined, scope);
+      if (next === ledger) return;
+      entrySaved();
+      if (motionEnabled) setSaveWave((nonce) => nonce + 1);
+      update({
         ...next,
         ...(draft.type === 'expense'
           ? { expCats: promoteCategory(state.expCats, draft.category) }
           : { incCats: promoteCategory(state.incCats, draft.category) }),
       });
-      if (persisted !== undefined && !(await persisted)) return false;
-
-      entrySaved();
-      setSaveWaveNonce((nonce) => nonce + 1);
       if (sheet === 'repeat-entry') {
         setSheet('repeats');
-        return true;
+        return;
       }
       let landing = { y: draft.y, m: draft.m, day: draft.day };
       // A `scope: 'one'` save doesn't necessarily land on `draft`'s own date:
@@ -864,7 +651,6 @@ function Shell({
       } else {
         fireLandingPulse();
       }
-      return true;
     };
 
     // Editing a specific occurrence of a still-repeating series is ambiguous
@@ -876,10 +662,13 @@ function Shell({
     // edit sets Repeat to Never, since ending a series has no "just this
     // occurrence" reading — it can only mean "and future".
     if (sheet !== 'repeat-entry' && editing?.occurrence && draft.repeat && draft.repeat !== 'never') {
-      chooseRecurringSave(() => void commit('one'), () => void commit('future'));
-      return false;
+      chooseRecurringSave(
+        () => commit('one'),
+        () => commit('future'),
+      );
+      return;
     }
-    return commit('future');
+    commit('future');
   };
 
   // handleDelete(): one-time entries use the existing destructive confirm;
@@ -996,7 +785,6 @@ function Shell({
       <BottomSheet
         visible={sheet !== null}
         onClose={sheet === 'repeat-entry' ? openRepeats : closeSheet}
-        enableContentPanningGesture={sheet === 'entry' || sheet === 'repeat-entry'}
         // Entry is a focused calculator, so start it at the largest available
         // detent. The form still compacts its controls to avoid making the
         // bottom keypad rows a scroll target on short iPhones.
@@ -1008,7 +796,6 @@ function Shell({
           sheet={sheet}
           entry={
             <EntrySheet
-            key={activeQuickEntryDraft ? `quick-entry-${quickEntryPresentationToken}` : 'new-entry'}
             expCats={state.expCats}
             incCats={state.incCats}
             y={cursor.y}
@@ -1017,7 +804,6 @@ function Shell({
             today={todayDate}
             symbol={symbol}
             editing={editing ?? undefined}
-            initialDraft={activeQuickEntryDraft ?? undefined}
             repeatManagement={sheet === 'repeat-entry'}
             onSave={handleSubmit}
             onDelete={handleDelete}
@@ -1039,12 +825,8 @@ function Shell({
             activeRepeatCount={activeRepeats.length}
             onOpenRepeats={openRepeats}
             onOpenBudgets={openBudgets}
-            onOpenHouseholdSync={openHouseholdSync}
-            nearbySharingPaired={householdSync.model.syncNow !== 'not-paired'}
             onExportData={exportData}
-            onImportData={importData}
-            onExportHouseholdBackup={exportHouseholdBackup}
-            onImportHouseholdBackup={importHouseholdBackup}
+            onImportZaim={importZaim}
             hasCorruptStash={hasCorruptStash}
             onExportCorruptStash={exportCorruptStash}
             onDeleteAllData={deleteAllData}
@@ -1066,25 +848,6 @@ function Shell({
             ScrollContainer={BottomSheetScrollView}
             />
           }
-          householdSync={
-            <HouseholdSyncSheet
-              model={householdSync.model}
-              history={householdSync.history}
-              onSyncNow={householdSync.onSyncNow}
-              onRestore={householdSync.onRestore}
-              pairing={householdSync.pairing ? {
-                state: householdSync.pairing.state,
-                deviceId: householdSync.pairing.deviceId,
-                onRevokeDevice: (deviceId) => confirm(
-                  strings.sync.revokeDevice,
-                  strings.sync.deviceLimitWarning,
-                  () => householdSync.pairing?.onRevokeDevice(deviceId),
-                ),
-              } : undefined}
-              onClose={backToSettings}
-              ScrollContainer={BottomSheetScrollView}
-            />
-          }
           repeats={
             <RepeatsSheet
             recurrenceRules={state.recurrenceRules}
@@ -1097,7 +860,12 @@ function Shell({
           }
         />
       </BottomSheet>
-      <SaveWave nonce={saveWaveNonce} color={colors.positive} testID="save-wave-overlay" />
+
+      <SaveWave
+        nonce={saveWave}
+        color={colors.positive}
+        originFromBottom={metrics.ctaHeight * 1.5}
+      />
     </View>
   );
 }
@@ -1112,14 +880,12 @@ function SheetBody({
   entry,
   settings,
   budgets,
-  householdSync,
   repeats,
 }: {
   sheet: Sheet | null;
   entry: React.ReactNode;
   settings: React.ReactNode;
   budgets: React.ReactNode;
-  householdSync: React.ReactNode;
   repeats: React.ReactNode;
 }) {
   // BottomSheetView measures its direct child on native. A Fragment can
@@ -1132,11 +898,9 @@ function SheetBody({
       ? entry
       : sheet === 'settings'
         ? settings
-          : sheet === 'budgets'
-            ? budgets
-            : sheet === 'household-sync'
-              ? householdSync
-            : sheet === 'repeats'
+        : sheet === 'budgets'
+          ? budgets
+          : sheet === 'repeats'
             ? repeats
             : null;
 

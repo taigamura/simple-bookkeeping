@@ -1,13 +1,13 @@
 {
   "version": "1.0",
   "created_at": "2026-07-08T11:55:33+00:00",
-  "updated_at": "2026-08-09T22:07:44+00:00",
+  "updated_at": "2026-07-13T09:58:36+00:00",
   "repository": "",
   "queue": [
     {
       "source": "github",
-      "issue_number": 89,
-      "title": "Enforce the no-internet boundary and remove dormant telemetry",
+      "issue_number": 74,
+      "title": "Recover safely from invalid or failed ledger persistence",
       "priority": "P0",
       "labels": [
         {
@@ -25,17 +25,17 @@
       ],
       "milestone": null,
       "dependencies": [],
-      "id": "github-89",
+      "id": "github-74",
       "status": "completed",
-      "added_at": "2026-08-09T16:05:00+00:00",
-      "started_at": "2026-08-09T16:08:11+00:00",
-      "completed_at": "2026-08-09T16:28:00+00:00",
-      "error_message": "Host-verified non-UI slice: typecheck, 427 Jest tests, production export, and privacy invariant passed; canonical Playwright is unchanged by this issue."
+      "added_at": "2026-07-13T06:47:33+00:00",
+      "started_at": "2026-07-13T07:08:58+00:00",
+      "completed_at": "2026-07-13T07:44:12+00:00",
+      "error_message": ""
     },
     {
       "source": "github",
-      "issue_number": 90,
-      "title": "Migrate ledger entities to stable household identities",
+      "issue_number": 75,
+      "title": "Make CSV export/import a verified backup flow",
       "priority": "P0",
       "labels": [
         {
@@ -53,17 +53,17 @@
       ],
       "milestone": null,
       "dependencies": [],
-      "id": "github-90",
+      "id": "github-75",
       "status": "completed",
-      "added_at": "2026-08-09T16:05:01+00:00",
-      "started_at": "2026-08-09T16:33:22+00:00",
-      "completed_at": "2026-08-09T16:57:03+00:00",
-      "error_message": "Monitor-verified completion after harness checkbox false negative: commits 9e88fb1 and ca66803; typecheck, 434 Jest tests, production web export, and 19 canonical Playwright scenarios passed."
+      "added_at": "2026-07-13T06:47:34+00:00",
+      "started_at": "2026-07-13T07:44:12+00:00",
+      "completed_at": "2026-07-13T08:03:55+00:00",
+      "error_message": ""
     },
     {
       "source": "github",
-      "issue_number": 91,
-      "title": "Reject unsafe imported financial rows before persistence",
+      "issue_number": 77,
+      "title": "Freeze V1 privacy mode and remove monetization remnants",
       "priority": "P0",
       "labels": [
         {
@@ -81,527 +81,17 @@
       ],
       "milestone": null,
       "dependencies": [],
-      "id": "github-91",
+      "id": "github-77",
       "status": "completed",
-      "added_at": "2026-08-09T16:05:01+00:00",
-      "started_at": "2026-08-09T16:58:44+00:00",
-      "completed_at": "2026-08-09T17:06:16+00:00",
+      "added_at": "2026-07-13T06:47:36+00:00",
+      "started_at": "2026-07-13T08:03:55+00:00",
+      "completed_at": "2026-07-13T09:58:36+00:00",
       "error_message": ""
     },
     {
       "source": "github",
-      "issue_number": 92,
-      "title": "Replace EntrySheet date text with a temporary native picker",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [],
-      "id": "github-92",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:02+00:00",
-      "started_at": "2026-08-09T17:06:16+00:00",
-      "completed_at": "2026-08-09T17:18:52+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 93,
-      "title": "Escalate EntrySheet to fullscreen before scrolling",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [],
-      "id": "github-93",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:03+00:00",
-      "started_at": "2026-08-09T17:18:52+00:00",
-      "completed_at": "2026-08-09T17:26:02+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 94,
-      "title": "Show the current-month today allowance",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        90
-      ],
-      "id": "github-94",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:04+00:00",
-      "started_at": "2026-08-09T17:26:02+00:00",
-      "completed_at": "2026-08-09T17:32:39+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 95,
-      "title": "Converge newly added transactions across two replicas",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        90
-      ],
-      "id": "github-95",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:04+00:00",
-      "started_at": "2026-08-09T17:32:40+00:00",
-      "completed_at": "2026-08-09T17:39:32+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 96,
-      "title": "Reconcile external quick-entry commands exactly once",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        90
-      ],
-      "id": "github-96",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:05+00:00",
-      "started_at": "2026-08-09T17:39:32+00:00",
-      "completed_at": "2026-08-09T17:47:21+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 97,
-      "title": "Create a provider-neutral import pipeline",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        90,
-        91
-      ],
-      "id": "github-97",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:06+00:00",
-      "started_at": "2026-08-09T17:47:21+00:00",
-      "completed_at": "2026-08-09T18:00:00+00:00",
-      "error_message": "Monitor-verified after Ralph misclassified a Playwright launch block as quota exhaustion: commit 55f3ed1; 467 Jest tests, typecheck, web export, and 19 canonical Playwright scenarios passed."
-    },
-    {
-      "source": "github",
-      "issue_number": 98,
-      "title": "Dismiss EntrySheet from safe downward drags",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        93
-      ],
-      "id": "github-98",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:06+00:00",
-      "started_at": "2026-08-09T17:59:49+00:00",
-      "completed_at": "2026-08-09T18:10:48+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 99,
-      "title": "Move save confirmation to a fullscreen app-canvas wave",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        98
-      ],
-      "id": "github-99",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:07+00:00",
-      "started_at": "2026-08-09T18:10:48+00:00",
-      "completed_at": "2026-08-09T18:20:27+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 100,
-      "title": "Merge transaction edits and remove-wins deletes with history",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        95
-      ],
-      "id": "github-100",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:08+00:00",
-      "started_at": "2026-08-09T18:20:27+00:00",
-      "completed_at": "2026-08-09T18:27:36+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 101,
-      "title": "Synchronize unordered categories, budgets, and household currency",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        100
-      ],
-      "id": "github-101",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:09+00:00",
-      "started_at": "2026-08-09T18:27:36+00:00",
-      "completed_at": "2026-08-09T18:33:05+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 102,
-      "title": "Synchronize recurrence rules, exceptions, and deterministic splits",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        100,
-        101
-      ],
-      "id": "github-102",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:09+00:00",
-      "started_at": "2026-08-09T18:33:05+00:00",
-      "completed_at": "2026-08-09T18:43:10+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 103,
-      "title": "Pair exactly two household phones with authenticated keys",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        95
-      ],
-      "id": "github-103",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:12+00:00",
-      "started_at": "2026-08-09T18:43:10+00:00",
-      "completed_at": "2026-08-09T18:58:35+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 104,
-      "title": "Synchronize automatically over foreground nearby P2P",
-      "priority": "P0",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHIw",
-          "name": "P0",
-          "description": "Critical / must ship first",
-          "color": "B60205"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        102,
-        103
-      ],
-      "id": "github-104",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:12+00:00",
-      "started_at": "2026-08-09T18:58:35+00:00",
-      "completed_at": "2026-08-09T19:16:33+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 105,
-      "title": "Expose nearby sync status, history, and recovery actions",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        100,
-        104
-      ],
-      "id": "github-105",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:13+00:00",
-      "started_at": "2026-08-09T19:16:33+00:00",
-      "completed_at": "2026-08-09T19:28:19+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 106,
-      "title": "Revoke a lost phone and pair its replacement",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        104
-      ],
-      "id": "github-106",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:14+00:00",
-      "started_at": "2026-08-09T19:28:19+00:00",
-      "completed_at": "2026-08-09T19:43:34+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 107,
-      "title": "Export and restore an encrypted household recovery pack",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        104
-      ],
-      "id": "github-107",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:15+00:00",
-      "started_at": "2026-08-09T19:43:34+00:00",
-      "completed_at": "2026-08-09T20:09:05+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 108,
-      "title": "Create the App Group inbox and native extension bridge",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        96
-      ],
-      "id": "github-108",
-      "status": "completed",
-      "added_at": "2026-08-09T16:05:15+00:00",
-      "started_at": "2026-08-09T20:09:05+00:00",
-      "completed_at": "2026-08-09T20:16:24+00:00",
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 109,
-      "title": "Verify the current MoneyForward CSV contract",
+      "issue_number": 76,
+      "title": "Certify the accessible bilingual core journey",
       "priority": "P1",
       "labels": [
         {
@@ -619,107 +109,17 @@
       ],
       "milestone": null,
       "dependencies": [],
-      "id": "github-109",
-      "status": "failed",
-      "added_at": "2026-08-09T16:05:16+00:00",
-      "started_at": "2026-08-09T20:16:24+00:00",
-      "completed_at": "2026-08-09T21:39:30+00:00",
-      "error_message": "Evidence gate: the committed research report explicitly lacks a current captured/versioned export for encoding, date representation, amount direction, transfer values, and ID repeatability; issue acceptance criteria are not met."
-    },
-    {
-      "source": "github",
-      "issue_number": 110,
-      "title": "Verify the current おカネレコ CSV contract",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [],
-      "id": "github-110",
-      "status": "failed",
-      "added_at": "2026-08-09T16:05:17+00:00",
-      "started_at": "2026-08-09T21:39:30+00:00",
-      "completed_at": "2026-08-09T21:43:19+00:00",
-      "error_message": "Evidence gate: only a historical header screenshot is available; current encoding, date/amount/type, transfer/refund, currency, ID, and variant semantics remain unverified, so issue acceptance criteria are not met."
-    },
-    {
-      "source": "github",
-      "issue_number": 111,
-      "title": "Import verified MoneyForward transaction exports",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        97,
-        109
-      ],
-      "id": "github-111",
-      "status": "failed",
-      "added_at": "2026-08-09T16:05:18+00:00",
-      "started_at": "2026-08-09T21:43:19+00:00",
-      "completed_at": "2026-08-09T21:47:22+00:00",
-      "error_message": "loop exited non-zero"
-    },
-    {
-      "source": "github",
-      "issue_number": 112,
-      "title": "Import verified おカネレコ transaction exports",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        97,
-        110
-      ],
-      "id": "github-112",
-      "status": "pending",
-      "added_at": "2026-08-09T16:05:18+00:00",
+      "id": "github-76",
+      "status": "completed",
+      "added_at": "2026-07-13T06:47:35+00:00",
       "started_at": null,
-      "completed_at": null,
+      "completed_at": "2026-07-13T09:58:36+00:00",
       "error_message": ""
     },
     {
       "source": "github",
-      "issue_number": 113,
-      "title": "Unify provider detection, import preview, and atomic apply",
+      "issue_number": 78,
+      "title": "Prepare the bilingual App Store publication package",
       "priority": "P1",
       "labels": [
         {
@@ -737,268 +137,14 @@
       ],
       "milestone": null,
       "dependencies": [
-        111,
-        112
+        76,
+        77
       ],
-      "id": "github-113",
-      "status": "pending",
-      "added_at": "2026-08-09T16:05:19+00:00",
+      "id": "github-78",
+      "status": "completed",
+      "added_at": "2026-07-13T06:47:36+00:00",
       "started_at": null,
-      "completed_at": null,
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 114,
-      "title": "Add full-fidelity local household backup and restore",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        97,
-        102
-      ],
-      "id": "github-114",
-      "status": "processing",
-      "added_at": "2026-08-09T16:05:27+00:00",
-      "started_at": "2026-08-09T22:07:44+00:00",
-      "completed_at": null,
-      "error_message": null
-    },
-    {
-      "source": "github",
-      "issue_number": 115,
-      "title": "Build progressive Home and Lock Screen widgets",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        94,
-        108
-      ],
-      "id": "github-115",
-      "status": "pending",
-      "added_at": "2026-08-09T16:05:28+00:00",
-      "started_at": null,
-      "completed_at": null,
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 116,
-      "title": "Log expenses through Siri and Shortcuts App Intents",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        108
-      ],
-      "id": "github-116",
-      "status": "pending",
-      "added_at": "2026-08-09T16:05:28+00:00",
-      "started_at": null,
-      "completed_at": null,
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 117,
-      "title": "Open quick EntrySheet from one iOS 18 unified control",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        93,
-        116
-      ],
-      "id": "github-117",
-      "status": "pending",
-      "added_at": "2026-08-09T16:05:29+00:00",
-      "started_at": null,
-      "completed_at": null,
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 119,
-      "title": "Disclose paired nearby transfer across privacy surfaces",
-      "priority": "P1",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHZw",
-          "name": "P1",
-          "description": "Important",
-          "color": "D93F0B"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        89,
-        104
-      ],
-      "id": "github-119",
-      "status": "pending",
-      "added_at": "2026-08-09T16:05:30+00:00",
-      "started_at": null,
-      "completed_at": null,
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 118,
-      "title": "Prototype the minimal Apple Watch expense companion",
-      "priority": "P2",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHrw",
-          "name": "P2",
-          "description": "Nice-to-have",
-          "color": "FBCA04"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        94,
-        108
-      ],
-      "id": "github-118",
-      "status": "pending",
-      "added_at": "2026-08-09T16:05:30+00:00",
-      "started_at": null,
-      "completed_at": null,
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 120,
-      "title": "Run a bounded craft, accessibility, and motion review",
-      "priority": "P2",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHrw",
-          "name": "P2",
-          "description": "Nice-to-have",
-          "color": "FBCA04"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        99,
-        105,
-        113,
-        115,
-        117
-      ],
-      "id": "github-120",
-      "status": "pending",
-      "added_at": "2026-08-09T16:05:31+00:00",
-      "started_at": null,
-      "completed_at": null,
-      "error_message": ""
-    },
-    {
-      "source": "github",
-      "issue_number": 121,
-      "title": "Integrate the autonomous phase and prepare human native gates",
-      "priority": "P2",
-      "labels": [
-        {
-          "id": "LA_kwDOTLNNfs8AAAACpzipYw",
-          "name": "ready-for-agent",
-          "description": "PRD ready for an agent to implement",
-          "color": "0E8A16"
-        },
-        {
-          "id": "LA_kwDOTLNNfs8AAAACquIHrw",
-          "name": "P2",
-          "description": "Nice-to-have",
-          "color": "FBCA04"
-        }
-      ],
-      "milestone": null,
-      "dependencies": [
-        106,
-        107,
-        114,
-        118,
-        119,
-        120
-      ],
-      "id": "github-121",
-      "status": "pending",
-      "added_at": "2026-08-09T16:05:32+00:00",
-      "started_at": null,
-      "completed_at": null,
+      "completed_at": "2026-07-13T09:58:36+00:00",
       "error_message": ""
     }
   ]

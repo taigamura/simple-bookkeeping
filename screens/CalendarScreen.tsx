@@ -47,7 +47,6 @@ import {
   dayNet,
   expense,
   getRemainingBudget,
-  getTodayAllowance,
   income,
   isBudgetActive,
   monthEntries,
@@ -155,10 +154,6 @@ export function CalendarScreen({
   // Mode-aware budget logic: check if any budget is active and calculate remaining.
   const budgetActive = isBudgetActive(budgetMode, budgets, totalBudget);
   const remaining = getRemainingBudget(budgetMode, budgets, totalBudget, month);
-  const currentMonth = today?.y === y && today.m === m;
-  const todayAllowance = currentMonth && today
-    ? getTodayAllowance(budgetMode, budgets, totalBudget, entries, { y, m }, today)
-    : null;
 
   // Title block direction cue: which way the displayed month moved, derived
   // from the absolute month index (y*12+m) so the December -> January turn
@@ -322,18 +317,6 @@ export function CalendarScreen({
             value={remaining}
             format={(n) => (n < 0 ? signed(n, symbol) : yen(n, symbol))}
             tone={remaining < 0 ? 'negative' : 'ink'}
-          />
-        )}
-        {todayAllowance && (
-          <StripCol
-            label={strings.calendar.todayAllowance}
-            value={todayAllowance.amount ?? 0}
-            format={(n) => todayAllowance.status === 'available'
-              ? yen(n, symbol)
-              : todayAllowance.status === 'no-budget'
-                ? strings.calendar.noBudget
-                : strings.calendar.overBudget}
-            tone={todayAllowance.status === 'available' ? 'positive' : 'negative'}
           />
         )}
       </View>

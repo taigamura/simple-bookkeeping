@@ -87,8 +87,8 @@ describe('LoadingScreen opening', () => {
     );
 
     expect(getByLabelText(strings.a11y.loadingKaji)).toBeTruthy();
-    expect(en.a11y.loadingKaji).toBe('Loading Suito');
-    expect(ja.a11y.loadingKaji).toBe('Suitoを読み込み中');
+    expect(en.a11y.loadingKaji).toBe('Loading Kaji');
+    expect(ja.a11y.loadingKaji).toBe('Kajiを読み込み中');
   });
 
   it('shows the complete mark and reveals the app synchronously in Reduced Motion', () => {

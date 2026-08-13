@@ -66,14 +66,8 @@ interface SettingsSheetProps {
   onOpenRepeats: () => void;
   /** Drill into the Budgets sheet (#49) — Settings dismisses, Budgets presents. */
   onOpenBudgets: () => void;
-  /** Drill into the paired-household status/history sheet (#105). */
-  onOpenHouseholdSync?: () => void;
-  /** Nearby sharing is disabled until a second household phone is paired. */
-  nearbySharingPaired?: boolean;
   onExportData: () => void;
-  onImportData: () => void;
-  onExportHouseholdBackup?: () => void;
-  onImportHouseholdBackup?: () => void;
+  onImportZaim: () => void;
   /** Whether a corrupt-stash blob exists (#28) — gates the recovery row. */
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
@@ -99,12 +93,8 @@ export function SettingsSheet({
   activeRepeatCount,
   onOpenRepeats,
   onOpenBudgets,
-  onOpenHouseholdSync,
-  nearbySharingPaired = false,
   onExportData,
-  onImportData,
-  onExportHouseholdBackup,
-  onImportHouseholdBackup,
+  onImportZaim,
   hasCorruptStash,
   onExportCorruptStash,
   onDeleteAllData,
@@ -133,53 +123,15 @@ export function SettingsSheet({
         />
         <RepeatsLink count={activeRepeatCount} onPress={onOpenRepeats} />
         <BudgetsLink onPress={onOpenBudgets} />
-        <PrivacyDisclosure nearbySharingPaired={nearbySharingPaired} />
-        {onOpenHouseholdSync && <HouseholdSyncLink onPress={onOpenHouseholdSync} />}
         <DataActions
           onExportData={onExportData}
-          onImportData={onImportData}
-          onExportHouseholdBackup={onExportHouseholdBackup}
-          onImportHouseholdBackup={onImportHouseholdBackup}
+          onImportZaim={onImportZaim}
           hasCorruptStash={hasCorruptStash}
           onExportCorruptStash={onExportCorruptStash}
           onDeleteAllData={onDeleteAllData}
         />
       </ScrollContainer>
     </View>
-  );
-}
-
-function PrivacyDisclosure({ nearbySharingPaired }: { nearbySharingPaired: boolean }) {
-  const { colors } = useTheme();
-  return (
-    <Section label={strings.settings.privacy}>
-      <View style={[styles.privacyCard, { backgroundColor: colors.card2 }]} accessibilityRole="summary">
-        <Txt variant="secondary" tone="ink">{strings.settings.internetServices}</Txt>
-        <Txt variant="secondary" tone="muted">
-          {nearbySharingPaired ? strings.settings.nearbySharingPaired : strings.settings.nearbySharingOff}
-        </Txt>
-      </View>
-    </Section>
-  );
-}
-
-function HouseholdSyncLink({ onPress }: { onPress: () => void }) {
-  const { colors } = useTheme();
-  return (
-    <Section label={strings.settings.householdSync}>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={strings.settings.householdSync}
-        style={({ pressed }) => [
-          styles.linkRow,
-          { backgroundColor: pressed ? colors.card3 : colors.card2 },
-        ]}
-      >
-        <Txt variant="listItem" tone="ink" style={styles.linkLabel}>{strings.settings.householdSync}</Txt>
-        <Txt variant="listItem" tone="dim">›</Txt>
-      </Pressable>
-    </Section>
   );
 }
 
@@ -515,23 +467,19 @@ function RepeatsLink({ count, onPress }: { count: number; onPress: () => void })
 }
 
 /**
- * Export/import-data (#24, #113), the conditional unreadable-backup
+ * Export/Import-from-Zaim (#24, #12), the conditional unreadable-backup
  * recovery row (#28), and
  * the Delete all data action (#67). Premium/ads stripped for v1 (#23).
  */
 function DataActions({
   onExportData,
-  onImportData,
-  onExportHouseholdBackup,
-  onImportHouseholdBackup,
+  onImportZaim,
   hasCorruptStash,
   onExportCorruptStash,
   onDeleteAllData,
 }: {
   onExportData: () => void;
-  onImportData: () => void;
-  onExportHouseholdBackup?: () => void;
-  onImportHouseholdBackup?: () => void;
+  onImportZaim: () => void;
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
   onDeleteAllData: () => void;
@@ -554,33 +502,14 @@ function DataActions({
         </Txt>
       </Pressable>
 
-      {(onExportHouseholdBackup || onImportHouseholdBackup) && (
-        <>
-          <Txt variant="microLabel" tone="dim" style={styles.backupLabel}>{strings.settings.householdBackup}</Txt>
-          {onExportHouseholdBackup && (
-            <Pressable onPress={onExportHouseholdBackup} accessibilityRole="button"
-              accessibilityLabel={strings.settings.exportHouseholdBackup} style={rowStyle}>
-              <Txt variant="listItem" tone="ink">{strings.settings.exportHouseholdBackup}</Txt>
-            </Pressable>
-          )}
-          {onImportHouseholdBackup && (
-            <Pressable onPress={onImportHouseholdBackup} accessibilityRole="button"
-              accessibilityLabel={strings.settings.importHouseholdBackup} style={rowStyle}>
-              <Txt variant="listItem" tone="ink">{strings.settings.importHouseholdBackup}</Txt>
-            </Pressable>
-          )}
-        </>
-      )}
-
       <Pressable
-        onPress={onImportData}
+        onPress={onImportZaim}
         accessibilityRole="button"
-        accessibilityLabel={strings.settings.importData}
-        accessibilityHint={strings.importData.actionHint}
+        accessibilityLabel={strings.settings.importFromZaim}
         style={rowStyle}
       >
         <Txt variant="listItem" tone="ink">
-          {strings.settings.importData}
+          {strings.settings.importFromZaim}
         </Txt>
       </Pressable>
 
@@ -651,7 +580,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backupLabel: { marginTop: 8 },
   linkRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -661,7 +589,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   linkLabel: { flex: 1 },
-  privacyCard: { borderRadius: metrics.iconTileRadius, padding: 14, gap: 6 },
   optRow: { flexDirection: 'row', gap: 8 },
   optBox: {
     flex: 1,

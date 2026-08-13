@@ -11,7 +11,6 @@ import {
   pruneBudgets,
   isBudgetActive,
   getRemainingBudget,
-  getTodayAllowance,
   type Budgets,
 } from './budgets';
 import type { Transaction } from './types';
@@ -113,56 +112,6 @@ describe('budgetRemaining', () => {
 
   it('is the full budget total for a month with no entries', () => {
     expect(budgetRemaining({ Food: 30000, Rent: 80000 }, [])).toBe(110000);
-  });
-});
-
-describe('getTodayAllowance (#94)', () => {
-  const today = { y: 2026, m: 1, day: 27 };
-  const month = { y: 2026, m: 1 };
-
-  it('divides remaining configured budget by remaining days, including today', () => {
-    const result = getTodayAllowance('category', { Food: 1000 }, 0, [
-      tx({ id: 'past', y: 2026, m: 1, day: 26, amount: 100 }),
-      tx({ id: 'today', y: 2026, m: 1, day: 27, amount: 200 }),
-      tx({ id: 'future', y: 2026, m: 1, day: 28, amount: 500 }),
-      tx({ id: 'income', y: 2026, m: 1, day: 27, type: 'income', amount: 9999 }),
-    ], month, today);
-
-    expect(result).toMatchObject({
-      status: 'available',
-      amount: 350,
-      configuredBudget: 1000,
-      spentThroughToday: 300,
-      remainingDays: 2,
-    });
-  });
-
-  it('uses the final day as a one-day divisor in leap years and floors fractions', () => {
-    expect(getTodayAllowance(
-      'total', {}, 1001,
-      [tx({ y: 2028, m: 1, day: 29, amount: 1 })],
-      { y: 2028, m: 1 },
-      { y: 2028, m: 1, day: 29 },
-    )).toMatchObject({ amount: 1000, remainingDays: 1 });
-  });
-
-  it('makes no-budget and overspent states explicit', () => {
-    expect(getTodayAllowance('category', {}, 0, [], month, today).status).toBe('no-budget');
-    expect(getTodayAllowance(
-      'total', {}, 100,
-      [tx({ y: 2026, m: 1, day: 27, amount: 101 })],
-      month,
-      today,
-    )).toMatchObject({ status: 'overspent', amount: null, spentThroughToday: 101 });
-  });
-
-  it('keeps entries from other months out of the current-month calculation', () => {
-    expect(getTodayAllowance(
-      'total', {}, 1000,
-      [tx({ y: 2025, m: 1, day: 27, amount: 900 })],
-      month,
-      today,
-    ).spentThroughToday).toBe(0);
   });
 });
 

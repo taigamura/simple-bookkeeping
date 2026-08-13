@@ -5,6 +5,10 @@ import 'react-native-gesture-handler';
 import { registerRootComponent } from 'expo';
 
 import App from './App';
+import { init as initErrorReporting } from './platform/errorReporting';
+
+// Sentry (#27): no-ops until a DSN is configured in app.json's expo.extra.
+initErrorReporting();
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
 // It also ensures that whether you load the app in Expo Go or in a native build,

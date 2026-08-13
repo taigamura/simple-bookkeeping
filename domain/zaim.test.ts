@@ -7,7 +7,6 @@ import * as Encoding from 'encoding-japanese';
 
 import type { Transaction } from './types';
 import { decodeZaimBytes, parseZaimCsv, serializeZaimCsv, type ZaimExisting } from './zaim';
-import { validateFinancialRow } from './financialRow';
 
 const HEADER =
   '日付,方法,カテゴリ,カテゴリの内訳,支払元,入金先,品目,メモ,お店,通貨,収入,支出,振替,残高調整';
@@ -101,7 +100,7 @@ describe('parseZaimCsv', () => {
   it('starts with a zeroed skip tally when nothing is skipped', () => {
     const csv = [HEADER, '2026-07-01,Cash,Food,-,-,-,-,-,-,JPY,-,1200,-,-'].join('\n');
     const { skipped } = parseZaimCsv(csv, cats());
-    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 0, invalidDate: 0, invalidAmount: 0, emptyCategory: 0, unsupportedType: 0, outOfRange: 0, duplicate: 0 });
+    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 0, duplicate: 0 });
   });
 
   it('skips a transfer row and counts it, without producing an entry', () => {
@@ -111,7 +110,7 @@ describe('parseZaimCsv', () => {
     ].join('\n');
     const { entries, skipped } = parseZaimCsv(csv, cats());
     expect(entries).toHaveLength(0);
-    expect(skipped).toEqual({ transfer: 1, balanceAdjustment: 0, malformed: 0, invalidDate: 0, invalidAmount: 0, emptyCategory: 0, unsupportedType: 0, outOfRange: 0, duplicate: 0 });
+    expect(skipped).toEqual({ transfer: 1, balanceAdjustment: 0, malformed: 0, duplicate: 0 });
   });
 
   it('skips a balance-adjustment row and counts it, without producing an entry', () => {
@@ -121,37 +120,37 @@ describe('parseZaimCsv', () => {
     ].join('\n');
     const { entries, skipped } = parseZaimCsv(csv, cats());
     expect(entries).toHaveLength(0);
-    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 1, malformed: 0, invalidDate: 0, invalidAmount: 0, emptyCategory: 0, unsupportedType: 0, outOfRange: 0, duplicate: 0 });
+    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 1, malformed: 0, duplicate: 0 });
   });
 
-  it('skips a row with an impossible date and counts it explicitly', () => {
+  it('skips a row with a bad date and counts it as malformed', () => {
     const csv = [
       HEADER,
       '2026-13-40,Cash,Food,-,-,-,-,-,-,JPY,-,900,-,-',
     ].join('\n');
     const { entries, skipped } = parseZaimCsv(csv, cats());
     expect(entries).toHaveLength(0);
-    expect(skipped.invalidDate).toBe(1);
+    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 1, duplicate: 0 });
   });
 
-  it('skips a row with a non-numeric amount and counts it explicitly', () => {
+  it('skips a row with a non-numeric amount and counts it as malformed', () => {
     const csv = [
       HEADER,
       '2026-07-10,Cash,Food,-,-,-,-,-,-,JPY,-,abc,-,-',
     ].join('\n');
     const { entries, skipped } = parseZaimCsv(csv, cats());
     expect(entries).toHaveLength(0);
-    expect(skipped.invalidAmount).toBe(1);
+    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 1, duplicate: 0 });
   });
 
-  it('skips a row with a missing category and counts it explicitly', () => {
+  it('skips a row with a missing category and counts it as malformed', () => {
     const csv = [
       HEADER,
       '2026-07-11,Cash,-,-,-,-,-,-,-,JPY,-,900,-,-',
     ].join('\n');
     const { entries, skipped } = parseZaimCsv(csv, cats());
     expect(entries).toHaveLength(0);
-    expect(skipped.emptyCategory).toBe(1);
+    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 1, duplicate: 0 });
   });
 
   it('imports every valid row from a file mixing valid, transfer, balance-adjustment, and malformed rows', () => {
@@ -165,7 +164,7 @@ describe('parseZaimCsv', () => {
     ].join('\n');
     const { entries, skipped } = parseZaimCsv(csv, cats());
     expect(entries).toHaveLength(2);
-    expect(skipped).toMatchObject({ transfer: 1, balanceAdjustment: 1, invalidDate: 1, duplicate: 0 });
+    expect(skipped).toEqual({ transfer: 1, balanceAdjustment: 1, malformed: 1, duplicate: 0 });
   });
 
   it('re-importing the same CSV produces zero new entries, all counted as duplicates', () => {
@@ -179,7 +178,7 @@ describe('parseZaimCsv', () => {
 
     const second = parseZaimCsv(csv, cats({ entries: first.entries }));
     expect(second.entries).toHaveLength(0);
-    expect(second.skipped).toMatchObject({ transfer: 0, balanceAdjustment: 0, malformed: 0, duplicate: 2 });
+    expect(second.skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 0, duplicate: 2 });
   });
 
   it('only appends rows that are not already in the ledger, counting the rest as duplicates', () => {
@@ -196,7 +195,7 @@ describe('parseZaimCsv', () => {
     const { entries, skipped } = parseZaimCsv(csv, cats({ entries: existingEntries }));
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({ day: 2, type: 'income', amount: 300000 });
-    expect(skipped).toMatchObject({ transfer: 0, balanceAdjustment: 0, malformed: 0, duplicate: 1 });
+    expect(skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 0, duplicate: 1 });
   });
 
   it('does not treat two different rows on the same day as duplicates of each other', () => {
@@ -208,35 +207,6 @@ describe('parseZaimCsv', () => {
     const { entries, skipped } = parseZaimCsv(csv, cats());
     expect(entries).toHaveLength(2);
     expect(skipped.duplicate).toBe(0);
-  });
-
-  it('rejects leap-day and fractional, unsafe amounts without losing valid rows', () => {
-    const csv = [
-      HEADER,
-      '2024-02-29,Cash,Food,-,-,-,-,-,-,JPY,-,1200,-,-',
-      '2023-02-29,Cash,Food,-,-,-,-,-,-,JPY,-,900,-,-',
-      '2026-07-02,Cash,Food,-,-,-,-,-,-,JPY,-,1.5,-,-',
-      '2026-07-03,Cash,Food,-,-,-,-,-,-,JPY,-,9007199254740992,-,-',
-    ].join('\n');
-    const { entries, skipped } = parseZaimCsv(csv, cats());
-    expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({ y: 2024, m: 1, day: 29, amount: 1200 });
-    expect(skipped).toMatchObject({ invalidDate: 1, invalidAmount: 1, outOfRange: 1 });
-  });
-});
-
-describe('validateFinancialRow', () => {
-  const valid = { y: 2026, m: 6, day: 1, type: 'expense', amount: 100, category: 'Food' };
-
-  it.each([
-    [{ ...valid, y: 2026, m: 1, day: 29 }, 'invalidDate'],
-    [{ ...valid, amount: 1.5 }, 'invalidAmount'],
-    [{ ...valid, amount: Number.POSITIVE_INFINITY }, 'invalidAmount'],
-    [{ ...valid, amount: Number.MAX_SAFE_INTEGER + 1 }, 'outOfRange'],
-    [{ ...valid, category: '   ' }, 'emptyCategory'],
-    [{ ...valid, type: 'refund' }, 'unsupportedType'],
-  ] as const)('rejects unsafe row data with reason %s', (row, reason) => {
-    expect(validateFinancialRow(row)).toEqual({ valid: false, reason });
   });
 });
 
@@ -385,6 +355,6 @@ describe('serializeZaimCsv', () => {
 
     const second = parseZaimCsv(csv, cats({ entries: first.entries }));
     expect(second.entries).toHaveLength(0);
-    expect(second.skipped).toMatchObject({ transfer: 0, balanceAdjustment: 0, malformed: 0, duplicate: 2 });
+    expect(second.skipped).toEqual({ transfer: 0, balanceAdjustment: 0, malformed: 0, duplicate: 2 });
   });
 });

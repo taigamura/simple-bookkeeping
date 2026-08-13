@@ -12,19 +12,7 @@ export interface ZaimSkipStrings {
   transfer: (n: number) => string;
   balanceAdjustment: (n: number) => string;
   malformedRow: (n: number) => string;
-  invalidDate: (n: number) => string;
-  invalidAmount: (n: number) => string;
-  emptyCategory: (n: number) => string;
-  unsupportedType: (n: number) => string;
-  outOfRange: (n: number) => string;
   duplicate: (n: number) => string;
-}
-
-export interface ImportSkipStrings extends ZaimSkipStrings {
-  unknownFormat: (n: number) => string;
-  ambiguousFormat: (n: number) => string;
-  currencyMismatch: (n: number) => string;
-  unsupportedField: (n: number) => string;
 }
 
 export interface Strings {
@@ -64,9 +52,6 @@ export interface Strings {
     net: string;
     /** Strip label for the month's remaining budget (#50). */
     budget: string;
-    todayAllowance: string;
-    noBudget: string;
-    overBudget: string;
     /** Sub-title under the month, counting the month's entries. */
     entriesThisMonth: (n: number) => string;
     /** Header toggle, labelled by the view it switches *to*. */
@@ -139,53 +124,9 @@ export interface Strings {
     data: string;
     exportData: string;
     importFromZaim: string;
-    importData: string;
-    householdBackup: string;
-    exportHouseholdBackup: string;
-    importHouseholdBackup: string;
     exportUnreadableBackup: string;
     deleteAllData: string;
     deleteAllDataConfirmMessage: string;
-    householdSync: string;
-    privacy: string;
-    internetServices: string;
-    nearbySharingOff: string;
-    nearbySharingPaired: string;
-  };
-  sync: {
-    paired: string;
-    offline: string;
-    syncing: string;
-    error: string;
-    lastSynced: string;
-    neverSynced: string;
-    syncNow: string;
-    partnerAbsent: string;
-    notPaired: string;
-    history: string;
-    added: string;
-    edited: string;
-    deleted: string;
-    by: (actor: string) => string;
-    restore: string;
-    noHistory: string;
-    nearbyOnly: string;
-    devices: string;
-    thisPhone: string;
-    revokeDevice: string;
-    inviteReplacement: string;
-    invitePhone: string;
-    deviceLimitWarning: string;
-    recoveryLimitNotice: string;
-    invitationCreatedTitle: string;
-    invitationCreated: (code: string) => string;
-    invitationFailedTitle: string;
-    invitationFailed: string;
-    recoveryExportTitle: string;
-    recoveryRestoreTitle: string;
-    recoveryPassphrasePrompt: string;
-    recoveryFailedTitle: string;
-    recoveryFailed: string;
   };
   budgets: {
     title: string;
@@ -249,27 +190,6 @@ export interface Strings {
     entriesReady: (n: number) => string;
     skip: ZaimSkipStrings;
   };
-  importData: {
-    /** VoiceOver hint for the Settings action that opens the CSV preview flow. */
-    actionHint: string;
-    unknownFormatTitle: string;
-    unknownFormatMessage: string;
-    ambiguousFormatTitle: string;
-    ambiguousFormatMessage: string;
-    noSupportedRowsTitle: string;
-    noSupportedRowsMessage: string;
-    fileTooLargeTitle: string;
-    fileTooLargeMessage: string;
-    importFailedTitle: string;
-    importFailedMessage: string;
-    canceledTitle: string;
-    canceledMessage: string;
-    preview: (provider: string, imported: number) => string;
-    duplicates: (count: number) => string;
-    completeTitle: string;
-    complete: (provider: string, imported: number) => string;
-    skip: ImportSkipStrings;
-  };
 }
 
 export const en: Strings = {
@@ -282,7 +202,7 @@ export const en: Strings = {
     delete: 'Delete',
   },
   a11y: {
-    loadingKaji: 'Loading Suito',
+    loadingKaji: 'Loading Kaji',
     selected: 'Selected',
     notSelected: 'Not selected',
     textInput: 'Text input',
@@ -308,9 +228,6 @@ export const en: Strings = {
     out: 'Out',
     net: 'Net',
     budget: 'Budget',
-    todayAllowance: 'Today',
-    noBudget: 'No budget',
-    overBudget: 'Over budget',
     entriesThisMonth: (n) => `${n} ${n === 1 ? 'entry' : 'entries'} this month`,
     showDots: 'Show dots',
     showNumbers: 'Show numbers',
@@ -380,40 +297,9 @@ export const en: Strings = {
     data: 'Data',
     exportData: 'Export data',
     importFromZaim: 'Import from Zaim',
-    importData: 'Import data',
-    householdBackup: 'Full-fidelity household backup',
-    exportHouseholdBackup: 'Export household backup',
-    importHouseholdBackup: 'Restore household backup',
     exportUnreadableBackup: 'Export unreadable backup',
     deleteAllData: 'Delete all data',
     deleteAllDataConfirmMessage: 'This will permanently delete all entries, repeating series, and budgets. Categories, currency, and settings will be preserved.',
-    householdSync: 'Household sync',
-    privacy: 'Privacy & sharing',
-    internetServices: 'Internet services: none',
-    nearbySharingOff: 'Nearby household sharing: off until paired',
-    nearbySharingPaired: 'Nearby household sharing: paired',
-  },
-  sync: {
-    paired: 'Paired', offline: 'Offline', syncing: 'Syncing nearby', error: 'Sync error',
-    lastSynced: 'Last synced', neverSynced: 'Not synced yet', syncNow: 'Sync now',
-    partnerAbsent: 'Partner not nearby. Nothing will change on this phone.',
-    notPaired: 'Pair another phone to share changes nearby.',
-    history: 'Change history', added: 'Added', edited: 'Edited', deleted: 'Deleted',
-    by: (actor) => `By ${actor}`, restore: 'Restore version', noHistory: 'No shared changes yet.',
-    nearbyOnly: 'Nearby only while both paired phones are open. No background or remote sync.',
-    devices: 'Paired phones', thisPhone: 'This phone', revokeDevice: 'Revoke',
-    inviteReplacement: 'Invite replacement phone', invitePhone: 'Invite another phone',
-    deviceLimitWarning: 'Only two phones can be active. Revoking a lost phone cannot be undone, and creates a fresh key before replacement pairing.',
-    recoveryLimitNotice: 'If both phones are lost, recovery is impossible without a surviving phone or a valid recovery pack.',
-    invitationCreatedTitle: 'Invitation ready',
-    invitationCreated: (code) => `Share the invitation file with the replacement phone. Confirm matching code ${code} on both phones.`,
-    invitationFailedTitle: 'Could not create invitation',
-    invitationFailed: 'Your paired household was not changed. Try again with only one active phone.',
-    recoveryExportTitle: 'Export encrypted recovery pack',
-    recoveryRestoreTitle: 'Restore encrypted recovery pack',
-    recoveryPassphrasePrompt: 'Enter a passphrase of at least 8 characters. Suito does not store or transmit it.',
-    recoveryFailedTitle: 'Recovery pack was not changed',
-    recoveryFailed: 'Your live data was kept. Check the passphrase and pack, then try again.',
   },
   budgets: {
     title: 'Budgets',
@@ -479,46 +365,7 @@ export const en: Strings = {
       transfer: (n) => `${n} transfer${n === 1 ? '' : 's'} skipped`,
       balanceAdjustment: (n) => `${n} balance adjustment${n === 1 ? '' : 's'} skipped`,
       malformedRow: (n) => `${n} malformed row${n === 1 ? '' : 's'} skipped`,
-      invalidDate: (n) => `${n} invalid date${n === 1 ? '' : 's'} skipped`,
-      invalidAmount: (n) => `${n} invalid amount${n === 1 ? '' : 's'} skipped`,
-      emptyCategory: (n) => `${n} empty categor${n === 1 ? 'y' : 'ies'} skipped`,
-      unsupportedType: (n) => `${n} unsupported type${n === 1 ? '' : 's'} skipped`,
-      outOfRange: (n) => `${n} out-of-range value${n === 1 ? '' : 's'} skipped`,
       duplicate: (n) => `${n} duplicate${n === 1 ? '' : 's'} skipped`,
-    },
-  },
-  importData: {
-    actionHint: 'Choose a Zaim, MoneyForward ME, or おカネレコ CSV. Review the preview before your ledger is changed.',
-    unknownFormatTitle: 'Unsupported CSV format',
-    unknownFormatMessage: 'This file is not a supported Zaim, MoneyForward ME, or おカネレコ export. Your ledger was not changed.',
-    ambiguousFormatTitle: 'CSV format is ambiguous',
-    ambiguousFormatMessage: 'This file matched more than one supported format. Your ledger was not changed.',
-    noSupportedRowsTitle: 'No supported rows found',
-    noSupportedRowsMessage: 'No rows can be imported from this file. Your ledger was not changed.',
-    fileTooLargeTitle: 'CSV is too large',
-    fileTooLargeMessage: 'Choose a CSV with no more than 10,000 rows and 5 MB. Your ledger was not changed.',
-    importFailedTitle: 'Import failed',
-    importFailedMessage: 'Your ledger was not changed. Choose a supported CSV and try again.',
-    canceledTitle: 'Import canceled',
-    canceledMessage: 'Your ledger was not changed.',
-    preview: (provider, imported) => `${provider}: ${imported} ${imported === 1 ? 'entry' : 'entries'} ready to import`,
-    duplicates: (count) => `${count} duplicate${count === 1 ? '' : 's'} skipped`,
-    completeTitle: 'Import complete',
-    complete: (provider, imported) => `${provider}: imported ${imported} ${imported === 1 ? 'entry' : 'entries'}.`,
-    skip: {
-      transfer: (n) => `${n} transfer${n === 1 ? '' : 's'} skipped`,
-      balanceAdjustment: (n) => `${n} balance adjustment${n === 1 ? '' : 's'} skipped`,
-      malformedRow: (n) => `${n} malformed row${n === 1 ? '' : 's'} skipped`,
-      invalidDate: (n) => `${n} invalid date${n === 1 ? '' : 's'} skipped`,
-      invalidAmount: (n) => `${n} invalid amount${n === 1 ? '' : 's'} skipped`,
-      emptyCategory: (n) => `${n} empty categor${n === 1 ? 'y' : 'ies'} skipped`,
-      unsupportedType: (n) => `${n} unsupported type${n === 1 ? '' : 's'} skipped`,
-      outOfRange: (n) => `${n} out-of-range value${n === 1 ? '' : 's'} skipped`,
-      duplicate: (n) => `${n} duplicate${n === 1 ? '' : 's'} skipped`,
-      unknownFormat: (n) => `${n} unknown format${n === 1 ? '' : 's'} skipped`,
-      ambiguousFormat: (n) => `${n} ambiguous format${n === 1 ? '' : 's'} skipped`,
-      currencyMismatch: (n) => `${n} currency mismatch${n === 1 ? '' : 'es'} skipped`,
-      unsupportedField: (n) => `${n} unsupported row${n === 1 ? '' : 's'} skipped`,
     },
   },
 };
@@ -533,7 +380,7 @@ export const ja: Strings = {
     delete: '削除',
   },
   a11y: {
-    loadingKaji: 'Suitoを読み込み中',
+    loadingKaji: 'Kajiを読み込み中',
     selected: '選択中',
     notSelected: '未選択',
     textInput: 'テキスト入力',
@@ -559,9 +406,6 @@ export const ja: Strings = {
     out: '支出',
     net: '収支',
     budget: '予算',
-    todayAllowance: '今日',
-    noBudget: '予算なし',
-    overBudget: '予算超過',
     entriesThisMonth: (n) => `今月 ${n} 件`,
     showDots: 'ドット表示',
     showNumbers: '金額表示',
@@ -631,40 +475,9 @@ export const ja: Strings = {
     data: 'データ',
     exportData: 'データを書き出す',
     importFromZaim: 'Zaimから読み込む',
-    importData: 'データを読み込む',
-    householdBackup: '家庭の完全バックアップ',
-    exportHouseholdBackup: '家庭のバックアップを書き出す',
-    importHouseholdBackup: '家庭のバックアップを復元',
     exportUnreadableBackup: '読み取れないバックアップを書き出す',
     deleteAllData: 'すべてのデータを削除',
     deleteAllDataConfirmMessage: 'すべての記録、繰り返し、および予算が完全に削除されます。カテゴリ、通貨、および設定は保持されます。',
-    householdSync: '家庭内同期',
-    privacy: 'プライバシーと共有',
-    internetServices: 'インターネットサービス: なし',
-    nearbySharingOff: '近くの家庭内共有: ペアリングするまでオフ',
-    nearbySharingPaired: '近くの家庭内共有: ペアリング済み',
-  },
-  sync: {
-    paired: 'ペア済み', offline: 'オフライン', syncing: '近くの端末と同期中', error: '同期エラー',
-    lastSynced: '最終同期', neverSynced: 'まだ同期していません', syncNow: '今すぐ同期',
-    partnerAbsent: '相手の端末が近くにありません。この端末の記録は変更されません。',
-    notPaired: '近くで変更を共有するには、もう1台の端末とペアリングしてください。',
-    history: '変更履歴', added: '追加', edited: '編集', deleted: '削除',
-    by: (actor) => `${actor}が変更`, restore: 'この版を復元', noHistory: '共有された変更はまだありません。',
-    nearbyOnly: 'ペア済みの2台を開いて近くに置いた間だけ同期します。バックグラウンドやリモート同期はありません。',
-    devices: 'ペア済みの端末', thisPhone: 'この端末', revokeDevice: '失効',
-    inviteReplacement: '交換端末を招待', invitePhone: 'もう1台の端末を招待',
-    deviceLimitWarning: '有効な端末は2台までです。紛失した端末の失効は取り消せず、交換端末とのペアリング前に新しい鍵を作成します。',
-    recoveryLimitNotice: '2台の端末を両方失った場合、生き残っている端末または有効なリカバリーパックがなければ復旧できません。',
-    invitationCreatedTitle: '招待の準備ができました',
-    invitationCreated: (code) => `招待ファイルを交換端末と共有し、両方の端末で照合コード ${code} を確認してください。`,
-    invitationFailedTitle: '招待を作成できませんでした',
-    invitationFailed: '家庭内ペアリングは変更されていません。有効な端末が1台だけの状態で再試行してください。',
-    recoveryExportTitle: '暗号化されたリカバリーパックを書き出す',
-    recoveryRestoreTitle: '暗号化されたリカバリーパックを復元する',
-    recoveryPassphrasePrompt: '8文字以上のパスフレーズを入力してください。Suitoは保存も送信もしません。',
-    recoveryFailedTitle: 'リカバリーパックは変更されていません',
-    recoveryFailed: '現在のデータは保持されています。パスフレーズとパックを確認して再試行してください。',
   },
   budgets: {
     title: '予算',
@@ -729,46 +542,7 @@ export const ja: Strings = {
       transfer: (n) => `振替${n}件をスキップしました`,
       balanceAdjustment: (n) => `残高調整${n}件をスキップしました`,
       malformedRow: (n) => `不正な行${n}件をスキップしました`,
-      invalidDate: (n) => `不正な日付${n}件をスキップしました`,
-      invalidAmount: (n) => `不正な金額${n}件をスキップしました`,
-      emptyCategory: (n) => `カテゴリなし${n}件をスキップしました`,
-      unsupportedType: (n) => `未対応の種類${n}件をスキップしました`,
-      outOfRange: (n) => `範囲外の値${n}件をスキップしました`,
       duplicate: (n) => `重複${n}件をスキップしました`,
-    },
-  },
-  importData: {
-    actionHint: 'Zaim、MoneyForward ME、またはおカネレコのCSVを選択します。帳簿を変更する前にプレビューを確認できます。',
-    unknownFormatTitle: '未対応のCSV形式です',
-    unknownFormatMessage: 'このファイルは、対応するZaim、MoneyForward ME、またはおカネレコのエクスポートではありません。帳簿は変更されていません。',
-    ambiguousFormatTitle: 'CSV形式を判別できません',
-    ambiguousFormatMessage: 'このファイルは複数の対応形式に一致しました。帳簿は変更されていません。',
-    noSupportedRowsTitle: '読み込み可能な行がありません',
-    noSupportedRowsMessage: 'このファイルには読み込み可能な行がありません。帳簿は変更されていません。',
-    fileTooLargeTitle: 'CSVファイルが大きすぎます',
-    fileTooLargeMessage: '10,000行、5 MB以下のCSVを選択してください。帳簿は変更されていません。',
-    importFailedTitle: '読み込みに失敗しました',
-    importFailedMessage: '帳簿は変更されていません。対応するCSVを選択して、もう一度試してください。',
-    canceledTitle: '読み込みをキャンセルしました',
-    canceledMessage: '帳簿は変更されていません。',
-    preview: (provider, imported) => `${provider}: ${imported}件の記録を読み込めます`,
-    duplicates: (count) => `重複${count}件をスキップしました`,
-    completeTitle: '読み込みが完了しました',
-    complete: (provider, imported) => `${provider}: ${imported}件の記録を読み込みました。`,
-    skip: {
-      transfer: (n) => `振替${n}件をスキップしました`,
-      balanceAdjustment: (n) => `残高調整${n}件をスキップしました`,
-      malformedRow: (n) => `不正な行${n}件をスキップしました`,
-      invalidDate: (n) => `不正な日付${n}件をスキップしました`,
-      invalidAmount: (n) => `不正な金額${n}件をスキップしました`,
-      emptyCategory: (n) => `カテゴリなし${n}件をスキップしました`,
-      unsupportedType: (n) => `未対応の種類${n}件をスキップしました`,
-      outOfRange: (n) => `範囲外の値${n}件をスキップしました`,
-      duplicate: (n) => `重複${n}件をスキップしました`,
-      unknownFormat: (n) => `不明な形式${n}件をスキップしました`,
-      ambiguousFormat: (n) => `判別できない形式${n}件をスキップしました`,
-      currencyMismatch: (n) => `通貨が一致しない行${n}件をスキップしました`,
-      unsupportedField: (n) => `未対応の行${n}件をスキップしました`,
     },
   },
 };
