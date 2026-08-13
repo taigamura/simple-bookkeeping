@@ -51,3 +51,6 @@ target/
 
 # WSL NTFS alternate-data-stream artifacts
 *:Zone.Identifier
+
+# Local backup exports (device dumps, unreadable-blob exports)
+backups/
