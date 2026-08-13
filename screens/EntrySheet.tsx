@@ -38,9 +38,8 @@ import {
   type WeekendShift,
 } from '../domain';
 import { strings } from '../i18n';
-import { CategoryChips, Keypad, PressScale, SaveWave, SegmentedToggle } from '../ui';
+import { CategoryChips, Keypad, PressScale, SegmentedToggle } from '../ui';
 import {
-  useMotion,
   useTheme,
   metrics,
   glowFor,
@@ -50,7 +49,7 @@ import {
   type Tone,
 } from '../theme';
 import { IconButton } from '../nav/IconButton';
-import { SHEET_CHROME, SHEET_TOP_STRIP, WEB_FRAME_INSET } from '../nav/BottomSheet';
+import { SHEET_CHROME, WEB_FRAME_INSET } from '../nav/BottomSheet';
 
 interface EntrySheetProps {
   expCats: string[];
@@ -66,6 +65,8 @@ interface EntrySheetProps {
    * Existing concrete or projected occurrence to edit (#43).
    */
   editing?: Transaction;
+  /** Draft supplied by quick-entry flows before the sheet is shown. */
+  initialDraft?: EntryDraft;
   /** Settings management route: recurring cadences only and explicit stop copy. */
   repeatManagement?: boolean;
   /** Collects the draft on save; the host stores or splits the corresponding ledger item. */
@@ -110,37 +111,6 @@ const next = <T,>(order: T[], value: T): T =>
   order[(order.indexOf(value) + 1) % order.length];
 
 /**
- * How long the save bloom plays before the sheet is told to close (ms).
- *
- * Originally 170ms, on the theory that added latency past ~200ms starts
- * reading as lag. In practice that made the wave imperceptible: `SaveWave`'s
- * spread reaches full size at 70% of `durations.wave` (≈434ms), so at 170ms it
- * had barely started — the sheet's own 200ms dismiss (see
- * `SHEET_ANIMATION_DURATION`) then began sliding over a bloom that was ~13%
- * grown, and by the time the sheet cleared the screen there was nothing left
- * to see. Measured directly (sampling computed styles at every animation
- * frame, not just screenshots) rather than assumed.
- *
- * The "~200ms lag" rule is the right instinct for latency with *nothing* to
- * show for it — a frozen screen. It doesn't apply here: for the whole lead the
- * user is watching the bloom actively expand from the button they just
- * pressed, which is itself the feedback that the tap registered. So the lead
- * is now tuned to the animation instead of to the lag threshold: long enough
- * for the spread to finish and the fade to be clearly underway before the
- * sheet starts covering it, so a real "grow then fade" reads as one complete
- * gesture rather than a truncated blip.
- */
-const WAVE_LEAD = 380;
-
-/**
- * Vertical space the Delete action occupies below the CTA in edit mode: its own
- * 44px min height plus its 8px bottom margin. The pinned footer stacks its two
- * children directly with no gap between them, so there is nothing else to add.
- * Kept in step with `styles.deleteRow` below.
- */
-const DELETE_ROW_BLOCK = 44 + 8;
-
-/**
  * Intrinsic height of the form at full size, measured on a tall screen. Used
  * only as the denominator of the compact factor below — the real height is
  * still measured at layout and reported to the host for its detent.
@@ -182,6 +152,15 @@ const NATIVE_BOTTOM_ALLOWANCE = 34;
  * Scaling is what keeps an ordinary phone from scrolling a form that was
  * designed not to; the pinning is what guarantees the button is *reachable*.
  */
+export function entryCompactScale(windowHeight: number, chrome: number): number {
+  // Entry opens at the host's expanded detent. Reserve the pinned footer
+  // before scaling the scrollable body;
+  // otherwise the form can still be just tall enough to push 0/00 below the
+  // fold even though the sheet itself is fullscreen.
+  const budget = windowHeight - chrome - SHEET_CHROME - FOOTER_BUDGET;
+  return Math.max(MIN_COMPACT_SCALE, Math.min(1, budget / NATURAL_FORM_HEIGHT));
+}
+
 function useCompactScale(): number {
   const { height: windowHeight } = useWindowDimensions();
   // Everything between the window edges and the sheet's content box. On web
@@ -197,12 +176,7 @@ function useCompactScale(): number {
   // is reachable, so precision here buys nothing.
   const chrome =
     Platform.OS === 'web' ? WEB_FRAME_INSET : metrics.statusOffset + NATIVE_BOTTOM_ALLOWANCE;
-  // Entry opens at the host's expanded detent. Account for the host's dimmed
-  // top strip and reserve the pinned footer before scaling the scrollable body;
-  // otherwise the form can still be just tall enough to push 0/00 below the
-  // fold even though the sheet itself is fullscreen.
-  const budget = windowHeight - chrome - SHEET_TOP_STRIP - SHEET_CHROME - FOOTER_BUDGET;
-  return Math.max(MIN_COMPACT_SCALE, Math.min(1, budget / NATURAL_FORM_HEIGHT));
+  return entryCompactScale(windowHeight, chrome);
 }
 
 const formatDate = ({ y, m, day }: RecurrenceDate): string =>
@@ -227,6 +201,43 @@ const parseDate = (value: string): RecurrenceDate | null => {
   return { y, m, day };
 };
 
+const formatTime = (date: Date): string =>
+  `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+const parseTime = (value: string): { hours: number; minutes: number } | null => {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return { hours, minutes };
+};
+
+const dateTimeFromParts = (date: RecurrenceDate, time: { hours: number; minutes: number }) =>
+  new Date(date.y, date.m, date.day, time.hours, time.minutes, 0, 0);
+
+const initialDateTime = (
+  source: RecurrenceDate,
+  timestamp?: string,
+): Date => {
+  const parsed = timestamp ? new Date(timestamp) : null;
+  const hours = parsed && !Number.isNaN(parsed.getTime()) ? parsed.getHours() : new Date().getHours();
+  const minutes =
+    parsed && !Number.isNaN(parsed.getTime()) ? parsed.getMinutes() : new Date().getMinutes();
+  return dateTimeFromParts(source, { hours, minutes });
+};
+
+const NativeDateTimePicker =
+  Platform.OS === 'ios' && process.env.NODE_ENV !== 'test'
+    ? (require('@react-native-community/datetimepicker').default as ComponentType<{
+        value: Date;
+        mode: 'datetime';
+        display: 'spinner';
+        onChange: (_event: unknown, date?: Date) => void;
+        style?: StyleProp<ViewStyle>;
+      }>)
+    : null;
+
 export function EntrySheet({
   expCats,
   incCats,
@@ -236,6 +247,7 @@ export function EntrySheet({
   today,
   symbol,
   editing,
+  initialDraft,
   repeatManagement = false,
   onSave,
   onDelete,
@@ -259,45 +271,39 @@ export function EntrySheet({
   // keypad keys do — below that a tap row stops being a comfortable target.
   const gap = Math.max(8, Math.round(14 * scale));
   const rowHeight = Math.max(40, Math.round(46 * scale));
-  const { enabled: motionEnabled } = useMotion();
-  // Bloom fire counter, and the latch that keeps the CTA from re-firing during
-  // the lead. Both are local: the host knows nothing about the animation.
-  const [wave, setWave] = useState(0);
+  // Latch so a double-tap cannot save twice while the host processes the save
+  // and dismisses the sheet.
   const [saving, setSaving] = useState(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isEditing = editing != null;
   const catsFor = (t: TxType) => (t === 'income' ? incCats : expCats);
-  const [txType, setTxType] = useState<TxType>(editing?.type ?? 'expense');
-  const [amountStr, setAmountStr] = useState(editing ? String(editing.amount) : '');
+  const [txType, setTxType] = useState<TxType>(initialDraft?.type ?? editing?.type ?? 'expense');
+  const [amountStr, setAmountStr] = useState(initialDraft?.amountStr ?? (editing ? String(editing.amount) : ''));
   const [category, setCategory] = useState(
-    () => editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
+    () => initialDraft?.category ?? editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
   );
-  const [note, setNote] = useState(editing?.note ?? '');
-  const [repeat, setRepeat] = useState<Repeat>(editing?.repeat ?? 'never');
+  const [note, setNote] = useState(initialDraft?.note ?? editing?.note ?? '');
+  const [repeat, setRepeat] = useState<Repeat>(initialDraft?.repeat ?? editing?.repeat ?? 'never');
   const [weekendShift, setWeekendShift] = useState<WeekendShift>(
     editing?.occurrence?.weekendShift ?? 'after',
   );
-  const [dateText, setDateText] = useState(() =>
-    formatDate(editing?.occurrence?.scheduled ?? editing ?? { y, m, day }),
-  );
+  const initialDate = initialDraft
+    ? { y: initialDraft.y, m: initialDraft.m, day: initialDraft.day }
+    : editing?.occurrence?.scheduled ?? editing ?? { y, m, day };
+  const [dateTime, setDateTime] = useState(() => initialDateTime(initialDate, editing?.timestamp));
+  const [dateText, setDateText] = useState(() => formatDate(initialDate));
+  const [timeText, setTimeText] = useState(() => formatTime(dateTime));
+  const [dateTimePickerVisible, setDateTimePickerVisible] = useState(false);
 
   const value = amountValue(amountStr);
   const enteredDate = parseDate(dateText);
-  // Where the bloom starts: the middle of the CTA, measured up from the bottom
-  // of the form. In edit mode the CTA is not the last row — the Delete action
-  // and the container's row gap sit below it — so the origin has to clear both,
-  // or the wave would appear to launch from the destructive button.
-  // Where the bloom starts: the middle of the CTA, measured up from the bottom
-  // of the sheet. The CTA now sits in the pinned footer, so this is a fixed
-  // offset rather than something that moves with the body's height — but in
-  // edit mode the Delete action still sits below it and has to be cleared, or
-  // the wave would appear to launch from the destructive button.
-  const showDelete = isEditing && onDelete != null;
-  const waveOrigin = (showDelete ? DELETE_ROW_BLOCK : 0) + metrics.ctaHeight / 2;
+  const enteredTime = parseTime(timeText);
+  const enteredDateTime =
+    enteredDate && enteredTime ? dateTimeFromParts(enteredDate, enteredTime) : null;
   const categoryIsCurrent = catsFor(txType).includes(category);
   const canSave =
     value > 0 &&
     enteredDate !== null &&
+    enteredTime !== null &&
     (!repeatManagement || categoryIsCurrent);
   const heroText = yen(value, symbol);
   const showWeekend = repeat === 'monthly' || repeat === 'yearly';
@@ -328,44 +334,20 @@ export function EntrySheet({
     if (!catsFor(nextType).includes(category)) setCategory(catsFor(nextType)[0]);
   };
 
-  // Save is deliberately not instantaneous when motion is on (#motion): the
-  // bloom is fired first and `onSave` — which dismisses this sheet — follows a
-  // beat later, so the wave plays inside the sheet it came from rather than
-  // being cut off the moment the sheet unmounts. The host's dismissal then runs
-  // *through* the tail of the bloom, which is what makes the two read as one
-  // gesture rather than two events.
-  //
-  // WAVE_LEAD is the whole added latency of a save. It is short enough to stay
-  // under the ~200ms threshold where a delay starts reading as lag, and the
-  // wave itself covers the wait, so nothing appears frozen.
   const save = () => {
-    if (!enteredDate || saving) return;
-    const draft = { type: txType, amountStr, category, note, ...enteredDate, repeat };
-
-    if (!motionEnabled) {
-      onSave(draft, weekendShift);
-      return;
-    }
-
-    // Latch immediately so a double-tap during the lead cannot save twice —
-    // the CTA is still on screen and still under the finger for that window.
+    if (!enteredDate || !enteredDateTime || saving) return;
+    const draft = {
+      type: txType,
+      amountStr,
+      category,
+      note,
+      ...enteredDate,
+      timestamp: enteredDateTime.toISOString(),
+      repeat,
+    };
     setSaving(true);
-    setWave((n) => n + 1);
-    saveTimer.current = setTimeout(() => {
-      saveTimer.current = null;
-      onSave(draft, weekendShift);
-    }, WAVE_LEAD);
+    onSave(draft, weekendShift);
   };
-
-  // The sheet host unmounts this content on dismiss, which can land before the
-  // lead elapses if the user pans the sheet down mid-save. Dropping the timer
-  // on unmount keeps that from firing `onSave` into a torn-down tree.
-  useEffect(
-    () => () => {
-      if (saveTimer.current !== null) clearTimeout(saveTimer.current);
-    },
-    [],
-  );
 
   return (
     <View style={styles.host}>
@@ -426,35 +408,97 @@ export function EntrySheet({
             <Txt variant="optionLabel" tone="dim">
               {strings.entry.dateRowLabel}
             </Txt>
-            <View style={styles.dateControls}>
-              <TextInput
-                value={dateText}
-                onChangeText={setDateText}
-                placeholder={strings.entry.datePlaceholder}
-                placeholderTextColor={colors.dim}
-                accessibilityLabel={`${strings.entry.dateRowLabel} ${strings.entry.datePlaceholder}`}
-                accessibilityValue={{ text: dateText }}
-                autoCapitalize="none"
-                autoCorrect={false}
-                maxLength={10}
-                returnKeyType="done"
-                style={[styles.dateInput, { color: colors.ink }]}
-              />
-              <Pressable
-                onPress={() => setDateText(formatDate(today))}
-                accessibilityRole="button"
-                accessibilityLabel={strings.entry.useToday}
-                style={({ pressed }) => [styles.todayButton, pressed && { opacity: 0.6 }]}
-              >
-                <Txt variant="optionLabel" tone="positive">
-                  {strings.entry.today}
-                </Txt>
-              </Pressable>
-            </View>
+            {NativeDateTimePicker ? (
+              <View style={styles.nativeDateTimeControls}>
+                <Pressable
+                  onPress={() => setDateTimePickerVisible((visible) => !visible)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${strings.entry.dateRowLabel} ${dateText} ${timeText}`}
+                  accessibilityValue={{ text: `${dateText} ${timeText}` }}
+                  accessibilityHint="Tap to choose the date and time"
+                  style={({ pressed }) => [styles.nativeDateField, pressed && { opacity: 0.65 }]}
+                >
+                  <Txt variant="listItem" tone="ink">
+                    {dateText}
+                  </Txt>
+                  <Txt variant="optionLabel" tone="dim">
+                    {timeText}
+                  </Txt>
+                </Pressable>
+                {dateTimePickerVisible && (
+                  <View style={styles.nativeDatePickerFrame}>
+                    <NativeDateTimePicker
+                      value={dateTime}
+                      mode="datetime"
+                      display="spinner"
+                      onChange={(_event, nextDate) => {
+                        if (!nextDate) return;
+                        setDateTime(nextDate);
+                        setDateText(formatDate({
+                          y: nextDate.getFullYear(),
+                          m: nextDate.getMonth(),
+                          day: nextDate.getDate(),
+                        }));
+                        setTimeText(formatTime(nextDate));
+                      }}
+                      style={styles.nativeDatePicker}
+                    />
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={styles.dateControls}>
+                <TextInput
+                  value={dateText}
+                  onChangeText={setDateText}
+                  placeholder={strings.entry.datePlaceholder}
+                  placeholderTextColor={colors.dim}
+                  accessibilityLabel={`${strings.entry.dateRowLabel} ${strings.entry.datePlaceholder}`}
+                  accessibilityValue={{ text: dateText }}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={10}
+                  returnKeyType="done"
+                  style={[styles.dateInput, { color: colors.ink }]}
+                />
+                <TextInput
+                  value={timeText}
+                  onChangeText={setTimeText}
+                  placeholder="HH:MM"
+                  placeholderTextColor={colors.dim}
+                  accessibilityLabel="Time HH:MM"
+                  accessibilityValue={{ text: timeText }}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={5}
+                  returnKeyType="done"
+                  style={[styles.timeInput, { color: colors.ink }]}
+                />
+                <Pressable
+                  onPress={() => {
+                    const now = new Date();
+                    const nextDate = dateTimeFromParts(today, {
+                      hours: now.getHours(),
+                      minutes: now.getMinutes(),
+                    });
+                    setDateTime(nextDate);
+                    setDateText(formatDate(today));
+                    setTimeText(formatTime(nextDate));
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={strings.entry.useToday}
+                  style={({ pressed }) => [styles.todayButton, pressed && { opacity: 0.6 }]}
+                >
+                  <Txt variant="optionLabel" tone="positive">
+                    {strings.entry.today}
+                  </Txt>
+                </Pressable>
+              </View>
+            )}
           </View>
-          {!enteredDate && (
+          {(!enteredDate || !enteredTime) && (
             <Txt variant="secondary" tone="negative" style={styles.dateWarning}>
-              {strings.entry.invalidDate}
+              {!enteredDate ? strings.entry.invalidDate : 'Enter a valid time.'}
             </Txt>
           )}
         </View>
@@ -560,10 +604,6 @@ export function EntrySheet({
         )}
       </View>
 
-      {/* Last child so the bloom paints over the whole form, body and footer
-          alike. It is out of flow (absolutely positioned), so it neither shifts
-          the layout nor inflates the height reported for the sheet's detent. */}
-      <SaveWave nonce={wave} color={colors.positive} originFromBottom={waveOrigin} />
     </View>
   );
 }
@@ -665,6 +705,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  nativeDateTimeControls: {
+    alignItems: 'flex-end',
+    flexShrink: 1,
+  },
+  nativeDateField: {
+    minHeight: 40,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 2,
+  },
   dateInput: {
     width: 94,
     minHeight: 44,
@@ -672,6 +725,26 @@ const styles = StyleSheet.create({
     fontFamily: mono.semibold,
     fontSize: 14.5,
     textAlign: 'right',
+  },
+  timeInput: {
+    width: 58,
+    minHeight: 44,
+    paddingHorizontal: 0,
+    fontFamily: mono.semibold,
+    fontSize: 14.5,
+    textAlign: 'right',
+  },
+  nativeDatePicker: {
+    width: 220,
+    height: 118,
+    transform: [{ scale: 0.78 }],
+  },
+  nativeDatePickerFrame: {
+    width: 190,
+    height: 108,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   todayButton: {
     minHeight: 44,
