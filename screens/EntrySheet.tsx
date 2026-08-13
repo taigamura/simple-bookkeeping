@@ -283,6 +283,7 @@ export function EntrySheet({
   const [dateTime, setDateTime] = useState(() => initialDateTime(initialDate, editing?.timestamp));
   const [dateText, setDateText] = useState(() => formatDate(initialDate));
   const [timeText, setTimeText] = useState(() => formatTime(dateTime));
+  const [dateTimePickerVisible, setDateTimePickerVisible] = useState(false);
 
   const value = amountValue(amountStr);
   const enteredDate = parseDate(dateText);
@@ -399,22 +400,43 @@ export function EntrySheet({
               {strings.entry.dateRowLabel}
             </Txt>
             {NativeDateTimePicker ? (
-              <NativeDateTimePicker
-                value={dateTime}
-                mode="datetime"
-                display="spinner"
-                onChange={(_event, nextDate) => {
-                  if (!nextDate) return;
-                  setDateTime(nextDate);
-                  setDateText(formatDate({
-                    y: nextDate.getFullYear(),
-                    m: nextDate.getMonth(),
-                    day: nextDate.getDate(),
-                  }));
-                  setTimeText(formatTime(nextDate));
-                }}
-                style={styles.nativeDatePicker}
-              />
+              <View style={styles.nativeDateTimeControls}>
+                <Pressable
+                  onPress={() => setDateTimePickerVisible((visible) => !visible)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${strings.entry.dateRowLabel} ${dateText} ${timeText}`}
+                  accessibilityValue={{ text: `${dateText} ${timeText}` }}
+                  accessibilityHint="Tap to choose the date and time"
+                  style={({ pressed }) => [styles.nativeDateField, pressed && { opacity: 0.65 }]}
+                >
+                  <Txt variant="listItem" tone="ink">
+                    {dateText}
+                  </Txt>
+                  <Txt variant="optionLabel" tone="dim">
+                    {timeText}
+                  </Txt>
+                </Pressable>
+                {dateTimePickerVisible && (
+                  <View style={styles.nativeDatePickerFrame}>
+                    <NativeDateTimePicker
+                      value={dateTime}
+                      mode="datetime"
+                      display="spinner"
+                      onChange={(_event, nextDate) => {
+                        if (!nextDate) return;
+                        setDateTime(nextDate);
+                        setDateText(formatDate({
+                          y: nextDate.getFullYear(),
+                          m: nextDate.getMonth(),
+                          day: nextDate.getDate(),
+                        }));
+                        setTimeText(formatTime(nextDate));
+                      }}
+                      style={styles.nativeDatePicker}
+                    />
+                  </View>
+                )}
+              </View>
             ) : (
               <View style={styles.dateControls}>
                 <TextInput
@@ -674,6 +696,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  nativeDateTimeControls: {
+    alignItems: 'flex-end',
+    flexShrink: 1,
+  },
+  nativeDateField: {
+    minHeight: 40,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 2,
+  },
   dateInput: {
     width: 94,
     minHeight: 44,
@@ -691,8 +726,16 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   nativeDatePicker: {
-    width: 230,
-    height: 104,
+    width: 220,
+    height: 118,
+    transform: [{ scale: 0.78 }],
+  },
+  nativeDatePickerFrame: {
+    width: 190,
+    height: 108,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   todayButton: {
     minHeight: 44,
