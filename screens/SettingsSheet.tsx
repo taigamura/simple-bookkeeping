@@ -67,7 +67,7 @@ interface SettingsSheetProps {
   /** Drill into the Budgets sheet (#49) — Settings dismisses, Budgets presents. */
   onOpenBudgets: () => void;
   onExportData: () => void;
-  onImportZaim: () => void;
+  onImportData: () => void;
   /** Whether a corrupt-stash blob exists (#28) — gates the recovery row. */
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
@@ -94,7 +94,7 @@ export function SettingsSheet({
   onOpenRepeats,
   onOpenBudgets,
   onExportData,
-  onImportZaim,
+  onImportData,
   hasCorruptStash,
   onExportCorruptStash,
   onDeleteAllData,
@@ -125,7 +125,7 @@ export function SettingsSheet({
         <BudgetsLink onPress={onOpenBudgets} />
         <DataActions
           onExportData={onExportData}
-          onImportZaim={onImportZaim}
+          onImportData={onImportData}
           hasCorruptStash={hasCorruptStash}
           onExportCorruptStash={onExportCorruptStash}
           onDeleteAllData={onDeleteAllData}
@@ -473,13 +473,13 @@ function RepeatsLink({ count, onPress }: { count: number; onPress: () => void })
  */
 function DataActions({
   onExportData,
-  onImportZaim,
+  onImportData,
   hasCorruptStash,
   onExportCorruptStash,
   onDeleteAllData,
 }: {
   onExportData: () => void;
-  onImportZaim: () => void;
+  onImportData: () => void;
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
   onDeleteAllData: () => void;
@@ -503,13 +503,13 @@ function DataActions({
       </Pressable>
 
       <Pressable
-        onPress={onImportZaim}
+        onPress={onImportData}
         accessibilityRole="button"
-        accessibilityLabel={strings.settings.importFromZaim}
+        accessibilityLabel={strings.settings.importData}
         style={rowStyle}
       >
         <Txt variant="listItem" tone="ink">
-          {strings.settings.importFromZaim}
+          {strings.settings.importData}
         </Txt>
       </Pressable>
 

@@ -954,12 +954,12 @@ describe('Root CSV backup flow (#75)', () => {
     const { update } = renderBackupRoot({ state: { ...DEFAULT_STATE, entries: [] } });
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+    fireEvent.press(screen.getByLabelText(strings.settings.importData));
 
     await waitFor(() =>
       expect(alert).toHaveBeenCalledWith(
-        strings.settings.importFromZaim,
-        strings.zaim.entriesReady(2),
+        strings.settings.importData,
+        strings.importData.preview('Zaim', 2),
         expect.any(Array),
       ),
     );
@@ -1001,12 +1001,12 @@ describe('Root CSV backup flow (#75)', () => {
     const { update } = renderBackupRoot({ state: { ...DEFAULT_STATE, entries: ledger } });
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+    fireEvent.press(screen.getByLabelText(strings.settings.importData));
 
     await waitFor(() =>
       expect(alert).toHaveBeenCalledWith(
-        strings.zaim.noEntriesTitle,
-        `${strings.zaim.noEntriesMessage} — ${strings.zaim.skip.duplicate(2)}`,
+        strings.importData.noSupportedRowsTitle,
+        `${strings.importData.noSupportedRowsMessage} — ${strings.importData.skip.duplicate(2)}`,
       ),
     );
     expect(update).not.toHaveBeenCalled();
@@ -1027,12 +1027,12 @@ describe('Root CSV backup flow (#75)', () => {
     });
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+    fireEvent.press(screen.getByLabelText(strings.settings.importData));
 
     await waitFor(() =>
       expect(alert).toHaveBeenCalledWith(
-        strings.zaim.noEntriesTitle,
-        `${strings.zaim.noEntriesMessage} — ${strings.zaim.skip.duplicate(1)}`,
+        strings.importData.noSupportedRowsTitle,
+        `${strings.importData.noSupportedRowsMessage} — ${strings.importData.skip.duplicate(1)}`,
       ),
     );
     expect(update).not.toHaveBeenCalled();
@@ -1045,7 +1045,7 @@ describe('Root CSV backup flow (#75)', () => {
     const { update } = renderBackupRoot();
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+    fireEvent.press(screen.getByLabelText(strings.settings.importData));
 
     await waitFor(() => expect(DocumentPicker.getDocumentAsync).toHaveBeenCalled());
     expect(update).not.toHaveBeenCalled();
@@ -1063,10 +1063,10 @@ describe('Root CSV backup flow (#75)', () => {
     const { update } = renderBackupRoot();
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+    fireEvent.press(screen.getByLabelText(strings.settings.importData));
 
     await waitFor(() =>
-      expect(alert).toHaveBeenCalledWith(strings.zaim.importFailedTitle, strings.zaim.importFailedMessage),
+      expect(alert).toHaveBeenCalledWith(strings.importData.importFailedTitle, strings.importData.importFailedMessage),
     );
     expect(update).not.toHaveBeenCalled();
     alert.mockRestore();
@@ -1082,10 +1082,10 @@ describe('Root CSV backup flow (#75)', () => {
     const { update } = renderBackupRoot();
 
     fireEvent.press(screen.getByLabelText(strings.nav.settings));
-    fireEvent.press(screen.getByLabelText(strings.settings.importFromZaim));
+    fireEvent.press(screen.getByLabelText(strings.settings.importData));
 
     await waitFor(() =>
-      expect(alert).toHaveBeenCalledWith(strings.zaim.notZaimTitle, strings.zaim.notZaimMessage),
+      expect(alert).toHaveBeenCalledWith(strings.importData.unknownFormatTitle, strings.importData.unknownFormatMessage),
     );
     expect(update).not.toHaveBeenCalled();
     alert.mockRestore();

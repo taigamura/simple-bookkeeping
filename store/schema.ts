@@ -221,6 +221,13 @@ function normalizeRecurrenceRule(value: unknown): RecurrenceRule | null {
   return normalized;
 }
 
+function isImportProvenance(value: unknown): value is NonNullable<Transaction['importProvenance']> {
+  return isRecord(value)
+    && typeof value.provider === 'string' && value.provider.length > 0
+    && typeof value.sourceId === 'string' && value.sourceId.length > 0
+    && isInteger(value.row) && value.row >= 0;
+}
+
 function normalizeTransaction(value: unknown): Transaction | null {
   if (!isRecord(value)) return null;
   if (typeof value.id !== 'string' || value.id.length === 0) return null;
@@ -237,6 +244,7 @@ function normalizeTransaction(value: unknown): Transaction | null {
   if (value.accountId !== undefined && typeof value.accountId !== 'string') return null;
   if (value.timestamp !== undefined && !isTimestamp(value.timestamp)) return null;
   if (value.timestampInferred !== undefined && value.timestampInferred !== true) return null;
+  if (value.importProvenance !== undefined && !isImportProvenance(value.importProvenance)) return null;
 
   const normalized: Transaction = {
     id: value.id,
@@ -257,6 +265,7 @@ function normalizeTransaction(value: unknown): Transaction | null {
     normalized.timestampInferred = true;
   }
   if (value.accountId !== undefined) normalized.accountId = value.accountId;
+  if (isImportProvenance(value.importProvenance)) normalized.importProvenance = { ...value.importProvenance };
   return normalized;
 }
 

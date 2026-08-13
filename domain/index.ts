@@ -88,11 +88,41 @@ export {
   decodeZaimBytes,
   parseZaimCsv,
   serializeZaimCsv,
+  zaimImportAdapter,
   type ZaimExisting,
   type ZaimImportResult,
   type ZaimSkipReason,
   type ZaimSkipTally,
 } from './zaim';
+export {
+  validateFinancialRow,
+  type FinancialRow,
+  type FinancialRowInvalidReason,
+  type FinancialRowValidation,
+} from './financialRow';
+export {
+  previewImport,
+  previewImportBytes,
+  applyImport,
+  applyImportPreview,
+  sourceFingerprint,
+  type ImportAdapter,
+  type ImportDetection,
+  type NormalizedImportRow,
+  type AdapterParseResult,
+  type ImportPreview,
+  type ImportState,
+  type ImportSkipReason,
+  type ImportSkipTally,
+} from './importPipeline';
+export {
+  decodeMoneyforwardMeBytes,
+  moneyforwardMeImportAdapter,
+} from './moneyforward';
+export {
+  decodeOkaneRecoBytes,
+  okaneRecoImportAdapter,
+} from './okaneReco';
 export {
   pressKey,
   amountValue,

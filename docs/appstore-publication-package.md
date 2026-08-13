@@ -9,10 +9,10 @@ This document contains the complete App Store publication materials for the bili
 ## Part 1: English App Store Listing
 
 ### App Name
-**[NAME]**
+**Suito**
 
 ### Subtitle (up to 30 characters)
-Personal expense tracker
+Bookkeeping, never in the red
 
 ### Description
 
@@ -65,10 +65,10 @@ Standard
 ## Part 2: Japanese App Store Listing
 
 ### アプリ名 (App Name)
-**[NAME]**
+**Suito**
 
 ### 副題 (Subtitle; up to 30 characters)
-個人用家計簿アプリ
+赤字にしないシンプルな家計簿
 
 ### 説明 (Description)
 
