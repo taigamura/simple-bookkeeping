@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Kaji",
+    "name": "Suito",
     "slug": "kaji",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,7 +14,17 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.taigamura.kaji",
       "buildNumber": "1",
-      "config": { "usesNonExemptEncryption": false }
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.taigamura.kaji"]
+      },
+      "infoPlist": {
+        "CFBundleURLTypes": [{ "CFBundleURLSchemes": ["kaji-quick-entry"] }],
+        "NSLocalNetworkUsageDescription": "Suito connects to your paired household phone when both apps are open and nearby.",
+        "NSBonjourServices": ["_kaji-sync._tcp"]
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -44,10 +54,11 @@
           }
         }
       ],
-      "@sentry/react-native/expo"
+      "expo-secure-store",
+      "./config/withQuickEntry",
+      "./config/withWatchExpense"
     ],
     "extra": {
-      "sentryDsn": "",
       "eas": {
         "projectId": "130c36b5-0731-4688-9e25-e7dd5dd87615"
       }

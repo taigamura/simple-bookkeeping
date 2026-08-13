@@ -6,15 +6,13 @@
 PROJECT_NAME="kaji"
 PROJECT_TYPE="typescript"
 
-# Claude Code CLI command
-# If "claude" is not in your PATH, set to your installation:
-#   "npx @anthropic-ai/claude-code"  (uses npx, no global install needed)
-#   "/path/to/claude"                (custom path)
-CLAUDE_CODE_CMD="claude"
+# Route Ralph through the OpenAI Codex compatibility shim.
+CLAUDE_CODE_CMD="codex-claude-shim"
+CLAUDE_MODEL="gpt-5.6-luna"
 
 # Loop settings
 MAX_CALLS_PER_HOUR=100
-CLAUDE_TIMEOUT_MINUTES=15
+CLAUDE_TIMEOUT_MINUTES=30
 CLAUDE_OUTPUT_FORMAT="json"
 # Token limit per hour (0 = disabled). One invocation can use 100k+ tokens.
 # Recommended: 500000 for light use, 2000000 for heavy use.

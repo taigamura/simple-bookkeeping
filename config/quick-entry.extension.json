@@ -1,0 +1,7 @@
+{
+  "bundleIdentifier": "com.taigamura.kaji.quick-entry",
+  "appGroup": "group.com.taigamura.kaji",
+  "inboxDirectory": "quick-entry-inbox",
+  "quarantineDirectory": "quick-entry-quarantine",
+  "urlScheme": "kaji-quick-entry"
+}

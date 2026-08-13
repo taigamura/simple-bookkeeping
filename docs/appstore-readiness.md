@@ -8,7 +8,7 @@ V1 an official, public App Store release.
 The implementation PRD is GitHub issue
 [#72 — Official public V1 release readiness](https://github.com/taigamura/simple-bookkeeping/issues/72).
 
-The current name, **Kaji**, is a working name. Choosing the final public name
+The current name, **Suito**, is a working name. Choosing the final public name
 is intentionally deferred, but applying it consistently is a release gate.
 
 ## Product contract for V1
@@ -22,7 +22,7 @@ V1 is a small, local-first personal income and expense tracker. It includes:
 - Zaim-compatible CSV import and export, including Shift-JIS import.
 - Corrupt-load recovery through a separately stashed, exportable backup.
 
-V1 deliberately has no accounts/wallets, cloud backend, sync, advertising,
+V1 deliberately has no accounts/wallets, cloud backend, remote sync, advertising,
 in-app purchases, analytics, enabled crash reporting, bank integrations, or
 currency conversion.
 
@@ -37,8 +37,8 @@ currency conversion.
 - [x] CSV import/export and corrupt-load safety net implemented.
 - [x] Haptics and optional native device authentication implemented.
 - [x] Privacy policy written and hosted in English and Japanese.
-- [x] Sentry kept inert with a blank DSN, source-map upload disabled, and a
-      unit test proving blank-DSN runtime initialization is skipped.
+- [x] Crash reporting, analytics, and telemetry SDK/config surfaces removed;
+      the privacy boundary checker is enforced in CI.
 - [x] Real-iPhone behavior tested and accepted as sufficient to enter the
       release-candidate phase.
 - [x] Total/per-category budgets, delete-all-data, launch destination, and
@@ -93,9 +93,9 @@ currency conversion.
       promotional copy, and support contact details.
 - [ ] Complete Finance category, age rating, copyright, privacy-policy URL,
       support URL, and export-compliance metadata.
-- [x] Declare “Data Not Collected” only while Sentry, analytics, advertising,
-      and every other transmission path remain disabled; see
-      `docs/v1-privacy-mode.md`.
+- [ ] Verify the App Store privacy label against the exact production binary,
+      including authenticated nearby peer traffic. Do not guess the answer;
+      see `docs/v1-privacy-mode.md`.
 - [ ] Capture current Japanese and English screenshots for every App Store
       device class required by App Store Connect.
 - [ ] Write review notes explaining that the app is local-only, has no account
@@ -112,9 +112,9 @@ currency conversion.
       lock/unlock, Zaim import, CSV export, delete-all confirmation, relaunch,
       and persistence.
 - [ ] Confirm there are no placeholder labels, fake purchase/ad surfaces,
-      debug controls, unexpected network requests, or developer-only sample
-      data in the initial experience using the audit in
-      `docs/v1-privacy-mode.md`.
+      debug controls, app-attributable public network requests, or developer-only
+      sample data. Run `docs/production-binary-network-audit.md` and separately
+      record expected paired local-peer traffic.
 - [ ] Submit the tested build and archive the final checklist, build number,
       commit, and App Store metadata snapshot.
 

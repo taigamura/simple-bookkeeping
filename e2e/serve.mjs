@@ -13,7 +13,7 @@ import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = fileURLToPath(new URL('./.web-build', import.meta.url));
+const ROOT = process.env.E2E_WEB_BUILD_DIR ?? fileURLToPath(new URL('./.web-build', import.meta.url));
 const PORT = Number(process.env.E2E_PORT ?? 4173);
 
 const MIME = {

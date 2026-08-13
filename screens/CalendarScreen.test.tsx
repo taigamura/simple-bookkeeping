@@ -34,6 +34,7 @@ const renderCalendar = (
   totalBudget: number = 0,
   view: CalendarView = 'numbers',
   onToggleView: () => void = () => {},
+  today?: { y: number; m: number; day: number },
 ) =>
   render(
     <ThemeProvider>
@@ -45,6 +46,7 @@ const renderCalendar = (
         y={2026}
         m={6}
         day={1}
+        today={today}
         symbol="¥"
         view={view}
         onToggleView={onToggleView}
@@ -122,6 +124,34 @@ describe('CalendarScreen strip BUDGET column (#50)', () => {
     );
     expect(screen.getByText('¥5,000')).toBeTruthy();
     expect(screen.queryByText('¥20,000')).toBeNull();
+  });
+
+  it('shows the current-month today allowance and counts today through month-end', () => {
+    renderCalendar(
+      [tx({ day: 26, amount: 100 }), tx({ day: 27, amount: 200 }), tx({ day: 28, amount: 500 })],
+      { Food: 1000 },
+      'category',
+      0,
+      'numbers',
+      () => {},
+      { y: 2026, m: 6, day: 27 },
+    );
+    expect(screen.getByText('Today')).toBeTruthy();
+    expect(screen.getByText('¥140')).toBeTruthy();
+  });
+
+  it('states when the current month has no configured budget', () => {
+    renderCalendar(
+      [],
+      {},
+      'category',
+      0,
+      'numbers',
+      () => {},
+      { y: 2026, m: 6, day: 27 },
+    );
+    expect(screen.getByText('Today')).toBeTruthy();
+    expect(screen.getByText('No budget')).toBeTruthy();
   });
 });
 

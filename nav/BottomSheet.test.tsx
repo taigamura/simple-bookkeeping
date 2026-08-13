@@ -30,7 +30,7 @@ jest.mock('react-native-safe-area-context', () =>
 
 import { act, render, screen } from '@testing-library/react-native';
 import React from 'react';
-import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ThemeProvider } from '../theme';
@@ -125,6 +125,18 @@ describe('BottomSheet', () => {
     // respond to touch and pan gestures; verified by device testing.
     expect(() => renderSheet()).not.toThrow();
     // On device: verify grab bar drag visibly tracks finger and fling dismisses
+  });
+
+  test('keeps content panning opt-in and configures safe drag thresholds', () => {
+    renderSheet();
+    expect(modalProps().enableContentPanningGesture).toBe(false);
+    expect(modalProps().activeOffsetY).toBe(12);
+    expect(modalProps().failOffsetX).toEqual([-12, 12]);
+
+    renderSheet({ enableContentPanningGesture: true });
+    // Web uses the pointer bridge below because RNGH's content detector cannot
+    // receive a reliable stream through react-native-web Pressables.
+    expect(modalProps().enableContentPanningGesture).toBe(Platform.OS !== 'web');
   });
 
   test('offers fixed 80% and expanded snap points', () => {

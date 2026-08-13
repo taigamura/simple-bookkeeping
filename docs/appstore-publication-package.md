@@ -1,22 +1,22 @@
 # App Store Publication Package
 
-Status: Prepared for name application | Issue #78
+Status: Name applied (Suito) | Issue #78
 
-This document contains the complete App Store publication materials for the bilingual V1 release. All copy is final-form except where marked with `[NAME]` or similar placeholder. Applying the final public name is mechanical—update the designated placeholders and verify the checklist at the end.
+This document contains the complete App Store publication materials for the bilingual V1 release. All copy is final-form. The public name **Suito** has been applied throughout; the working identifiers (`com.taigamura.kaji`, the `kaji-*` schemes, and the Expo slug) are deliberately unchanged.
 
 ---
 
 ## Part 1: English App Store Listing
 
 ### App Name
-**[NAME]**
+**Suito**
 
 ### Subtitle (up to 30 characters)
-Personal expense tracker
+Bookkeeping, never in the red
 
 ### Description
 
-[NAME] is a small, fast, local-first personal income and expense tracker. All your financial data stays on your device—there are no accounts, cloud sync, or analytics.
+Suito is a small, fast, local-first personal income and expense tracker. Your financial data is stored locally on your device. Internet services: none. There are no accounts, internet backend, cloud or remote sync, or analytics. Nearby household sharing is off until a second phone is paired; when both paired apps are open and nearby, they can exchange encrypted changes directly.
 
 **What you can do:**
 - Track income and expenses by day with an optional note.
@@ -28,25 +28,27 @@ Personal expense tracker
 - Switch between light and dark themes.
 - Use the full app in Japanese or English, matching your device language.
 
-**What [NAME] doesn't do:**
+**What Suito doesn't do:**
 - No account creation or login.
-- No cloud sync or multi-device sharing.
-- No connection to banks or other services.
+- No cloud sync or remote multi-device sharing.
+- No connection to banks, internet services, or cloud backends.
 - No currency conversion (currency choices are display-only).
 - No ads or in-app purchases.
 - No analytics or data collection.
 
 **Recurring entries (repeats):**
-When you create or edit an entry marked as daily, monthly, or yearly, [NAME] continues the series indefinitely from that date. You can edit this and future occurrences, delete one occurrence, or delete this and all future occurrences. Projected repeats are included in monthly budgets and summaries.
+When you create or edit an entry marked as daily, monthly, or yearly, Suito continues the series indefinitely from that date. You can edit this and future occurrences, delete one occurrence, or delete this and all future occurrences. Projected repeats are included in monthly budgets and summaries.
 
 **Getting started:**
-Start on the Calendar to add your first entry, or on the Summary to see your monthly totals. Import an existing Zaim CSV to restore a backup. All data is stored privately on your device.
+Start on the Calendar to add your first entry, or on the Summary to see your monthly totals. Import a supported Zaim, MoneyForward ME, or おカネレコ CSV. All data is stored privately on your device.
 
 ### Keywords (comma-separated, ~100 characters total)
 money, expense, budget, personal finance, tracker, local-first
 
 ### Promotional Text (Optional; up to 170 characters)
-All your financial data stays on your device. No accounts, no sync, no analytics.
+Your financial data is stored locally on your device. Internet services: none.
+No accounts, backend, cloud or remote sync, or analytics. Paired nearby
+household sharing is a separate local network capability, not “zero networking.”
 
 ### Category
 Finance
@@ -65,14 +67,14 @@ Standard
 ## Part 2: Japanese App Store Listing
 
 ### アプリ名 (App Name)
-**[NAME]**
+**Suito**
 
 ### 副題 (Subtitle; up to 30 characters)
-個人用家計簿アプリ
+赤字にしないシンプルな家計簿
 
 ### 説明 (Description)
 
-[NAME]は小さくて高速な、ローカルファースト型の個人用家計簿です。あなたの家計データはすべてデバイスに保存され、クラウド、アカウント、または分析はありません。
+Suitoは小さくて高速な、ローカルファースト型の個人用家計簿です。家計データはお使いの端末にローカル保存されます。インターネットサービスはありません。クラウドやリモート同期、アカウント、分析もありません。近くの家庭内共有は2台目の端末をペアリングするまでオフで、ペアリング後は両方のアプリを開いて近くに置いたときだけ、暗号化された変更を直接共有できます。
 
 **できること：**
 - 毎日の収支を記録。メモを追加できます。
@@ -86,7 +88,7 @@ Standard
 
 **ないもの：**
 - アカウント登録やログインなし。
-- クラウド同期やデバイス間共有なし。
+- クラウド同期やリモートでのデバイス間共有なし。
 - 銀行や他のサービスとの接続なし。
 - 通貨換算なし（通貨選択は表示のみ）。
 - 広告またはアプリ内購入なし。
@@ -96,13 +98,13 @@ Standard
 記録を「毎日」「毎月」「毎年」として作成または編集すると、選択した日から終了日なしで繰り返します。繰り返し記録は、この回以降を編集したり、この回だけ、またはこの回以降のすべてを削除したりできます。予算とサマリーには、表示する月の繰り返し記録も含まれます。
 
 **はじめ方：**
-カレンダーで最初の記録を追加するか、サマリーで月の合計を確認してください。既存のZaim CSVを読み込んでバックアップを復元できます。すべてのデータはあなたのデバイスにプライベートに保存されます。
+カレンダーで最初の記録を追加するか、サマリーで月の合計を確認してください。対応するZaim、MoneyForward ME、またはおカネレコのCSVを読み込めます。すべてのデータはあなたのデバイスにプライベートに保存されます。
 
 ### キーワード (Keywords; comma-separated, ~100 characters total)
 家計簿, 支出, 予算, 家計管理, 収支, ローカルファースト
 
 ### プロモーションテキスト (Promotional Text; Optional; up to 170 characters)
-すべての家計データはあなたのデバイスに保存されます。アカウント、同期、分析なし。
+家計データはお使いの端末にローカル保存されます。インターネットサービス、アカウント、クラウドやリモート同期、分析なし。ペア済みの近くの端末との共有は別のローカル通信です。
 
 ### カテゴリ (Category)
 ファイナンス
@@ -130,17 +132,17 @@ Standard
 
 ### Data Collection
 
-**App Privacy Details:**
-- **Data Not Collected** – [NAME] does not collect any user data. All financial information (transactions, categories, budgets, settings) is stored only on your device in local app storage. There is no account, sync, analytics, advertising, crash reporting, or any network transmission of user data.
+**App Privacy Details (verification required):**
+- The expected answer is **Data Not Collected**: Suito does not collect user data. Financial information is stored in local app storage; there is no account, internet backend, cloud/remote sync, analytics, advertising, or crash reporting. Authenticated nearby peer-to-peer transfer is separately bounded local networking. Verify this label against the exact production binary and the current App Store Connect questionnaire before declaring it.
 
 ---
 
 ## Part 4: Review Notes for App Review
 
 **Summary:**
-[NAME] is a local-first personal finance tracker with no account login, no cloud features, and no data collection. All data remains on the user's device.
+Suito is a local-first personal finance tracker with no account login, cloud features, or data collection. Data is stored locally; paired nearby phones may exchange encrypted changes while both apps are open.
 
-**How to review [NAME]:**
+**How to review Suito:**
 
 1. **Cold launch:** Open the app with no prior data. You will see the Calendar view.
 2. **Add an entry:** Tap the ＋ button to create an expense or income entry. Choose a category, enter an amount, and optionally add a note. You can set the entry as a repeat (daily, monthly, or yearly); it continues indefinitely from the selected date.
@@ -148,15 +150,15 @@ Standard
 4. **Settings:** Tap Settings to view options. You can toggle the appearance theme, change the currency symbol, manage custom categories, and access import/export.
 5. **CSV import/export:**
    - To export: In Settings, tap "Export data" to save a CSV file using the system share sheet. Repeating occurrences through today are exported as concrete one-time rows because Zaim CSV has no recurrence-rule format.
-   - To import: In Settings, tap "Import from Zaim" to select a CSV file. [NAME] accepts standard Zaim CSV format and UTF-8 or Shift-JIS encoding.
-6. **No login, no network:** The app has no account creation, login, or network activity. It does not connect to banks, services, or cloud backends. All data is private and local.
+   - To import: In Settings, tap "Import data" to select a CSV file. Suito detects supported Zaim, MoneyForward ME, and おカネレコ exports and previews the provider, import count, duplicates, and skipped rows before confirmation.
+6. **No login, no internet backend:** The app has no account creation, login, or internet service. It does not connect to banks, services, or cloud backends. Nearby household sharing is off until phones are paired, then occurs only directly between paired nearby phones while both apps are open. It must not be described as zero networking or no transmission.
 7. **Locales:** The app respects the device language setting. Change your device language to Japanese to verify the full Japanese UI and copy.
 8. **Delete all data:** In Settings, scroll to "Data" and select "Delete all data" to see a confirmation that clarifies the scope: entries, repeating series, and budgets are deleted, but currency, categories, and settings are preserved.
 
 **Important notes:**
-- The app is fully functional offline.
+- The app is fully functional without internet services. Paired nearby sharing uses local peer networking while both apps are open.
 - No account is required to use the app.
-- CSV import is Zaim-compatible and supports both UTF-8 and Shift-JIS encoding.
+- CSV import supports documented Zaim, MoneyForward ME, and おカネレコ formats; encoding support depends on the detected provider.
 - The "symbol-only currency" means the currency display changes (¥, $, €, £) but amounts are never converted or recalculated.
 
 ---
@@ -213,8 +215,8 @@ Each screenshot should show **real app UI** with **fictitious, non-sensitive dat
 **Screenshot 4: Settings (all locales)**
 - Shows Settings view with currency, categories, import/export, and data options visible.
 - Demonstrates theme toggle or lock option if relevant.
-- Caption (EN): "Import Zaim CSV or export to backup. Control theme and optional lock."
-- Caption (JA): "Zaim CSVを読み込み、バックアップを作成。テーマとロックを設定します。"
+- Caption (EN): "Import supported CSV data or export to backup. Control theme and optional lock."
+- Caption (JA): "対応するCSVを読み込み、バックアップを作成。テーマとロックを設定します。"
 
 **Screenshot 5 (optional, recommended): Budgets sheet (all locales)**
 - Shows Budgets view in per-category mode with 3–4 budget amounts and a "Budget left" bar.
@@ -246,65 +248,71 @@ Use this fictitious, non-sensitive data across all locales:
 
 ---
 
-## Part 6: Checklist for Final Name Application
+## Part 6: Name Application Record
 
-When the final public name is decided, update the following locations to ensure consistent branding:
+The public name is **Suito**, chosen 2026-08-13. It reads off 出納 (suitō, "receipts
+and disbursements"), and the blue interface echoes 水筒 (suitō, "water bottle"); the
+water direction is deliberately left for a later visual pass, not V1.
 
-### Documentation and Code
-- [ ] Update `docs/appstore-publication-package.md` (this file) – replace all `[NAME]` placeholders with the final name.
-- [ ] Update `docs/appstore-readiness.md` – update all references to "Kaji" (working name) with the final name.
-- [ ] Update `docs/v1-privacy-mode.md` – update all references to "Kaji" with the final name.
-- [ ] Update `README.md` – replace project name and description references.
-- [ ] Update `app.json` – set `name` and `slug` to match the final name (follow naming conventions; slug should be lowercase and kebab-case).
-- [ ] Update `package.json` – update the `name` field if desired (optional, but recommended for clarity).
+Tagline (bilingual, for the listing and marketing surfaces, not the 30-character
+subtitle field):
 
-### App UI and Copy
-- [ ] Update `i18n/strings.ts` or relevant copy – if any hardcoded app name appears in the UI, replace with the final name.
-- [ ] Update the privacy policy in `docs/privacy.html` – ensure the app name matches the final public name.
+- `Suito | 赤字にしないシンプルな家計簿`
+- `Suito | A simple bookkeeper that doesn't put you in the red`
 
-### App Icons and Splash Screen
-- [ ] Update `assets/icon.png` and related icon files – if the icon contains the text "Kaji" or the working name, regenerate or replace with the final name.
-- [ ] Update `assets/splash.png` – if the splash screen displays the app name, update to the final name.
+### What the name does NOT change
 
-### App Store Metadata
-- [ ] In App Store Connect:
-  - [ ] App Name: `[NAME]` → Final name
-  - [ ] Subtitle: "Personal expense tracker" (unchanged)
-  - [ ] Description: Replace all `[NAME]` references with the final name
-  - [ ] Promotional Text: Replace all `[NAME]` references
-  - [ ] Keywords: Update if desired (unchanged in this template)
-  - [ ] Support URL: Verify (https://github.com/taigamura/simple-bookkeeping)
-  - [ ] Privacy Policy URL: Verify (https://taigamura.github.io/simple-bookkeeping/privacy.html)
+The registered identifiers stay on the `kaji` namespace. They are not user-visible,
+and changing any of them breaks signing, App Group storage, or installed-app upgrades:
 
-### Japanese Metadata
-- [ ] In App Store Connect (Japanese localization):
-  - [ ] アプリ名: `[NAME]` → Final name (romanized or native as appropriate)
-  - [ ] 副題: "個人用家計簿アプリ" (unchanged)
-  - [ ] 説明: Replace all `[NAME]` references with the final name
-  - [ ] プロモーションテキスト: Replace all `[NAME]` references
-  - [ ] キーワード: Update if desired
-  - [ ] Support URL and Privacy Policy URL: Same as English (unchanged)
+- `com.taigamura.kaji` (bundle identifier) and `com.taigamura.kaji` (Android package)
+- `group.com.taigamura.kaji` (App Group) and every derived extension identifier
+- `kaji-quick-entry` (URL scheme), `_kaji-sync._tcp` (Bonjour service)
+- the Expo slug `kaji` and EAS project `130c36b5-0731-4688-9e25-e7dd5dd87615`
+- native target and source names (`KajiWatchApp`, `KajiNearbyModule`, and similar)
+- the repository name `simple-bookkeeping` and its GitHub Pages privacy URL
 
-### Version and Build Metadata
-- [ ] Confirm `app.json` version matches the release version (e.g., "1.0.0").
-- [ ] Confirm `app.json` buildNumber is incremented for the submission (required by Apple).
-- [ ] Verify `eas.json` is correctly configured for the production submission profile.
+### Applied in this commit
 
-### Final Verification (Before Submission)
-- [ ] All `[NAME]` placeholders have been replaced with the final public name.
-- [ ] The name is consistent across `app.json`, privacy policy, README, and App Store Connect metadata.
-- [ ] The app builds and runs without errors in production configuration.
-- [ ] Screenshots have been updated to reflect the final name if it appears in the UI (or note that the name does not appear in the current UI).
-- [ ] Privacy policy URL is accessible from a logged-out browser and matches the declared URL.
-- [ ] Support contact (email or URL) is verified and current.
-- [ ] The review notes have been updated if the final name requires any explanation (e.g., a non-English name or a name with special characters).
+- [x] `app.json` – `expo.name` is `Suito`; `NSLocalNetworkUsageDescription` names Suito.
+- [x] `i18n/strings.ts` – the loading label and the recovery passphrase notice name Suito in both locales. The `loadingKaji` key is an internal identifier and is unchanged.
+- [x] `docs/privacy.html` – all prose references name Suito.
+- [x] `README.md` – titled `Suito (出納)`.
+- [x] `docs/appstore-readiness.md` – prose references name Suito.
+- [x] `docs/appstore-publication-package.md` (this file) – all listing copy names Suito.
+
+### Decided 2026-08-13
+
+- App Store name availability: **Suito** confirmed not taken.
+- Japanese listing name: romanized `Suito`, matching the English listing rather than `Suito（出納）`.
+- English subtitle carries "Bookkeeping" so the listing is reachable by English search. Apple indexes the name and subtitle alongside the keyword field, so "bookkeeping" is deliberately absent from Keywords; repeating it there would waste characters.
+
+### Still open (human, before submission)
+
+- [ ] Icons and splash carry the Kippu mark and no wordmark, so no asset regeneration is required. Re-confirm on the built binary.
+- [ ] Confirm `app.json` version `1.0.0` and increment `buildNumber` for the submission.
+- [ ] Screenshots: the app name does not appear in any in-app surface, so existing screenshots remain valid. Re-confirm against the release candidate.
+
+### App Store Connect entry
+
+| Field | English | Japanese |
+| --- | --- | --- |
+| App Name | Suito | Suito |
+| Subtitle | Bookkeeping, never in the red | 赤字にしないシンプルな家計簿 |
+| Category | Finance | ファイナンス |
+| Rating | 4+ | 4+ |
+| Support URL | https://github.com/taigamura/simple-bookkeeping | same |
+| Privacy Policy URL | https://taigamura.github.io/simple-bookkeeping/privacy.html | same |
+
+Description, promotional text, and keywords are in Parts 1 and 2 above and already
+carry the name.
 
 ---
 
 ## Part 7: Export Compliance
 
 **Classification:**
-[NAME] does not implement or bundle encryption. It requires no CCATS export-compliance review.
+Suito does not implement or bundle encryption. It requires no CCATS export-compliance review.
 
 **EARs/ITARs applicability:**
 No. The app does not contain regulated technical data, source code, or cryptographic algorithms.

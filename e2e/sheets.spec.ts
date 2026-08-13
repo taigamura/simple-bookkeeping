@@ -220,6 +220,21 @@ test.describe('Budgets from Settings', () => {
 });
 
 test.describe('dismiss → immediate reopen', () => {
+  test('Entry: meaningful downward drag from the top band dismisses', async ({ page }) => {
+    const { fab } = await coldLoad(page);
+    await tapAt(page, fab);
+    await expectSheetOpen(page, 'entry-sheet');
+
+    const entry = sheet(page, 'entry-sheet');
+    const box = (await entry.boundingBox())!;
+    const x = box.x + box.width / 2;
+    await page.mouse.move(x, box.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(x, box.y + 180, { steps: 8 });
+    await page.mouse.up();
+    await expectSheetGone(page, 'entry-sheet');
+  });
+
   test('Entry: backdrop dismiss, then reopen', async ({ page }) => {
     const { fab } = await coldLoad(page);
     await tapAt(page, fab);

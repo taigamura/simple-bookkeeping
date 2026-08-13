@@ -24,7 +24,7 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         onOpenRepeats={() => {}}
         onOpenBudgets={() => {}}
         onExportData={() => {}}
-        onImportZaim={() => {}}
+        onImportData={() => {}}
         hasCorruptStash={false}
         onExportCorruptStash={() => {}}
         onDeleteAllData={() => {}}
@@ -76,6 +76,26 @@ describe('SettingsSheet', () => {
     expect(onOpenBudgets).toHaveBeenCalled();
   });
 
+  it('separates no internet services from nearby household-sharing state', () => {
+    const { rerender } = renderSheet();
+    expect(screen.getByText('Internet services: none')).toBeTruthy();
+    expect(screen.getByText('Nearby household sharing: off until paired')).toBeTruthy();
+
+    rerender(
+      <ThemeProvider>
+        <SettingsSheet
+          currency={CURRENCIES[0]} expCats={['Food']} incCats={['Salary']}
+          onChangeCurrency={() => {}} onChangeExpCats={() => {}} onChangeIncCats={() => {}}
+          activeRepeatCount={0} onOpenRepeats={() => {}} onOpenBudgets={() => {}}
+          onExportData={() => {}} onImportData={() => {}} hasCorruptStash={false}
+          onExportCorruptStash={() => {}} onDeleteAllData={() => {}} onClose={() => {}}
+          nearbySharingPaired
+        />
+      </ThemeProvider>,
+    );
+    expect(screen.getByText('Nearby household sharing: paired')).toBeTruthy();
+  });
+
   it('always renders a Repeats drill-in row with its active segment count', () => {
     const onOpenRepeats = jest.fn();
     renderSheet({ activeRepeatCount: 2, onOpenRepeats });
@@ -85,11 +105,14 @@ describe('SettingsSheet', () => {
     expect(onOpenRepeats).toHaveBeenCalled();
   });
 
-  it('renders an "Import from Zaim" action that fires its callback', () => {
-    const onImportZaim = jest.fn();
-    renderSheet({ onImportZaim });
-    fireEvent.press(screen.getByLabelText('Import from Zaim'));
-    expect(onImportZaim).toHaveBeenCalled();
+  it('renders an "Import data" action that fires its callback', () => {
+    const onImportData = jest.fn();
+    renderSheet({ onImportData });
+    const importData = screen.getByLabelText('Import data');
+    expect(importData.props.accessibilityHint).toContain('MoneyForward ME');
+    expect(importData.props.accessibilityHint).toContain('before your ledger is changed');
+    fireEvent.press(importData);
+    expect(onImportData).toHaveBeenCalled();
   });
 
   it('renders an "Export data" action that fires its callback', () => {
@@ -97,6 +120,17 @@ describe('SettingsSheet', () => {
     renderSheet({ onExportData });
     fireEvent.press(screen.getByLabelText('Export data'));
     expect(onExportData).toHaveBeenCalled();
+  });
+
+  it('separates full-fidelity household backup actions from portable CSV', () => {
+    const onExportHouseholdBackup = jest.fn();
+    const onImportHouseholdBackup = jest.fn();
+    renderSheet({ onExportHouseholdBackup, onImportHouseholdBackup });
+    expect(screen.getByText('Full-fidelity household backup')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Export household backup'));
+    fireEvent.press(screen.getByLabelText('Restore household backup'));
+    expect(onExportHouseholdBackup).toHaveBeenCalled();
+    expect(onImportHouseholdBackup).toHaveBeenCalled();
   });
 
   it('does not offer sample data loading', () => {
