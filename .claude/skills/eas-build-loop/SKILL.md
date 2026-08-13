@@ -1,12 +1,25 @@
 ---
 name: eas-build-loop
-description: Run an EAS build to green — submit, poll, read the real compile errors, fix, rebuild. Use when asked to build/ship the iOS or Android app, or to get a failing EAS build passing.
+description: Run an EAS build to green, fix compile errors, then submit the production iOS build when explicitly requested. Use when asked to build/ship the iOS or Android app, or to get a failing EAS build passing.
 ---
 
-# Driving an EAS build to green
+# Driving an EAS build to green and submission
 
-`node scripts/eas-build-loop.mjs run` does one iteration: submit → poll →
-extract errors. It never fixes anything — **you** are the fix step. Loop:
+For the production iOS release path, run the same commands a human release
+operator should run:
+
+```bash
+npx eas-cli build --platform ios --profile production
+npx eas-cli submit --platform ios --profile production
+```
+
+If build fails with fixable compile errors, fix them and rerun the same
+production iOS build command. After a green build, submit with the production
+iOS submit command above.
+
+`node scripts/eas-build-loop.mjs run` is still available as a non-interactive
+helper for one build iteration: submit → poll → extract errors. It never fixes
+anything — **you** are the fix step. Loop:
 
 ```bash
 node scripts/eas-build-loop.mjs run            # exit 0 = green, 1 = fix these, 2 = stop
@@ -71,5 +84,12 @@ next file that failed to compile. To avoid burning one build per instance:
 
 ## Submitting to App Store Connect
 
-Out of scope — this skill stops at a signed artifact. `eas submit` is a separate,
-outward-facing action: ask first.
+Only submit when the user explicitly asked for submission. For production iOS,
+submit the completed build with:
+
+```bash
+npx eas-cli submit --platform ios --profile production
+```
+
+If EAS asks for Expo or Apple login, stop and ask the user to complete the
+login step. Do not guess credentials or retry blindly.
