@@ -32,6 +32,9 @@ export interface Store {
   hasCorruptStash(): Promise<boolean>;
   /** The stashed raw blob, or `null` if none exists. */
   readCorruptStash(): Promise<string | null>;
+  /** Pretty-printed JSON of every key/value in storage, for the recovery
+   *  export — surfaces a ledger left under a superseded storage key. */
+  dumpStorage(): Promise<string>;
 }
 
 export function createStore(
@@ -90,5 +93,9 @@ export function createStore(
     lastLoadIssue: () => lastLoadIssue,
     hasCorruptStash: async () => (await persistence.readCorruptStash()) !== null,
     readCorruptStash: () => persistence.readCorruptStash(),
+    dumpStorage: async () => {
+      const pairs = (await persistence.dumpAll?.()) ?? [];
+      return JSON.stringify(Object.fromEntries(pairs), null, 2);
+    },
   };
 }

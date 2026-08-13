@@ -70,6 +70,9 @@ interface RootProps {
   /** Whether a corrupt-stash blob exists — gates the Settings recovery row. */
   hasCorruptStash: boolean;
   readCorruptStash: () => Promise<string | null>;
+  /** One-off recovery export: dumps every storage key/value to a file.
+   *  Optional so existing render helpers need not provide it. */
+  dumpStorage?: () => Promise<string>;
   persistenceNotice?: UseStore['persistenceNotice'];
 }
 
@@ -354,6 +357,7 @@ function Shell({
   showCorruptNotice,
   hasCorruptStash,
   readCorruptStash,
+  dumpStorage = async () => '{}',
   persistenceNotice = null,
 }: RootProps) {
   const [tab, setTab] = useState<Tab>('calendar');
@@ -503,6 +507,19 @@ function Shell({
     try {
       const raw = await readCorruptStash();
       if (raw) await shareTextFile('kaji-unreadable-backup.txt', raw);
+    } catch {
+      notify(strings.zaim.exportFailedTitle, strings.zaim.exportFailedMessage);
+    }
+  };
+
+  // recoverData(): one-off recovery export. Dumps every AsyncStorage key/value
+  // to a file, so a ledger left behind under a superseded storage key (e.g. a
+  // prior build that moved to a new key on migration) can be pulled off the
+  // device and re-imported, even though this build never reads that key.
+  const recoverData = async () => {
+    try {
+      const dump = await dumpStorage();
+      await shareTextFile('kaji-storage-dump.json', dump);
     } catch {
       notify(strings.zaim.exportFailedTitle, strings.zaim.exportFailedMessage);
     }
@@ -862,6 +879,7 @@ function Shell({
             onOpenBudgets={openBudgets}
             onExportData={exportData}
             onImportData={importData}
+            onRecoverData={recoverData}
             hasCorruptStash={hasCorruptStash}
             onExportCorruptStash={exportCorruptStash}
             onDeleteAllData={deleteAllData}

@@ -26,6 +26,8 @@ export interface UseStore {
   hasCorruptStash: boolean;
   /** Read the stashed raw blob for the "Export unreadable backup" row. */
   readCorruptStash: () => Promise<string | null>;
+  /** Dump every storage key/value for the one-off "Recover data" export. */
+  dumpStorage: () => Promise<string>;
   /** Non-corrupt persistence failures that need user-visible recovery guidance. */
   persistenceNotice: Exclude<LoadIssue, 'none' | 'corrupt'> | 'save-failed' | null;
 }
@@ -82,6 +84,7 @@ export function useStore(store: Store = defaultStore): UseStore {
   );
 
   const readCorruptStash = useCallback(() => store.readCorruptStash(), [store]);
+  const dumpStorage = useCallback(() => store.dumpStorage(), [store]);
 
   return {
     ready,
@@ -90,6 +93,7 @@ export function useStore(store: Store = defaultStore): UseStore {
     showCorruptNotice,
     hasCorruptStash,
     readCorruptStash,
+    dumpStorage,
     persistenceNotice,
   };
 }

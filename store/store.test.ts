@@ -568,4 +568,52 @@ describe('createStore — corrupt-load safety net (#28)', () => {
     expect(store.wasLastLoadCorrupt()).toBe(false);
     expect(store.lastLoadIssue()).toBe('recovery-failed');
   });
+
+  describe('dumpStorage (recovery export)', () => {
+    it('returns pretty JSON of every stored key/value', async () => {
+      const blob = JSON.stringify({ version: SCHEMA_VERSION, state: stateWith() });
+      const persistence = createMemoryPersistence(blob);
+      await persistence.writeCorruptStash('{stashed}');
+      const store = createStore(persistence);
+
+      const dump = JSON.parse(await store.dumpStorage());
+      expect(dump['kaji:state:v1']).toBe(blob);
+      expect(dump['kaji:state:v1:corrupt-stash']).toBe('{stashed}');
+    });
+
+    it('surfaces a ledger left behind under a superseded key even when load() is empty', async () => {
+      // Mirrors the real incident: this build reads an empty primary key while
+      // the original ledger still sits under a key a prior build moved on from.
+      const legacyLedger = JSON.stringify({
+        version: SCHEMA_VERSION,
+        state: { ...stateWith(), entries: [sampleEntry] },
+      });
+      const store = createStore({
+        read: async () => JSON.stringify({ version: SCHEMA_VERSION, state: stateWith() }),
+        write: async () => {},
+        readCorruptStash: async () => null,
+        writeCorruptStash: async () => {},
+        dumpAll: async () => [
+          ['kaji:state:v2:ios-reset-20260813', JSON.stringify({ version: SCHEMA_VERSION, state: stateWith() })],
+          ['kaji:state:v1', legacyLedger],
+        ],
+      });
+
+      await expect(store.load()).resolves.toMatchObject({ entries: [] });
+      const dump = JSON.parse(await store.dumpStorage());
+      expect(dump['kaji:state:v1']).toBe(legacyLedger);
+      expect(JSON.parse(dump['kaji:state:v1']).state.entries).toHaveLength(1);
+    });
+
+    it('degrades to an empty object when the adapter cannot enumerate keys', async () => {
+      const store = createStore({
+        read: async () => null,
+        write: async () => {},
+        readCorruptStash: async () => null,
+        writeCorruptStash: async () => {},
+        // no dumpAll — lightweight fakes may omit it
+      });
+      expect(await store.dumpStorage()).toBe('{}');
+    });
+  });
 });

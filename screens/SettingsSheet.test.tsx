@@ -92,6 +92,13 @@ describe('SettingsSheet', () => {
     expect(onImportData).toHaveBeenCalled();
   });
 
+  it('renders a "Recover data" action that fires its callback', () => {
+    const onRecoverData = jest.fn();
+    renderSheet({ onRecoverData });
+    fireEvent.press(screen.getByLabelText('Recover data (export raw storage)'));
+    expect(onRecoverData).toHaveBeenCalled();
+  });
+
   it('renders an "Export data" action that fires its callback', () => {
     const onExportData = jest.fn();
     renderSheet({ onExportData });
