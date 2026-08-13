@@ -19,6 +19,9 @@
 # General logs
 *.log
 
+# Local data exports/backups; never include personal ledger data in build uploads
+backups/
+
 # OS files
 .DS_Store
 Thumbs.db
