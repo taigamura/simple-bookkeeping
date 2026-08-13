@@ -54,6 +54,34 @@ export function createStore(
     return { ...DEFAULT_STATE };
   }
 
+  function hasLedgerData(state: AppState): boolean {
+    return state.entries.length > 0 || state.recurrenceRules.length > 0;
+  }
+
+  function parsePersisted(raw: string): AppState | null {
+    const envelope = JSON.parse(raw) as Partial<PersistedEnvelope>;
+    if (envelope.version !== SCHEMA_VERSION || !envelope.state) return null;
+    return normalizePersistedState(envelope.state);
+  }
+
+  async function recoverReadableLegacy(): Promise<AppState | null> {
+    const candidates = await persistence.readRecoveryCandidates?.();
+    if (!candidates) return null;
+
+    for (const candidate of candidates) {
+      try {
+        const recovered = parsePersisted(candidate);
+        if (!recovered || !hasLedgerData(recovered)) continue;
+        await persistence.write(candidate);
+        return recovered;
+      } catch {
+        // Bad recovery candidates stay untouched; the regular corrupt-stash
+        // path is only for the active key the app tried to load.
+      }
+    }
+    return null;
+  }
+
   return {
     async load() {
       lastLoadCorrupt = false;
@@ -66,15 +94,15 @@ export function createStore(
         lastLoadIssue = 'read-failed';
         return { ...DEFAULT_STATE };
       }
-      if (!raw) return { ...DEFAULT_STATE };
+      if (!raw) return (await recoverReadableLegacy()) ?? { ...DEFAULT_STATE };
 
       try {
-        const envelope = JSON.parse(raw) as Partial<PersistedEnvelope>;
-        if (envelope.version !== SCHEMA_VERSION || !envelope.state) {
-          return await stashAndDefault(raw);
-        }
-        const normalized = normalizePersistedState(envelope.state);
+        const normalized = parsePersisted(raw);
         if (!normalized) return await stashAndDefault(raw);
+        if (!hasLedgerData(normalized)) {
+          const recovered = await recoverReadableLegacy();
+          if (recovered) return recovered;
+        }
         return normalized;
       } catch {
         return await stashAndDefault(raw);

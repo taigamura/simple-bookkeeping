@@ -91,6 +91,56 @@ describe('createStore', () => {
     expect((await store.load()).entries).toEqual([sampleEntry]);
   });
 
+  it('recovers readable legacy ledger data when the active key is empty', async () => {
+    const legacyBlob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: stateWith({ entries: [sampleEntry] }),
+    });
+    const persistence = createMemoryPersistence(null);
+    persistence.setRecoveryCandidates([legacyBlob]);
+    const store = createStore(persistence);
+
+    const loaded = await store.load();
+
+    expect(loaded.entries).toEqual([sampleEntry]);
+    expect(await persistence.read()).toBe(legacyBlob);
+  });
+
+  it('keeps an active ledger instead of overwriting it from a recovery candidate', async () => {
+    const activeEntry = { ...sampleEntry, id: 'active', amount: 1000 };
+    const activeBlob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: stateWith({ entries: [activeEntry] }),
+    });
+    const legacyBlob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: stateWith({ entries: [sampleEntry] }),
+    });
+    const persistence = createMemoryPersistence(activeBlob);
+    persistence.setRecoveryCandidates([legacyBlob]);
+    const store = createStore(persistence);
+
+    const loaded = await store.load();
+
+    expect(loaded.entries).toEqual([activeEntry]);
+    expect(await persistence.read()).toBe(activeBlob);
+  });
+
+  it('ignores empty recovery candidates when the active key is empty', async () => {
+    const emptyLegacyBlob = JSON.stringify({
+      version: SCHEMA_VERSION,
+      state: stateWith(),
+    });
+    const persistence = createMemoryPersistence(null);
+    persistence.setRecoveryCandidates([emptyLegacyBlob]);
+    const store = createStore(persistence);
+
+    const loaded = await store.load();
+
+    expect(loaded).toEqual(DEFAULT_STATE);
+    expect(await persistence.read()).toBeNull();
+  });
+
   it('round-trips persisted infinite recurrence rules', async () => {
     const draft: EntryDraft = {
       type: 'expense',

@@ -1,7 +1,9 @@
 /**
- * shareTextFile — writes UTF-8 text to a cache file and hands it to the
- * system share sheet (expo-sharing). Reused by the CSV export (#24) and the
- * corrupt-load safety net's "Export unreadable backup" row (#28).
+ * shareTextFile — writes UTF-8 text to disk and hands it to the system share
+ * sheet (expo-sharing). On iOS the file is written to Documents so it also
+ * appears under the app's folder in Files; other native platforms use cache.
+ * Reused by the CSV export (#24) and the corrupt-load safety net's "Export
+ * unreadable backup" row (#28).
  *
  * RN Web has no native share sheet (expo-sharing's web shim only wraps
  * `navigator.share`, which is gated to secure contexts and rarely present in
@@ -19,7 +21,7 @@ export async function shareTextFile(filename: string, contents: string): Promise
     return;
   }
 
-  const file = new File(Paths.cache, filename);
+  const file = new File(Platform.OS === 'ios' ? Paths.document : Paths.cache, filename);
   file.create({ overwrite: true });
   file.write(contents);
 

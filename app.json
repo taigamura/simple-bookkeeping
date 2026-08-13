@@ -32,6 +32,13 @@
     "plugins": [
       "expo-font",
       [
+        "expo-file-system",
+        {
+          "enableFileSharing": true,
+          "supportsOpeningDocumentsInPlace": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
