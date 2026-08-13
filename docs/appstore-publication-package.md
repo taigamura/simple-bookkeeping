@@ -68,7 +68,7 @@ Standard
 **Suito**
 
 ### 副題 (Subtitle; up to 30 characters)
-赤字にしないシンプルな家計簿
+赤字にならない家計簿
 
 ### 説明 (Description)
 
@@ -279,7 +279,7 @@ The final public name is Suito. Use this checklist to verify consistent branding
 ### Japanese Metadata
 - [ ] In App Store Connect (Japanese localization):
   - [ ] アプリ名: `Suito`
-  - [ ] 副題: "赤字にしないシンプルな家計簿"
+  - [ ] 副題: "赤字にならない家計簿"
   - [ ] 説明: 最終公開名が使われていることを確認
   - [ ] プロモーションテキスト: 必要な箇所で最終公開名が使われていることを確認
   - [ ] キーワード: Update if desired
