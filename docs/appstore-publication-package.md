@@ -12,7 +12,7 @@ This document contains the complete App Store publication materials for the bili
 **Suito**
 
 ### Subtitle (up to 30 characters)
-Stay out of the red
+Bookkeeping, never in the red
 
 ### Description
 
@@ -281,10 +281,14 @@ and changing any of them breaks signing, App Group storage, or installed-app upg
 - [x] `docs/appstore-readiness.md` – prose references name Suito.
 - [x] `docs/appstore-publication-package.md` (this file) – all listing copy names Suito.
 
+### Decided 2026-08-13
+
+- App Store name availability: **Suito** confirmed not taken.
+- Japanese listing name: romanized `Suito`, matching the English listing rather than `Suito（出納）`.
+- English subtitle carries "Bookkeeping" so the listing is reachable by English search. Apple indexes the name and subtitle alongside the keyword field, so "bookkeeping" is deliberately absent from Keywords; repeating it there would waste characters.
+
 ### Still open (human, before submission)
 
-- [ ] Confirm "Suito" is available as an App Store app name and clear of conflicting Finance-category trademarks.
-- [ ] Decide whether the Japanese listing name stays romanized `Suito` or becomes `Suito（出納）`.
 - [ ] Icons and splash carry the Kippu mark and no wordmark, so no asset regeneration is required. Re-confirm on the built binary.
 - [ ] Confirm `app.json` version `1.0.0` and increment `buildNumber` for the submission.
 - [ ] Screenshots: the app name does not appear in any in-app surface, so existing screenshots remain valid. Re-confirm against the release candidate.
@@ -294,7 +298,7 @@ and changing any of them breaks signing, App Group storage, or installed-app upg
 | Field | English | Japanese |
 | --- | --- | --- |
 | App Name | Suito | Suito |
-| Subtitle | Stay out of the red | 赤字にしないシンプルな家計簿 |
+| Subtitle | Bookkeeping, never in the red | 赤字にしないシンプルな家計簿 |
 | Category | Finance | ファイナンス |
 | Rating | 4+ | 4+ |
 | Support URL | https://github.com/taigamura/simple-bookkeeping | same |
