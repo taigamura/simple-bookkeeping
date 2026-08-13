@@ -50,17 +50,14 @@ tap should feel physical; a number changing because the month changed should
 feel edited.
 
 **The save is the one celebratory moment**, and it is split in two. An accent
-bloom (`ui/SaveWave`) expands from the CTA *inside the Entry sheet*, and the day
-cell the entry landed on plays a one-shot ring pulse. The full-screen version of
-this effect was considered and rejected: it reads beautifully once, but at
-thirty saves a day it is thirty half-second occlusions of the ledger the user is
-trying to read. Scoping the bloom to the sheet and putting the arrival signal on
-the destination says "this went there" without ever hiding the there.
+bloom (`ui/SaveWave`) expands from the CTA's near-bottom origin across the app
+canvas, and the day cell the entry landed on plays a one-shot ring pulse. The
+wave lives in the app shell so it survives the sheet's unmount, while the
+destination signal says "this went there" without ever hiding the there.
 
-Saving therefore carries **170ms of deliberate latency** (`WAVE_LEAD` in
-`EntrySheet`) so the bloom plays before the sheet is told to dismiss. This is
-under the ~200ms threshold where delay reads as lag, and the animation covers
-the wait.
+The host first resolves any recurrence scope choice, awaits the durable state
+write, then starts the wave and dismisses the sheet. There is no artificial
+pre-save delay, and a failed write produces no celebratory confirmation.
 
 **Headline figures roll, row figures do not.** `ui/AnimatedNumber` ticks the
 Summary hero, the In/Out/Net strip, and the day net. List-row amounts stay
@@ -123,6 +120,19 @@ control mirrors the appearance fade with a restrained 45° crossfade/rotation.
 - Adding a field to `AppState` remains backward-compatible: `motion` is in
   `additiveStateKeys`, so blobs written before this shipped load with the
   default.
+
+## Amendment (2026-08-10): save confirmation belongs to the app canvas
+
+`EntrySheet` no longer owns save animation state or delays persistence to show
+feedback. `Root` owns the save-wave nonce beside the landing-pulse nonce. Its
+commit path waits for the store's durable-write result, then starts the
+pointer-transparent wave and dismisses the sheet. Recurrence edits still ask
+for scope before this path begins. The overlay is rendered inside the
+`AppShell` canvas, below OS-owned status/home-indicator regions, so it cannot be
+clipped by the sheet or disappear when the sheet unmounts. The landing pulse
+continues to wait for the sheet dismissal duration, keeping both confirmations
+visible in sequence. Reduced motion still renders no wave and fires the
+destination update without animation timing.
 
 ## Amendment (2026-07-31): the save bloom and tab switch were imperceptible
 
@@ -343,12 +353,9 @@ and removes the overlay without scheduling an assembly or exit animation.
 
 ## Open
 
-- The bloom is clipped to the Entry sheet's content box. On a very short phone
-  where the sheet opens near its minimum height, the circle reaches full spread
-  before it has visibly travelled. Acceptable, but a height-aware diameter would
-  read better. (The sheet itself no longer overruns short screens — see
-  [ADR-0004](0004-entry-sheet-fits-its-screen.md), a pre-existing layout bug
-  found while verifying this work, not caused by it.)
+- The save wave now belongs to the app-shell canvas, rather than being clipped
+  to EntrySheet (see the 2026-08-10 amendment above). Keep its host within the
+  app safe-area canvas and pointer-transparent whenever this effect changes.
 - `e2e/app.ts`'s `dayIsSelected` probe reads the day tile's own
   `backgroundColor` and assumes unselected cells are transparent. That stopped
   being true when Kippu gave every cell a `card` fill, and the animated

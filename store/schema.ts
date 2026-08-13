@@ -31,9 +31,31 @@ import type {
 } from '../domain';
 import { isMotionPreference, type MotionPreference } from '../theme/motion';
 import { isThemePreference, type ThemePreference } from '../theme/tokens';
+import { categoryEntities, categoryIdFor, legacyCategoryEntities, withCategoryId, type CategoryEntity } from '../domain/identity';
 
 /** Bump when the shape changes incompatibly; `load()` falls back to defaults. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
+
+export interface HouseholdState {
+  entries: Transaction[];
+  recurrenceRules: RecurrenceRule[];
+  categories: CategoryEntity[];
+  /** Category identity → recurring monthly amount. */
+  budgets: Record<string, number>;
+  currency: Currency;
+}
+
+export interface DeviceState {
+  /** Local-only ordering, kept separate from household category entities. */
+  expenseCategoryOrder: string[];
+  incomeCategoryOrder: string[];
+  theme: ThemePreference;
+  budgetMode: 'category' | 'total';
+  totalBudget: number;
+  calendarView: CalendarView;
+  motion: MotionPreference;
+  summaryGranularity: SummaryGranularity;
+}
 
 export interface AppState {
   /** Appearance preference; `system` follows the OS. Blobs written before the
@@ -66,7 +88,13 @@ export interface AppState {
    *  because it is a way of looking at your money, not a transient view state.
    *  Added after v1 blobs shipped — merge-by-known-keys load fills the default. */
   summaryGranularity: SummaryGranularity;
+  /** v2 canonical household payload. Top-level fields remain compatibility projections. */
+  household: HouseholdState;
+  /** v2 device-local payload. Navigation itself remains runtime-only. */
+  device: DeviceState;
 }
+
+const DEFAULT_CATEGORIES = legacyCategoryEntities(DEFAULT_EXP_CATS, DEFAULT_INC_CATS);
 
 export const DEFAULT_STATE: AppState = {
   theme: 'system',
@@ -81,6 +109,15 @@ export const DEFAULT_STATE: AppState = {
   calendarView: 'dots',
   motion: 'system',
   summaryGranularity: 'monthly',
+  household: {
+    entries: [], recurrenceRules: [], categories: DEFAULT_CATEGORIES,
+    budgets: {}, currency: DEFAULT_CURRENCY,
+  },
+  device: {
+    expenseCategoryOrder: DEFAULT_EXP_CATS.map((label) => DEFAULT_CATEGORIES.find((c) => c.type === 'expense' && c.label === label)!.id),
+    incomeCategoryOrder: DEFAULT_INC_CATS.map((label) => DEFAULT_CATEGORIES.find((c) => c.type === 'income' && c.label === label)!.id),
+    theme: 'system', budgetMode: 'category', totalBudget: 0, calendarView: 'dots', motion: 'system', summaryGranularity: 'monthly',
+  },
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */
@@ -101,6 +138,8 @@ const additiveStateKeys: StateKey[] = [
   'calendarView',
   'motion',
   'summaryGranularity',
+  'household',
+  'device',
 ];
 const txTypes: TxType[] = ['income', 'expense'];
 const repeats: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
@@ -149,6 +188,13 @@ function isTimestamp(value: unknown): value is string {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value;
 }
 
+function isImportProvenance(value: unknown): value is NonNullable<Transaction['importProvenance']> {
+  return isRecord(value)
+    && typeof value.provider === 'string' && value.provider.length > 0
+    && typeof value.sourceId === 'string' && value.sourceId.length > 0
+    && isInteger(value.row) && value.row >= 0;
+}
+
 /** Deterministic timestamp for data saved before timestamps were introduced. */
 function legacyTimestamp(y: number, m: number, day: number): string {
   return new Date(Date.UTC(y, m, day, 12)).toISOString();
@@ -187,6 +233,8 @@ function normalizeRecurrenceRule(value: unknown): RecurrenceRule | null {
   if (!txTypes.includes(value.type as TxType)) return null;
   if (!isInteger(value.amount) || value.amount <= 0) return null;
   if (typeof value.category !== 'string' || typeof value.note !== 'string') return null;
+  if (value.categoryId !== undefined && typeof value.categoryId !== 'string') return null;
+  if (value.importProvenance !== undefined && !isImportProvenance(value.importProvenance)) return null;
   if (!recurringRepeats.includes(value.repeat as RecurrenceRule['repeat'])) return null;
   if (!weekendShifts.includes(value.weekendShift as WeekendShift)) return null;
   if (
@@ -214,6 +262,7 @@ function normalizeRecurrenceRule(value: unknown): RecurrenceRule | null {
     weekendShift: value.weekendShift as WeekendShift,
     exceptions: [...value.exceptions] as string[],
   };
+  if (typeof value.categoryId === 'string') normalized.categoryId = value.categoryId;
   if (value.timestamp === undefined || value.timestampInferred === true) {
     normalized.timestampInferred = true;
   }
@@ -221,7 +270,7 @@ function normalizeRecurrenceRule(value: unknown): RecurrenceRule | null {
   return normalized;
 }
 
-function normalizeTransaction(value: unknown): Transaction | null {
+function normalizeTransaction(value: unknown, preserveRepeat = false): Transaction | null {
   if (!isRecord(value)) return null;
   if (typeof value.id !== 'string' || value.id.length === 0) return null;
   if (!isInteger(value.y)) return null;
@@ -237,6 +286,7 @@ function normalizeTransaction(value: unknown): Transaction | null {
   if (value.accountId !== undefined && typeof value.accountId !== 'string') return null;
   if (value.timestamp !== undefined && !isTimestamp(value.timestamp)) return null;
   if (value.timestampInferred !== undefined && value.timestampInferred !== true) return null;
+  if (value.categoryId !== undefined && typeof value.categoryId !== 'string') return null;
 
   const normalized: Transaction = {
     id: value.id,
@@ -249,15 +299,66 @@ function normalizeTransaction(value: unknown): Transaction | null {
     category: value.category,
     note: value.note,
   };
-  // Legacy materialized repeats have no series identity. Treat them as
-  // one-time history rather than accidentally turning every old occurrence
-  // into its own infinite rule.
-  normalized.repeat = 'never';
+  // Materialized repeats from the pre-series schema are historical entries,
+  // not recurrence definitions. Backup staging opts into preserving an
+  // explicitly stored value because a full-fidelity file must be byte-stable.
+  normalized.repeat = preserveRepeat && repeats.includes(value.repeat as Repeat)
+    ? value.repeat as Repeat
+    : 'never';
   if (value.timestamp === undefined || value.timestampInferred === true) {
     normalized.timestampInferred = true;
   }
   if (value.accountId !== undefined) normalized.accountId = value.accountId;
+  if (typeof value.categoryId === 'string') normalized.categoryId = value.categoryId;
+  if (isImportProvenance(value.importProvenance)) normalized.importProvenance = { ...value.importProvenance };
   return normalized;
+}
+
+function isCategoryEntity(value: unknown): value is CategoryEntity {
+  return isRecord(value)
+    && typeof value.id === 'string' && value.id.length > 0
+    && typeof value.label === 'string' && value.label.length > 0
+    && txTypes.includes(value.type as TxType);
+}
+
+/**
+ * Validate and normalize a household slice on its own.
+ *
+ * The full-fidelity backup (#114) restores this slice without the surrounding
+ * device payload, so it needs the same per-record normalization `load()`
+ * applies — most importantly, legacy rows saved before timestamps existed get
+ * the deterministic inferred timestamp rather than being rejected.
+ */
+export function normalizeHouseholdState(value: unknown, preserveRepeat = false): HouseholdState | null {
+  if (!isRecord(value) || !Array.isArray(value.entries) || !Array.isArray(value.recurrenceRules)
+    || !Array.isArray(value.categories) || !value.categories.every(isCategoryEntity)
+    || !isBudgets(value.budgets) || !isCurrency(value.currency)) return null;
+  const entries = value.entries.map((item) => normalizeTransaction(item, preserveRepeat));
+  const recurrenceRules = value.recurrenceRules.map((item) => normalizeRecurrenceRule(item));
+  if (entries.some((entry) => entry === null) || recurrenceRules.some((rule) => rule === null)) return null;
+  return {
+    entries: entries as Transaction[],
+    recurrenceRules: recurrenceRules as RecurrenceRule[],
+    categories: (value.categories as CategoryEntity[]).map((category) => ({ ...category })),
+    budgets: { ...value.budgets },
+    currency: { ...value.currency },
+  };
+}
+
+function isHouseholdState(value: unknown): value is HouseholdState {
+  return normalizeHouseholdState(value) !== null;
+}
+
+function isDeviceState(value: unknown): value is DeviceState {
+  return isRecord(value)
+    && isCategoryArray(value.expenseCategoryOrder)
+    && isCategoryArray(value.incomeCategoryOrder)
+    && isThemePreference(value.theme)
+    && (value.budgetMode === 'category' || value.budgetMode === 'total')
+    && typeof value.totalBudget === 'number' && Number.isFinite(value.totalBudget) && value.totalBudget >= 0
+    && isCalendarView(value.calendarView)
+    && isMotionPreference(value.motion)
+    && isSummaryGranularity(value.summaryGranularity);
 }
 
 function validateField(key: StateKey, value: unknown): boolean {
@@ -285,6 +386,10 @@ function validateField(key: StateKey, value: unknown): boolean {
       return isMotionPreference(value);
     case 'summaryGranularity':
       return isSummaryGranularity(value);
+    case 'household':
+      return isHouseholdState(value);
+    case 'device':
+      return isDeviceState(value);
   }
 }
 
@@ -320,5 +425,44 @@ export function normalizePersistedState(value: unknown): AppState | null {
     if (normalizedField === null) return null;
     (normalized as Record<StateKey, unknown>)[key] = normalizedField;
   }
-  return normalized;
+  return withIdentitySlices(normalized);
+}
+
+/** Build the v2 split payload from the compatibility projection. */
+export function withIdentitySlices(state: AppState, migrateLegacy = false, forceCanonical = false): AppState {
+  const categories = categoryEntities(
+    state.expCats,
+    state.incCats,
+    migrateLegacy ? [] : state.household.categories,
+    { legacy: migrateLegacy },
+  );
+  const entries = state.entries.map((entry) => migrateLegacy ? withCategoryId(entry, categories) : entry);
+  const recurrenceRules = state.recurrenceRules.map((rule) => ({
+    ...rule,
+    ...(migrateLegacy && !rule.categoryId ? { categoryId: categoryIdFor(rule.category, rule.type, categories) } : {}),
+  }));
+  const budgets = Object.fromEntries(Object.entries(state.budgets).map(([labelOrId, amount]) => [
+    categories.some((category) => category.id === labelOrId)
+      ? labelOrId
+      : categoryIdFor(labelOrId, 'expense', categories), amount,
+  ]));
+  const hasPersistedHousehold = forceCanonical || migrateLegacy || state.household.entries.length > 0 || state.household.recurrenceRules.length > 0 || Object.keys(state.household.budgets).length > 0;
+  const household: HouseholdState = hasPersistedHousehold
+    ? { entries, recurrenceRules, categories, budgets, currency: state.currency }
+    : state.household;
+  const categoryIds = (type: TxType, labels: string[], existing: string[]) => [
+    ...existing.filter((id) => categories.some((category) => category.type === type && category.id === id)),
+    ...labels.map((label) => categoryIdFor(label, type, categories))
+      .filter((id, index, all) => all.indexOf(id) === index && !existing.includes(id)),
+  ];
+  const device: DeviceState = {
+    ...state.device,
+    expenseCategoryOrder: categoryIds('expense', state.expCats, migrateLegacy ? [] : state.device.expenseCategoryOrder),
+    incomeCategoryOrder: categoryIds('income', state.incCats, migrateLegacy ? [] : state.device.incomeCategoryOrder),
+    ...(migrateLegacy ? {
+      theme: state.theme, budgetMode: state.budgetMode, totalBudget: state.totalBudget,
+      calendarView: state.calendarView, motion: state.motion, summaryGranularity: state.summaryGranularity,
+    } : {}),
+  };
+  return { ...state, entries, recurrenceRules, household, device };
 }

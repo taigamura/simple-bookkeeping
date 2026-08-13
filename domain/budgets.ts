@@ -9,11 +9,27 @@
  * unchanged when there is nothing to do, matching `categories.ts`.
  */
 
+import { daysInMonth } from './calendar';
 import { expense } from './entries';
-import type { Transaction } from './types';
+import type { RecurrenceDate, Transaction, YM } from './types';
 
 /** Category name → recurring monthly budget (positive integer, no minor units). */
 export type Budgets = Record<string, number>;
+
+export type TodayAllowanceStatus = 'available' | 'no-budget' | 'overspent';
+
+export interface TodayAllowance {
+  /** Explicit state so consumers do not mistake a missing budget for zero. */
+  status: TodayAllowanceStatus;
+  /** Conservatively rounded amount available per remaining calendar day. */
+  amount: number | null;
+  /** Configured monthly budget in the selected budget mode. */
+  configuredBudget: number;
+  /** Expenses dated today or earlier in the target month. */
+  spentThroughToday: number;
+  /** Number of calendar days from today through the end of the month. */
+  remainingDays: number;
+}
 
 /**
  * `setBudget(budgets, category, amount)` — store a positive integer budget for
@@ -98,4 +114,58 @@ export function getRemainingBudget(
   }
   // category mode: same as the existing budgetRemaining
   return budgetRemaining(budgets, entries);
+}
+
+/**
+ * Calculate the current month's "today allowance" payload.
+ *
+ * Only expenses in the target month dated through `today` count. Income and
+ * future-dated entries are deliberately ignored. The divisor includes today,
+ * and floor rounding keeps the allowance conservative in integer currencies.
+ * Callers should only present this payload when `month` is today's month.
+ */
+export function getTodayAllowance(
+  mode: 'category' | 'total',
+  budgets: Budgets,
+  totalBudget: number,
+  entries: Transaction[],
+  month: YM,
+  today: RecurrenceDate,
+): TodayAllowance {
+  const configuredBudget = mode === 'total'
+    ? totalBudget
+    : Object.values(budgets).reduce((sum, amount) => sum + amount, 0);
+  const spentThroughToday = expense(entries.filter((entry) => (
+    entry.y === month.y && entry.m === month.m && entry.day <= today.day
+  )));
+  const remainingDays = Math.max(daysInMonth(month.y, month.m) - today.day + 1, 1);
+
+  if (configuredBudget <= 0) {
+    return {
+      status: 'no-budget',
+      amount: null,
+      configuredBudget,
+      spentThroughToday,
+      remainingDays,
+    };
+  }
+
+  const remainingBudget = configuredBudget - spentThroughToday;
+  if (remainingBudget < 0) {
+    return {
+      status: 'overspent',
+      amount: null,
+      configuredBudget,
+      spentThroughToday,
+      remainingDays,
+    };
+  }
+
+  return {
+    status: 'available',
+    amount: Math.floor(remainingBudget / remainingDays),
+    configuredBudget,
+    spentThroughToday,
+    remainingDays,
+  };
 }

@@ -11,6 +11,8 @@ import * as Encoding from 'encoding-japanese';
 
 import { addCategory } from './categories';
 import { uid } from './entries';
+import { validateFinancialRow } from './financialRow';
+import type { ImportAdapter, AdapterParseResult } from './importPipeline';
 import type { Transaction, TxType } from './types';
 
 /** Zaim's CSV header, in column order — validated against the decoded file. */
@@ -64,13 +66,27 @@ export interface ZaimExisting {
 }
 
 /** Why a row was excluded from the imported entries. */
-export type ZaimSkipReason = 'transfer' | 'balanceAdjustment' | 'malformed' | 'duplicate';
+export type ZaimSkipReason =
+  | 'transfer'
+  | 'balanceAdjustment'
+  | 'malformed'
+  | 'invalidDate'
+  | 'invalidAmount'
+  | 'emptyCategory'
+  | 'unsupportedType'
+  | 'outOfRange'
+  | 'duplicate';
 
 /** Count of skipped rows, broken down by `ZaimSkipReason`. */
 export interface ZaimSkipTally {
   transfer: number;
   balanceAdjustment: number;
   malformed: number;
+  invalidDate: number;
+  invalidAmount: number;
+  emptyCategory: number;
+  unsupportedType: number;
+  outOfRange: number;
   duplicate: number;
 }
 
@@ -81,6 +97,34 @@ export interface ZaimImportResult {
   incCats: string[];
   skipped: ZaimSkipTally;
 }
+
+/** Provider adapter used by the neutral pipeline. It returns normalized rows,
+ * never persisted Transactions; `parseZaimCsv` remains as the legacy facade. */
+export const zaimImportAdapter: ImportAdapter = {
+  provider: 'zaim',
+  decode: decodeZaimBytes,
+  detect: (source) => hasZaimHeader(source) ? 'match' : 'no-match',
+  parse: (source, sourceId): AdapterParseResult => {
+    const tally: Partial<Record<import('./importPipeline').ImportSkipReason, number>> = {};
+    const rows = parseCsvRecords(source).filter((record) => record.length > 0).slice(1);
+    const normalized = [];
+    for (let i = 0; i < rows.length; i++) {
+      const result = readRow(parseCsvLine(rows[i]));
+      if (result.kind === 'skip') {
+        tally[result.reason] = (tally[result.reason] ?? 0) + 1;
+        continue;
+      }
+      const row = result.row;
+      normalized.push({
+        y: row.y, m: row.m, day: row.day, type: row.type, amount: row.amount,
+        category: row.category, note: composeNote(row),
+        currencyCode: cleanField(parseCsvLine(rows[i])[9]) || undefined,
+        provenance: { provider: 'zaim', sourceId, row: i },
+      });
+    }
+    return { kind: 'rows', rows: normalized, tally };
+  },
+};
 
 /**
  * Parse a decoded Zaim CSV export. Each `payment` row becomes an expense
@@ -101,7 +145,17 @@ export function parseZaimCsv(csvText: string, existing: ZaimExisting): ZaimImpor
   let expCats = existing.expCats;
   let incCats = existing.incCats;
   const entries: Transaction[] = [];
-  const skipped: ZaimSkipTally = { transfer: 0, balanceAdjustment: 0, malformed: 0, duplicate: 0 };
+  const skipped: ZaimSkipTally = {
+    transfer: 0,
+    balanceAdjustment: 0,
+    malformed: 0,
+    invalidDate: 0,
+    invalidAmount: 0,
+    emptyCategory: 0,
+    unsupportedType: 0,
+    outOfRange: 0,
+    duplicate: 0,
+  };
   const seenKeys = new Set(existing.entries.map(dedupeKey));
 
   for (const line of rows) {
@@ -112,7 +166,13 @@ export function parseZaimCsv(csvText: string, existing: ZaimExisting): ZaimImpor
     }
 
     const row = result.row;
-    const note = composeNote(row);
+    const validation = validateFinancialRow(row);
+    if (!validation.valid) {
+      skipped[validation.reason]++;
+      continue;
+    }
+
+    const note = composeNote({ ...row, ...validation.row });
     const key = dedupeKey({ ...row, note });
     if (seenKeys.has(key)) {
       skipped.duplicate++;
@@ -192,20 +252,22 @@ function readRow(cols: string[]): RowResult {
 
   const date = parseZaimDate(cols[COL.date]);
   const category = cleanField(cols[COL.category]);
-  if (!date || !category) return { kind: 'skip', reason: 'malformed' };
+  if (!date) return { kind: 'skip', reason: 'malformed' };
 
   const expense = parseAmount(cols[COL.expense]);
   const income = parseAmount(cols[COL.income]);
 
   let type: TxType;
   let amount: number;
-  if (expense !== null && expense > 0) {
+  if (expense !== null) {
     type = 'expense';
     amount = expense;
-  } else if (income !== null && income > 0) {
+  } else if (income !== null) {
     type = 'income';
     amount = income;
   } else {
+    const rawAmount = cleanField(cols[COL.expense]) || cleanField(cols[COL.income]);
+    if (rawAmount) return { kind: 'skip', reason: 'invalidAmount' };
     return { kind: 'skip', reason: 'malformed' };
   }
 
@@ -230,7 +292,6 @@ function parseZaimDate(value: string | undefined): { y: number; m: number; day: 
   const y = Number(match[1]);
   const m = Number(match[2]) - 1;
   const day = Number(match[3]);
-  if (m < 0 || m > 11 || day < 1 || day > 31) return null;
   return { y, m, day };
 }
 

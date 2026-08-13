@@ -23,6 +23,12 @@ export interface Persistence {
    *  fell back to defaults (#28) — `null` when nothing has been stashed. */
   readCorruptStash(): Promise<string | null>;
   writeCorruptStash(value: string): Promise<void>;
+  /** Queue and quarantine are separate from the ledger blob so a killed app
+   * can retry a command without partially writing the household state. */
+  readQuickEntryQueue?: () => Promise<string | null>;
+  writeQuickEntryQueue?: (value: string) => Promise<void>;
+  readQuickEntryQuarantine?: () => Promise<string | null>;
+  writeQuickEntryQuarantine?: (value: string) => Promise<void>;
 }
 
 /**
@@ -38,6 +44,8 @@ const CORRUPT_STASH_KEY =
   Platform.OS === 'ios'
     ? 'kaji:state:v2:ios-reset-20260813:corrupt-stash'
     : 'kaji:state:v1:corrupt-stash';
+const QUICK_ENTRY_QUEUE_KEY = 'kaji:quick-entry:v1:queue';
+const QUICK_ENTRY_QUARANTINE_KEY = 'kaji:quick-entry:v1:quarantine';
 
 export const asyncStoragePersistence: Persistence = {
   read: () => AsyncStorage.getItem(STORAGE_KEY),
@@ -48,6 +56,10 @@ export const asyncStoragePersistence: Persistence = {
   },
   readCorruptStash: () => AsyncStorage.getItem(CORRUPT_STASH_KEY),
   writeCorruptStash: (value) => AsyncStorage.setItem(CORRUPT_STASH_KEY, value),
+  readQuickEntryQueue: () => AsyncStorage.getItem(QUICK_ENTRY_QUEUE_KEY),
+  writeQuickEntryQueue: (value) => AsyncStorage.setItem(QUICK_ENTRY_QUEUE_KEY, value),
+  readQuickEntryQuarantine: () => AsyncStorage.getItem(QUICK_ENTRY_QUARANTINE_KEY),
+  writeQuickEntryQuarantine: (value) => AsyncStorage.setItem(QUICK_ENTRY_QUARANTINE_KEY, value),
 };
 
 /**
@@ -62,6 +74,8 @@ export function createMemoryPersistence(initial: string | null = null): MemoryPe
   let value = initial;
   let stash: string | null = null;
   let recoveryCandidates: string[] = [];
+  let quickEntryQueue: string | null = null;
+  let quickEntryQuarantine: string | null = null;
   return {
     read: async () => value,
     write: async (next) => {
@@ -75,5 +89,9 @@ export function createMemoryPersistence(initial: string | null = null): MemoryPe
     setRecoveryCandidates: (next: string[]) => {
       recoveryCandidates = next;
     },
+    readQuickEntryQueue: async () => quickEntryQueue,
+    writeQuickEntryQueue: async (next) => { quickEntryQueue = next; },
+    readQuickEntryQuarantine: async () => quickEntryQuarantine,
+    writeQuickEntryQuarantine: async (next) => { quickEntryQuarantine = next; },
   };
 }

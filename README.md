@@ -4,8 +4,9 @@ A minimal, iOS-style personal money-in/out tracker. Log daily income and
 expenses against a calendar, set either a total monthly budget or budgets by
 expense category, see monthly totals and category breakdowns, and import or
 export transaction history as Zaim-compatible CSV. There are no
-accounts/wallets, cloud accounts, or sync — the product is intentionally a
-small, local-first app rather than a full personal-finance platform. Built
+accounts/wallets, cloud accounts, or internet services. Optional household
+sharing is authenticated, nearby peer-to-peer transfer between paired phones
+while both apps are open; it is not cloud or remote sync. Built
 with Expo (React Native) + TypeScript and dark by default.
 
 See [`initial-spec.md`](initial-spec.md) for the original scope/stack spec
@@ -35,12 +36,13 @@ npm install
 ```bash
 npm run web       # expo start --web — fastest loop, primary dev target
 npm run start      # expo start — Metro bundler, QR code for Expo Go
-npm run ios        # expo start --ios (requires macOS/simulator)
-npm run android    # expo start --android (requires Android SDK/emulator)
+npm run ios        # expo run:ios (requires macOS/Xcode; builds local native modules)
+npm run android    # expo run:android (requires Android SDK/emulator; builds local native modules)
 ```
 
 Web is the primary validation target during development (see build
-decisions doc); native platforms are exercised via Expo Go / EAS builds
+decisions doc); native household/extension features require a development build
+(`npm run ios`, `npm run android`, or EAS) and are unavailable in Expo Go
 before any App Store submission.
 
 > **WSL2 note:** the standalone React Native DevTools debugger can fail with
@@ -157,10 +159,11 @@ requires a new production build and a repeat of the affected checks. EAS
 Submit uploads a binary to App Store Connect; it does not replace the final
 metadata and App Review submission steps there.
 
-While crash reporting remains disabled, every EAS build profile sets
-`SENTRY_DISABLE_AUTO_UPLOAD=true`. If Sentry is enabled later, configure its
-organization/project and `SENTRY_AUTH_TOKEN`, remove that flag, and update the
-privacy policy and App Store privacy answers before shipping.
+The release build has no crash-reporting, analytics, or telemetry SDK. Run
+`npm run privacy:check` to enforce the no-public-internet boundary. The only
+network capability is authenticated nearby peer-to-peer transfer between paired
+phones, implemented in `platform/nearbyNativeTransport.ts`; it must never be
+described as zero networking.
 
 ### V1 release status (2026-07-13)
 
@@ -182,7 +185,7 @@ The remaining work for a public V1 is tracked in
    then submit that exact build for review.
 
 V1 ships without advertising, purchases, Premium state, analytics, accounts,
-sync, or enabled crash reporting. The Sentry integration remains inert while
-`sentryDsn` is blank, EAS builds disable source-map upload accordingly, and the
-zero-data-collection release posture is documented in
+cloud or remote sync, or crash reporting. It may exchange encrypted changes
+with a paired nearby household phone while both apps are open. Its privacy posture is
+documented in
 [`docs/v1-privacy-mode.md`](docs/v1-privacy-mode.md).

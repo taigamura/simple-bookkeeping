@@ -90,3 +90,11 @@ a second copy that would drift. No behaviour in the host changed.
 - Nothing signals that the body scrolls beyond the keypad being visibly cut off.
   On the shortest screens a fade or a rule at the scroll boundary would make the
   affordance explicit.
+
+## Amendment (2026-08-10): confirmation is no longer sheet-sized
+
+The Entry sheet remains responsible only for form sizing and draft collection.
+Save confirmation is rendered by the app-shell canvas, so an absolutely
+positioned wave cannot affect the measured body or pinned-footer detent and is
+not clipped when the sheet dismisses. Its origin remains near the bottom of
+the canvas, matching the CTA without claiming OS-owned inset regions.

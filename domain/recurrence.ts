@@ -153,6 +153,7 @@ function occurrence(rule: RecurrenceRule, scheduled: RecurrenceDate): Transactio
     type: rule.type,
     amount: rule.amount,
     category: rule.category,
+    ...(rule.categoryId ? { categoryId: rule.categoryId } : {}),
     note: rule.note,
     repeat: rule.repeat,
     occurrence: { ruleId: rule.id, scheduled, weekendShift: rule.weekendShift },
@@ -257,12 +258,8 @@ export function saveLedgerItem(
           {
             ...normalized,
             ...landingDate,
-            timestamp: draft.timestamp ?? editing.timestamp,
-            ...(draft.timestamp
-              ? {}
-              : editing.timestampInferred
-                ? { timestampInferred: true as const }
-                : {}),
+            timestamp: editing.timestamp,
+            ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
             repeat: 'never',
           },
         ],
@@ -281,12 +278,8 @@ export function saveLedgerItem(
           ...ledger.entries,
           {
             ...normalized,
-            timestamp: draft.timestamp ?? editing.timestamp,
-            ...(draft.timestamp
-              ? {}
-              : editing.timestampInferred
-                ? { timestampInferred: true as const }
-                : {}),
+            timestamp: editing.timestamp,
+            ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
             repeat: 'never',
           },
         ],
@@ -305,12 +298,8 @@ export function saveLedgerItem(
             ...ledger.entries,
             {
               ...normalized,
-              timestamp: draft.timestamp ?? editing.timestamp,
-              ...(draft.timestamp
-                ? {}
-                : editing.timestampInferred
-                  ? { timestampInferred: true as const }
-                  : {}),
+              timestamp: editing.timestamp,
+              ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
               repeat: 'never',
             },
           ]
@@ -319,17 +308,14 @@ export function saveLedgerItem(
         ...recurrenceRules,
         {
           id: ruleId,
-          timestamp: draft.timestamp ?? editing.timestamp,
-          ...(draft.timestamp
-            ? {}
-            : editing.timestampInferred
-              ? { timestampInferred: true as const }
-              : {}),
+          timestamp: editing.timestamp,
+          ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
           start: ruleStart,
           anchorDay: sameCadence && !dateChanged ? source.anchorDay : nextStart.day,
           type: normalized.type,
           amount: normalized.amount,
           category: normalized.category,
+          ...(normalized.categoryId ? { categoryId: normalized.categoryId } : {}),
           note: normalized.note,
           repeat: draft.repeat,
           weekendShift,
@@ -353,10 +339,10 @@ export function saveLedgerItem(
                 y: normalized.y,
                 m: normalized.m,
                 day: normalized.day,
-                timestamp: normalized.timestamp,
                 type: normalized.type,
                 amount: normalized.amount,
                 category: normalized.category,
+                ...(normalized.categoryId ? { categoryId: normalized.categoryId } : {}),
                 note: normalized.note,
                 repeat: 'never',
               }
@@ -372,17 +358,14 @@ export function saveLedgerItem(
         ...ledger.recurrenceRules,
         {
           id: normalized.id,
-          timestamp: draft.timestamp ?? editing.timestamp,
-          ...(draft.timestamp
-            ? {}
-            : editing.timestampInferred
-              ? { timestampInferred: true as const }
-              : {}),
+          timestamp: editing.timestamp,
+          ...(editing.timestampInferred ? { timestampInferred: true as const } : {}),
           start,
           anchorDay: start.day,
           type: normalized.type,
           amount: normalized.amount,
           category: normalized.category,
+          ...(normalized.categoryId ? { categoryId: normalized.categoryId } : {}),
           note: normalized.note,
           repeat: draft.repeat,
           weekendShift,
@@ -403,6 +386,7 @@ export function saveLedgerItem(
     type: normalized.type,
     amount: normalized.amount,
     category: normalized.category,
+    ...(normalized.categoryId ? { categoryId: normalized.categoryId } : {}),
     note: normalized.note,
     repeat: draft.repeat,
     weekendShift,

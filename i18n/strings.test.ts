@@ -39,6 +39,11 @@ describe('dictionary completeness', () => {
       }
     }
   });
+
+  it('includes the bilingual household recovery limitation copy', () => {
+    expect(en.sync.recoveryLimitNotice).toContain('If both phones are lost');
+    expect(ja.sync.recoveryLimitNotice).toContain('2台の端末を両方失った場合');
+  });
 });
 
 describe('detectLanguage', () => {

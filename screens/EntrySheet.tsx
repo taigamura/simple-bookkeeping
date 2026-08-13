@@ -49,7 +49,7 @@ import {
   type Tone,
 } from '../theme';
 import { IconButton } from '../nav/IconButton';
-import { SHEET_CHROME, SHEET_TOP_STRIP, WEB_FRAME_INSET } from '../nav/BottomSheet';
+import { SHEET_CHROME, WEB_FRAME_INSET } from '../nav/BottomSheet';
 
 interface EntrySheetProps {
   expCats: string[];
@@ -65,6 +65,8 @@ interface EntrySheetProps {
    * Existing concrete or projected occurrence to edit (#43).
    */
   editing?: Transaction;
+  /** Draft supplied by quick-entry flows before the sheet is shown. */
+  initialDraft?: EntryDraft;
   /** Settings management route: recurring cadences only and explicit stop copy. */
   repeatManagement?: boolean;
   /** Collects the draft on save; the host stores or splits the corresponding ledger item. */
@@ -150,6 +152,15 @@ const NATIVE_BOTTOM_ALLOWANCE = 34;
  * Scaling is what keeps an ordinary phone from scrolling a form that was
  * designed not to; the pinning is what guarantees the button is *reachable*.
  */
+export function entryCompactScale(windowHeight: number, chrome: number): number {
+  // Entry opens at the host's expanded detent. Reserve the pinned footer
+  // before scaling the scrollable body;
+  // otherwise the form can still be just tall enough to push 0/00 below the
+  // fold even though the sheet itself is fullscreen.
+  const budget = windowHeight - chrome - SHEET_CHROME - FOOTER_BUDGET;
+  return Math.max(MIN_COMPACT_SCALE, Math.min(1, budget / NATURAL_FORM_HEIGHT));
+}
+
 function useCompactScale(): number {
   const { height: windowHeight } = useWindowDimensions();
   // Everything between the window edges and the sheet's content box. On web
@@ -165,12 +176,7 @@ function useCompactScale(): number {
   // is reachable, so precision here buys nothing.
   const chrome =
     Platform.OS === 'web' ? WEB_FRAME_INSET : metrics.statusOffset + NATIVE_BOTTOM_ALLOWANCE;
-  // Entry opens at the host's expanded detent. Account for the host's dimmed
-  // top strip and reserve the pinned footer before scaling the scrollable body;
-  // otherwise the form can still be just tall enough to push 0/00 below the
-  // fold even though the sheet itself is fullscreen.
-  const budget = windowHeight - chrome - SHEET_TOP_STRIP - SHEET_CHROME - FOOTER_BUDGET;
-  return Math.max(MIN_COMPACT_SCALE, Math.min(1, budget / NATURAL_FORM_HEIGHT));
+  return entryCompactScale(windowHeight, chrome);
 }
 
 const formatDate = ({ y, m, day }: RecurrenceDate): string =>
@@ -241,6 +247,7 @@ export function EntrySheet({
   today,
   symbol,
   editing,
+  initialDraft,
   repeatManagement = false,
   onSave,
   onDelete,
@@ -269,17 +276,19 @@ export function EntrySheet({
   const [saving, setSaving] = useState(false);
   const isEditing = editing != null;
   const catsFor = (t: TxType) => (t === 'income' ? incCats : expCats);
-  const [txType, setTxType] = useState<TxType>(editing?.type ?? 'expense');
-  const [amountStr, setAmountStr] = useState(editing ? String(editing.amount) : '');
+  const [txType, setTxType] = useState<TxType>(initialDraft?.type ?? editing?.type ?? 'expense');
+  const [amountStr, setAmountStr] = useState(initialDraft?.amountStr ?? (editing ? String(editing.amount) : ''));
   const [category, setCategory] = useState(
-    () => editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
+    () => initialDraft?.category ?? editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
   );
-  const [note, setNote] = useState(editing?.note ?? '');
-  const [repeat, setRepeat] = useState<Repeat>(editing?.repeat ?? 'never');
+  const [note, setNote] = useState(initialDraft?.note ?? editing?.note ?? '');
+  const [repeat, setRepeat] = useState<Repeat>(initialDraft?.repeat ?? editing?.repeat ?? 'never');
   const [weekendShift, setWeekendShift] = useState<WeekendShift>(
     editing?.occurrence?.weekendShift ?? 'after',
   );
-  const initialDate = editing?.occurrence?.scheduled ?? editing ?? { y, m, day };
+  const initialDate = initialDraft
+    ? { y: initialDraft.y, m: initialDraft.m, day: initialDraft.day }
+    : editing?.occurrence?.scheduled ?? editing ?? { y, m, day };
   const [dateTime, setDateTime] = useState(() => initialDateTime(initialDate, editing?.timestamp));
   const [dateText, setDateText] = useState(() => formatDate(initialDate));
   const [timeText, setTimeText] = useState(() => formatTime(dateTime));
