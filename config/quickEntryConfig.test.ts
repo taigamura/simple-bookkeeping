@@ -37,11 +37,15 @@ describe('generated quick-entry native configuration', () => {
     fs.symlinkSync(path.join(root, 'node_modules'), path.join(temp, 'node_modules'));
     childProcess.execFileSync(process.execPath, [require.resolve('expo/bin/cli'), 'prebuild', '--no-install', '--platform', 'ios'], { cwd: temp, stdio: 'pipe' });
 
-    const projectPath = path.join(temp, 'ios/Kaji.xcodeproj/project.pbxproj');
+    // The generated project and host target are named from the Expo `name`,
+    // which is the public product name and may change. Resolve it from the
+    // prebuild output rather than pinning it.
+    const hostName = fs.readdirSync(path.join(temp, 'ios')).find((entry) => entry.endsWith('.xcodeproj'))!.replace('.xcodeproj', '');
+    const projectPath = path.join(temp, `ios/${hostName}.xcodeproj/project.pbxproj`);
     const project = xcode.project(projectPath);
     project.parseSync();
     const targets = project.pbxNativeTargetSection();
-    const host = Object.values(targets).find((target: any) => target.name === 'Kaji');
+    const host = Object.values(targets).find((target: any) => target.name === hostName);
     const extension = Object.values(targets).find((target: any) => target.name === '"KajiQuickEntryExtension"');
     expect(host).toBeDefined();
     expect(extension).toBeDefined();
@@ -150,6 +154,6 @@ describe('generated quick-entry native configuration', () => {
     expect(extensionSource).toContain('URLQueryItem(name: "launch", value: "control")');
     expect(extensionSource).toContain('private let deepLinkInboxName = "quick-entry-deep-links"');
     expect(extensionSource).toContain('if #available(iOS 18.0, *) { KajiQuickEntryControl() }');
-    expect(fs.readFileSync(path.join(temp, 'ios/Kaji/Info.plist'), 'utf8')).toContain('kaji-quick-entry');
+    expect(fs.readFileSync(path.join(temp, `ios/${hostName}/Info.plist`), 'utf8')).toContain('kaji-quick-entry');
   }, 30_000);
 });

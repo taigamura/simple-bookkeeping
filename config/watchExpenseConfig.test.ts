@@ -19,9 +19,14 @@ function prebuildWatchProject(watchExpenseEnabled = true) {
     },
     stdio: 'pipe',
   });
-  const project = xcode.project(path.join(temp, 'ios/Kaji.xcodeproj/project.pbxproj'));
+  // The generated Xcode project and host target take their name from the Expo
+  // `name`, which is the public product name and may change. Resolve it from
+  // the prebuild output rather than pinning it, so a rename cannot silently
+  // turn these assertions into a false pass.
+  const hostName = fs.readdirSync(path.join(temp, 'ios')).find((entry) => entry.endsWith('.xcodeproj'))!.replace('.xcodeproj', '');
+  const project = xcode.project(path.join(temp, `ios/${hostName}.xcodeproj/project.pbxproj`));
   project.parseSync();
-  return { temp, project };
+  return { temp, project, hostName };
 }
 
 function target(project: any, name: string) {
@@ -54,9 +59,9 @@ describe('Apple Watch expense companion configuration (#118)', () => {
   });
 
   it('does not generate a Watch target or host bridge startup without the opt-in', () => {
-    const { temp, project } = prebuildWatchProject(false);
+    const { temp, project, hostName } = prebuildWatchProject(false);
     expect(Object.values(project.pbxNativeTargetSection()).some((value: any) => value.name === '"KajiWatchApp"')).toBe(false);
-    expect(fs.readFileSync(path.join(temp, 'ios/Kaji/AppDelegate.swift'), 'utf8')).not.toContain('KajiWatchPhoneBridge.shared.start()');
+    expect(fs.readFileSync(path.join(temp, `ios/${hostName}/AppDelegate.swift`), 'utf8')).not.toContain('KajiWatchPhoneBridge.shared.start()');
   }, 30_000);
 
   it('keeps the Watch contract bounded to queued expense commands and exact acknowledgements', () => {
@@ -76,8 +81,8 @@ describe('Apple Watch expense companion configuration (#118)', () => {
   });
 
   it('prebuilds isolated Watch sources, target dependencies, embeds, plist links, and host versions', () => {
-    const { temp, project } = prebuildWatchProject();
-    const [, host] = target(project, 'Kaji') as any;
+    const { temp, project, hostName } = prebuildWatchProject();
+    const [, host] = target(project, hostName) as any;
     const [watchAppId, watchApp] = target(project, '"KajiWatchApp"') as any;
     const [watchExtensionId, watchExtension] = target(project, '"KajiWatchExtension"') as any;
 
@@ -121,6 +126,6 @@ describe('Apple Watch expense companion configuration (#118)', () => {
     expect(watchSource).toContain('WatchConnectivity');
     expect(watchSource).toContain('WatchAllowanceComplicationDataSource');
     expect(watchSource).toContain('sessionReachabilityDidChange');
-    expect(fs.readFileSync(path.join(temp, 'ios/Kaji/AppDelegate.swift'), 'utf8')).toContain('KajiWatchPhoneBridge.shared.start()');
+    expect(fs.readFileSync(path.join(temp, `ios/${hostName}/AppDelegate.swift`), 'utf8')).toContain('KajiWatchPhoneBridge.shared.start()');
   }, 30_000);
 });
