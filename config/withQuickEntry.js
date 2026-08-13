@@ -261,7 +261,7 @@ private struct KajiQuickEntryControl: ControlWidget {
   }
 }
 `);
-  fs.writeFileSync(path.join(extensionRoot, `${EXTENSION_NAME}-Info.plist`), `<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string><key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string><key>CFBundleName</key><string>$(PRODUCT_NAME)</string><key>CFBundleInfoDictionaryVersion</key><string>6.0</string><key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string><key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string><key>CFBundlePackageType</key><string>XPC!</string><key>NSExtension</key><dict><key>NSExtensionPointIdentifier</key><string>com.apple.widgetkit-extension</string></dict></dict></plist>`);
+  fs.writeFileSync(path.join(extensionRoot, `${EXTENSION_NAME}-Info.plist`), `<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string><key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string><key>CFBundleName</key><string>$(PRODUCT_NAME)</string><key>CFBundleDisplayName</key><string>${config.name}</string><key>CFBundleInfoDictionaryVersion</key><string>6.0</string><key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string><key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string><key>CFBundlePackageType</key><string>XPC!</string><key>NSExtension</key><dict><key>NSExtensionPointIdentifier</key><string>com.apple.widgetkit-extension</string></dict></dict></plist>`);
   fs.copyFileSync(path.join(config.modRequest.projectRoot, 'config/quick-entry.entitlements'), path.join(extensionRoot, `${EXTENSION_NAME}.entitlements`));
   return config;
 }]);
