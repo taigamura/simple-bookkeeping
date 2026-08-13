@@ -136,12 +136,18 @@ public final class KajiQuickEntryModule: Module {
             let defaults = object["defaults"] as? [String: Any],
             let allowance = object["allowance"] as? [String: Any],
             let allowanceStatus = allowance["status"] as? String,
-            ["available", "no-budget", "overspent"].contains(allowanceStatus),
-            let categoryIDs = categories.compactMap({ $0["id"] as? String }),
-            categoryIDs.count == categories.count,
+            ["available", "no-budget", "overspent"].contains(allowanceStatus)
+      else { return false }
+
+    // compactMap returns a non-optional array, so these cannot be bound with
+    // `guard let`. The count checks below are what enforce that every entry
+    // actually carried a String value.
+    let categoryIDs = categories.compactMap { $0["id"] as? String }
+    let categoryNames = categories.compactMap { $0["name"] as? String }
+
+    guard categoryIDs.count == categories.count,
             categoryIDs.allSatisfy({ !$0.isEmpty && $0.count <= maxSnapshotStringLength }),
             Set(categoryIDs).count == categories.count,
-            let categoryNames = categories.compactMap({ $0["name"] as? String }),
             categoryNames.count == categories.count,
             categoryNames.allSatisfy({ !$0.isEmpty && $0.count <= maxSnapshotStringLength }),
             (defaults["categoryId"] is NSNull || (defaults["categoryId"] as? String) != nil),
@@ -160,8 +166,11 @@ public final class KajiQuickEntryModule: Module {
   }
 }
 
-private struct QuickEntryException: Exception {
-  let reason: String
+// ExpoModulesCore's Exception is an open class, not a protocol, so this has to
+// subclass rather than conform. GenericException<String> supplies the positional
+// init the call sites above already use.
+private final class QuickEntryException: GenericException<String> {
+  override var reason: String { param }
 }
 
 /** The App Intent lives in the host app target, not the widget extension. */

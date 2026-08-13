@@ -89,15 +89,18 @@ private let inboxName = "quick-entry-inbox"
 private let deepLinkInboxName = "quick-entry-deep-links"
 private let draftKey = "widget-expense-draft-v1"
 
-private struct Category: Codable, Hashable { let id: String; let name: String }
-private struct Currency: Codable { let symbol: String; let code: String }
-private struct Defaults: Codable { let categoryId: String?; let recentCategoryIds: [String] }
-private struct Allowance: Codable { let status: String; let amount: Int? }
-private struct Snapshot: Codable {
+// These models surface through KajiQuickEntryWidgetEntry, which TimelineProvider
+// forces to be internal, so they cannot be private without tripping Swift's
+// access-control check on the entry's stored properties.
+struct Category: Codable, Hashable { let id: String; let name: String }
+struct Currency: Codable { let symbol: String; let code: String }
+struct Defaults: Codable { let categoryId: String?; let recentCategoryIds: [String] }
+struct Allowance: Codable { let status: String; let amount: Int? }
+struct Snapshot: Codable {
   let version: Int; let categories: [Category]; let currency: Currency; let defaults: Defaults; let allowance: Allowance
   static let empty = Snapshot(version: 3, categories: [], currency: Currency(symbol: "¥", code: "JPY"), defaults: Defaults(categoryId: nil, recentCategoryIds: []), allowance: Allowance(status: "no-budget", amount: nil))
 }
-private struct ExpenseDraft: Codable { var amount = ""; var categoryId: String? }
+struct ExpenseDraft: Codable { var amount = ""; var categoryId: String? }
 
 private enum Copy {
   static var japanese: Bool { Locale.current.language.languageCode?.identifier == "ja" }
@@ -219,7 +222,7 @@ private struct InteractiveView: View { let entry: KajiQuickEntryWidgetEntry
   private var categories: [Category] { Store.categories(entry.snapshot) }
   var body: some View { VStack(alignment: .leading, spacing: 6) { HStack { Text(Copy.title).font(.headline); Spacer(); Text(entry.snapshot.currency.symbol + (entry.draft.amount.isEmpty ? "0" : entry.draft.amount)).monospacedDigit().privacySensitive() }; AllowanceView(snapshot: entry.snapshot)
     HStack { ForEach(categories, id: \.id) { category in Button(intent: CategoryIntent(id: category.id)) { Text(category.name).lineLimit(1) }.buttonStyle(.bordered).tint(entry.draft.categoryId == category.id ? .accentColor : .gray) } }
-    HStack { ForEach(["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"], id: \.self) { digit in Button(intent: KeypadIntent(action: .digit, digit: digit)) { Text(digit) }.buttonStyle(.bordered) }; Button(intent: KeypadIntent(action: .clear)) { Text(Copy.clear) }; Button(intent: KeypadIntent(action: .save)) { Text(Copy.save) }.tint(.green) }.buttonStyle(.borderedProminent) }
+    HStack { ForEach(["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"], id: \.self) { digit in Button(intent: KeypadIntent(action: .digit, digit: digit)) { Text(digit) }.buttonStyle(.bordered) }; Button(intent: KeypadIntent(action: .clear)) { Text(Copy.clear) }; Button(intent: KeypadIntent(action: .save)) { Text(Copy.save) }.tint(.green) }.buttonStyle(.borderedProminent)
   }.padding() }
 }
 private struct KajiQuickEntryWidgetView: View { let entry: KajiQuickEntryWidgetEntry; @Environment(\.widgetFamily) private var family
@@ -244,7 +247,11 @@ private struct KajiQuickEntryControl: ControlWidget {
       ControlWidgetButton(action: OpenQuickEntryControlIntent()) {
         Label(Copy.title, systemImage: "plus.circle")
       }
-    }.displayName(Copy.title).description(Copy.open)
+    // ControlWidgetConfiguration takes LocalizedStringResource only, unlike
+    // WidgetConfiguration above, which also accepts a plain String. Copy does
+    // its own locale switch, so wrap the resolved string rather than a key.
+    }.displayName(LocalizedStringResource(stringLiteral: Copy.title))
+      .description(LocalizedStringResource(stringLiteral: Copy.open))
   }
 }
 @main struct KajiQuickEntryExtension: WidgetBundle {

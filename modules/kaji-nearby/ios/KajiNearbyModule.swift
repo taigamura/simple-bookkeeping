@@ -40,9 +40,11 @@ public final class KajiNearbyModule: Module {
   }
 }
 
-private struct NearbyException: Exception {
-  let reason: String
-  init(_ reason: String) { self.reason = reason }
+// ExpoModulesCore's Exception is an open class, not a protocol, so this has to
+// subclass rather than conform. GenericException<String> supplies the positional
+// init the call sites above already use.
+private final class NearbyException: GenericException<String> {
+  override var reason: String { param }
 }
 
 private final class NearbyController: NSObject {

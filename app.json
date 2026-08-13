@@ -60,7 +60,24 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "130c36b5-0731-4688-9e25-e7dd5dd87615"
+        "projectId": "130c36b5-0731-4688-9e25-e7dd5dd87615",
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "KajiQuickEntryExtension",
+                  "bundleIdentifier": "com.taigamura.kaji.quick-entry",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.taigamura.kaji"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
       }
     },
     "owner": "taigamura"
