@@ -37,7 +37,7 @@ Required journey:
 7. Delete all data and relaunch.
 
 Expected result: no app-initiated network requests during the required journey.
-System-owned iOS file picker and share sheet UI may appear, but Kaji does not
+System-owned iOS file picker and share sheet UI may appear, but Suito does not
 transmit user data from those flows. Any future non-empty Sentry
 DSN, analytics SDK, ad SDK, account, sync, or purchase integration invalidates
 the “Data Not Collected” claim until the audit and public privacy text are

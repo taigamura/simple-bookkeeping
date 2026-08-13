@@ -8,8 +8,8 @@ V1 an official, public App Store release.
 The implementation PRD is GitHub issue
 [#72 — Official public V1 release readiness](https://github.com/taigamura/simple-bookkeeping/issues/72).
 
-The current name, **Kaji**, is a working name. Choosing the final public name
-is intentionally deferred, but applying it consistently is a release gate.
+The public app name is **Suito**. The internal Expo slug and bundle identifiers
+retain the original `kaji` naming for release continuity.
 
 ## Product contract for V1
 

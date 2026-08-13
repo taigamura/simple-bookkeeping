@@ -1,4 +1,4 @@
-# Kaji (家計)
+# Suito (出納)
 
 A minimal, iOS-style personal money-in/out tracker. Log daily income and
 expenses against a calendar, set either a total monthly budget or budgets by
