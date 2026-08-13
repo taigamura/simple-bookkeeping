@@ -15,6 +15,18 @@ export interface ZaimSkipStrings {
   duplicate: (n: number) => string;
 }
 
+export interface ImportSkipStrings extends ZaimSkipStrings {
+  invalidDate: (n: number) => string;
+  invalidAmount: (n: number) => string;
+  emptyCategory: (n: number) => string;
+  unsupportedType: (n: number) => string;
+  outOfRange: (n: number) => string;
+  unknownFormat: (n: number) => string;
+  ambiguousFormat: (n: number) => string;
+  currencyMismatch: (n: number) => string;
+  unsupportedField: (n: number) => string;
+}
+
 export interface Strings {
   common: {
     expense: string;
@@ -124,6 +136,7 @@ export interface Strings {
     data: string;
     exportData: string;
     importFromZaim: string;
+    importData: string;
     exportUnreadableBackup: string;
     deleteAllData: string;
     deleteAllDataConfirmMessage: string;
@@ -189,6 +202,25 @@ export interface Strings {
     noEntriesMessage: string;
     entriesReady: (n: number) => string;
     skip: ZaimSkipStrings;
+  };
+  importData: {
+    unknownFormatTitle: string;
+    unknownFormatMessage: string;
+    ambiguousFormatTitle: string;
+    ambiguousFormatMessage: string;
+    noSupportedRowsTitle: string;
+    noSupportedRowsMessage: string;
+    fileTooLargeTitle: string;
+    fileTooLargeMessage: string;
+    importFailedTitle: string;
+    importFailedMessage: string;
+    canceledTitle: string;
+    canceledMessage: string;
+    preview: (provider: string, imported: number) => string;
+    duplicates: (count: number) => string;
+    completeTitle: string;
+    complete: (provider: string, imported: number) => string;
+    skip: ImportSkipStrings;
   };
 }
 
@@ -297,6 +329,7 @@ export const en: Strings = {
     data: 'Data',
     exportData: 'Export data',
     importFromZaim: 'Import from Zaim',
+    importData: 'Import data',
     exportUnreadableBackup: 'Export unreadable backup',
     deleteAllData: 'Delete all data',
     deleteAllDataConfirmMessage: 'This will permanently delete all entries, repeating series, and budgets. Categories, currency, and settings will be preserved.',
@@ -366,6 +399,44 @@ export const en: Strings = {
       balanceAdjustment: (n) => `${n} balance adjustment${n === 1 ? '' : 's'} skipped`,
       malformedRow: (n) => `${n} malformed row${n === 1 ? '' : 's'} skipped`,
       duplicate: (n) => `${n} duplicate${n === 1 ? '' : 's'} skipped`,
+    },
+  },
+  importData: {
+    unknownFormatTitle: 'Unsupported CSV format',
+    unknownFormatMessage:
+      'This file is not a supported Zaim, MoneyForward ME, or おカネレコ export. Your ledger was not changed.',
+    ambiguousFormatTitle: 'CSV format is ambiguous',
+    ambiguousFormatMessage:
+      'This file matched more than one supported format. Your ledger was not changed.',
+    noSupportedRowsTitle: 'No supported rows found',
+    noSupportedRowsMessage: 'No rows can be imported from this file. Your ledger was not changed.',
+    fileTooLargeTitle: 'CSV is too large',
+    fileTooLargeMessage:
+      'Choose a CSV no larger than 5 MB. Your ledger was not changed.',
+    importFailedTitle: 'Import failed',
+    importFailedMessage: 'Your ledger was not changed. Choose a supported CSV and try again.',
+    canceledTitle: 'Import canceled',
+    canceledMessage: 'Your ledger was not changed.',
+    preview: (provider, imported) =>
+      `${provider}: ${imported} ${imported === 1 ? 'entry' : 'entries'} ready to import`,
+    duplicates: (count) => `${count} duplicate${count === 1 ? '' : 's'} skipped`,
+    completeTitle: 'Import complete',
+    complete: (provider, imported) =>
+      `${provider}: imported ${imported} ${imported === 1 ? 'entry' : 'entries'}.`,
+    skip: {
+      transfer: (n) => `${n} transfer${n === 1 ? '' : 's'} skipped`,
+      balanceAdjustment: (n) => `${n} balance adjustment${n === 1 ? '' : 's'} skipped`,
+      malformedRow: (n) => `${n} malformed row${n === 1 ? '' : 's'} skipped`,
+      invalidDate: (n) => `${n} invalid date${n === 1 ? '' : 's'} skipped`,
+      invalidAmount: (n) => `${n} invalid amount${n === 1 ? '' : 's'} skipped`,
+      emptyCategory: (n) => `${n} empty categor${n === 1 ? 'y' : 'ies'} skipped`,
+      unsupportedType: (n) => `${n} unsupported type${n === 1 ? '' : 's'} skipped`,
+      outOfRange: (n) => `${n} out-of-range value${n === 1 ? '' : 's'} skipped`,
+      duplicate: (n) => `${n} duplicate${n === 1 ? '' : 's'} skipped`,
+      unknownFormat: (n) => `${n} unknown format${n === 1 ? '' : 's'} skipped`,
+      ambiguousFormat: (n) => `${n} ambiguous format${n === 1 ? '' : 's'} skipped`,
+      currencyMismatch: (n) => `${n} currency mismatch${n === 1 ? '' : 'es'} skipped`,
+      unsupportedField: (n) => `${n} unsupported row${n === 1 ? '' : 's'} skipped`,
     },
   },
 };
@@ -475,6 +546,7 @@ export const ja: Strings = {
     data: 'データ',
     exportData: 'データを書き出す',
     importFromZaim: 'Zaimから読み込む',
+    importData: 'データを読み込む',
     exportUnreadableBackup: '読み取れないバックアップを書き出す',
     deleteAllData: 'すべてのデータを削除',
     deleteAllDataConfirmMessage: 'すべての記録、繰り返し、および予算が完全に削除されます。カテゴリ、通貨、および設定は保持されます。',
@@ -543,6 +615,40 @@ export const ja: Strings = {
       balanceAdjustment: (n) => `残高調整${n}件をスキップしました`,
       malformedRow: (n) => `不正な行${n}件をスキップしました`,
       duplicate: (n) => `重複${n}件をスキップしました`,
+    },
+  },
+  importData: {
+    unknownFormatTitle: '未対応のCSV形式です',
+    unknownFormatMessage:
+      'このファイルは、対応するZaim、MoneyForward ME、またはおカネレコのエクスポートではありません。帳簿は変更されていません。',
+    ambiguousFormatTitle: 'CSV形式を判別できません',
+    ambiguousFormatMessage: 'このファイルは複数の対応形式に一致しました。帳簿は変更されていません。',
+    noSupportedRowsTitle: '読み込み可能な行がありません',
+    noSupportedRowsMessage: 'このファイルには読み込み可能な行がありません。帳簿は変更されていません。',
+    fileTooLargeTitle: 'CSVファイルが大きすぎます',
+    fileTooLargeMessage: '5 MB以下のCSVを選択してください。帳簿は変更されていません。',
+    importFailedTitle: '読み込みに失敗しました',
+    importFailedMessage: '帳簿は変更されていません。対応するCSVを選択して、もう一度試してください。',
+    canceledTitle: '読み込みをキャンセルしました',
+    canceledMessage: '帳簿は変更されていません。',
+    preview: (provider, imported) => `${provider}: ${imported}件の記録を読み込めます`,
+    duplicates: (count) => `重複${count}件をスキップしました`,
+    completeTitle: '読み込みが完了しました',
+    complete: (provider, imported) => `${provider}: ${imported}件の記録を読み込みました。`,
+    skip: {
+      transfer: (n) => `振替${n}件をスキップしました`,
+      balanceAdjustment: (n) => `残高調整${n}件をスキップしました`,
+      malformedRow: (n) => `不正な行${n}件をスキップしました`,
+      invalidDate: (n) => `不正な日付${n}件をスキップしました`,
+      invalidAmount: (n) => `不正な金額${n}件をスキップしました`,
+      emptyCategory: (n) => `カテゴリなし${n}件をスキップしました`,
+      unsupportedType: (n) => `未対応の種類${n}件をスキップしました`,
+      outOfRange: (n) => `範囲外の値${n}件をスキップしました`,
+      duplicate: (n) => `重複${n}件をスキップしました`,
+      unknownFormat: (n) => `不明な形式${n}件をスキップしました`,
+      ambiguousFormat: (n) => `判別できない形式${n}件をスキップしました`,
+      currencyMismatch: (n) => `通貨が一致しない行${n}件をスキップしました`,
+      unsupportedField: (n) => `未対応の行${n}件をスキップしました`,
     },
   },
 };

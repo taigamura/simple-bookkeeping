@@ -24,24 +24,26 @@ import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanima
 import {
   activeRecurrences,
   clampDay,
-  decodeZaimBytes,
   deleteLedgerItem,
   entriesForMonth,
   entriesThrough,
-  parseZaimCsv,
+  moneyforwardMeImportAdapter,
+  okaneRecoImportAdapter,
   periodMonths,
+  previewImportBytes,
   promoteCategory,
   pruneBudgets,
   saveLedgerItem,
   shiftPeriod,
   serializeZaimCsv,
   shiftMonth,
+  zaimImportAdapter,
   type Currency,
   type EntryDraft,
   type Transaction,
   type WeekendShift,
   type YM,
-  type ZaimSkipTally,
+  type ImportSkipTally,
 } from '../domain';
 import { strings } from '../i18n';
 import { entrySaved } from '../platform/haptics';
@@ -87,14 +89,31 @@ function notify(title: string, message: string) {
 // " — 12 transfers skipped, 10 malformed rows skipped" (empty when nothing
 // was skipped) so the confirmation shows a breakdown by reason, not just an
 // opaque "some rows were skipped".
-function skipSummary(skipped: ZaimSkipTally): string {
-  const { skip } = strings.zaim;
+function skipSummary(skipped: ImportSkipTally): string {
+  const { skip } = strings.importData;
   const parts: string[] = [];
   if (skipped.transfer > 0) parts.push(skip.transfer(skipped.transfer));
   if (skipped.balanceAdjustment > 0) parts.push(skip.balanceAdjustment(skipped.balanceAdjustment));
   if (skipped.malformed > 0) parts.push(skip.malformedRow(skipped.malformed));
+  if (skipped.invalidDate > 0) parts.push(skip.invalidDate(skipped.invalidDate));
+  if (skipped.invalidAmount > 0) parts.push(skip.invalidAmount(skipped.invalidAmount));
+  if (skipped.emptyCategory > 0) parts.push(skip.emptyCategory(skipped.emptyCategory));
+  if (skipped.unsupportedType > 0) parts.push(skip.unsupportedType(skipped.unsupportedType));
+  if (skipped.outOfRange > 0) parts.push(skip.outOfRange(skipped.outOfRange));
+  if (skipped.currencyMismatch > 0) parts.push(skip.currencyMismatch(skipped.currencyMismatch));
+  if (skipped.unsupportedField > 0) parts.push(skip.unsupportedField(skipped.unsupportedField));
   if (skipped.duplicate > 0) parts.push(skip.duplicate(skipped.duplicate));
   return parts.length > 0 ? ` — ${parts.join(', ')}` : '';
+}
+
+// Human-facing provider name for a detected import adapter.
+function providerLabel(provider: string): string {
+  switch (provider) {
+    case 'zaim': return 'Zaim';
+    case 'moneyforward-me': return 'MoneyForward ME';
+    case 'okane-reco': return 'おカネレコ';
+    default: return provider;
+  }
 }
 
 function confirm(
@@ -489,13 +508,14 @@ function Shell({
     }
   };
 
-  // importZaim(): pick a Zaim CSV export → decode (Shift-JIS or UTF-8) →
-  // parse against the current ledger (so re-importing an overlapping export
-  // skips rows already present) → native Import/Cancel confirmation with the
-  // entry count and skip-reason breakdown → merge entries and any new
-  // categories into the ledger through the normal update() path. Canceling
-  // the picker or the confirmation writes nothing.
-  const importZaim = async () => {
+  // importData(): pick a CSV export → let each provider adapter attempt to
+  // decode it (Zaim, MoneyForward ME, おカネレコ) → preview against the current
+  // ledger without writing (so re-importing an overlapping export skips rows
+  // already present) → native Import/Cancel confirmation with the detected
+  // provider, entry count, and skip-reason breakdown → merge entries and any
+  // new categories through the normal update() path. Canceling the picker or
+  // the confirmation writes nothing.
+  const importData = async () => {
     try {
       const picked = await DocumentPicker.getDocumentAsync({ type: 'text/csv' });
       if (picked.canceled) return;
@@ -506,9 +526,8 @@ function Shell({
           ? await asset.file!.arrayBuffer()
           : await new File(asset.uri).arrayBuffer();
       const bytes = new Uint8Array(buffer);
-      const text = decodeZaimBytes(bytes);
-      if (!text) {
-        notify(strings.zaim.notZaimTitle, strings.zaim.notZaimMessage);
+      if (bytes.length > 5 * 1024 * 1024) {
+        notify(strings.importData.fileTooLargeTitle, strings.importData.fileTooLargeMessage);
         return;
       }
 
@@ -522,33 +541,53 @@ function Shell({
         { entries: [], recurrenceRules: state.recurrenceRules },
         today,
       );
-      const result = parseZaimCsv(text, {
-        expCats: state.expCats,
-        incCats: state.incCats,
-        // All persisted one-time entries participate in duplicate detection,
-        // including future-dated rows. Infinite rules contribute only their
-        // finite concrete history through today.
-        entries: [...state.entries, ...recurringHistory],
-      });
-      if (result.entries.length === 0) {
+      const preview = previewImportBytes(
+        bytes,
+        {
+          expCats: state.expCats,
+          incCats: state.incCats,
+          // All persisted one-time entries participate in duplicate detection,
+          // including future-dated rows. Infinite rules contribute only their
+          // finite concrete history through today.
+          entries: [...state.entries, ...recurringHistory],
+        },
+        [zaimImportAdapter, moneyforwardMeImportAdapter, okaneRecoImportAdapter],
+        // matchLegacyRows preserves the original Zaim flow's exact-row dedup for
+        // entries persisted before provenance existed; provider imports also
+        // dedup on source provenance.
+        { currency: state.currency, matchLegacyRows: true },
+      );
+
+      if (preview.status === 'no-write') {
+        const ambiguous = preview.reason === 'ambiguousFormat';
         notify(
-          strings.zaim.noEntriesTitle,
-          `${strings.zaim.noEntriesMessage}${skipSummary(result.skipped)}`,
+          ambiguous ? strings.importData.ambiguousFormatTitle : strings.importData.unknownFormatTitle,
+          ambiguous ? strings.importData.ambiguousFormatMessage : strings.importData.unknownFormatMessage,
+        );
+        return;
+      }
+      if (preview.entries.length === 0) {
+        notify(
+          strings.importData.noSupportedRowsTitle,
+          `${strings.importData.noSupportedRowsMessage}${skipSummary(preview.skipped)}`,
         );
         return;
       }
 
-      const message = `${strings.zaim.entriesReady(result.entries.length)}${skipSummary(result.skipped)}`;
-      confirm(strings.settings.importFromZaim, message, () => {
+      const provider = providerLabel(preview.provider!);
+      const message = `${strings.importData.preview(provider, preview.entries.length)}${skipSummary(preview.skipped)}`;
+      confirm(strings.settings.importData, message, () => {
+        // Apply against the real persisted entries, not the dedup set (which
+        // included projected recurring history that must never be written).
         update({
-          entries: [...state.entries, ...result.entries],
-          expCats: result.expCats,
-          incCats: result.incCats,
+          entries: [...state.entries, ...preview.entries],
+          expCats: preview.expCats,
+          incCats: preview.incCats,
         });
         setSheet(null);
       });
     } catch {
-      notify(strings.zaim.importFailedTitle, strings.zaim.importFailedMessage);
+      notify(strings.importData.importFailedTitle, strings.importData.importFailedMessage);
       return;
     }
   };
@@ -822,7 +861,7 @@ function Shell({
             onOpenRepeats={openRepeats}
             onOpenBudgets={openBudgets}
             onExportData={exportData}
-            onImportZaim={importZaim}
+            onImportData={importData}
             hasCorruptStash={hasCorruptStash}
             onExportCorruptStash={exportCorruptStash}
             onDeleteAllData={deleteAllData}
