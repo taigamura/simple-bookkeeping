@@ -22,12 +22,18 @@ export interface UseStore {
    *  blob (#28) — the root shows a one-time notice off this, not off
    *  `hasCorruptStash` (which stays true across later, healthy boots too). */
   showCorruptNotice: boolean;
+  /** True for this session if boot restored the ledger from a rolling backup
+   *  (the primary key was missing/unreadable) — drives a one-time notice. */
+  showRestoredNotice: boolean;
   /** Whether a corrupt-stash blob exists, from this boot or a past one. */
   hasCorruptStash: boolean;
   /** Read the stashed raw blob for the "Export unreadable backup" row. */
   readCorruptStash: () => Promise<string | null>;
   /** Dump every storage key/value for the one-off "Recover data" export. */
   dumpStorage: () => Promise<string>;
+  /** Drop the rolling backups — called on an intentional "Delete all data" so
+   *  the auto-restore can't resurrect the wipe on the next boot. */
+  clearSnapshots: () => Promise<void>;
   /** Non-corrupt persistence failures that need user-visible recovery guidance. */
   persistenceNotice: Exclude<LoadIssue, 'none' | 'corrupt'> | 'save-failed' | null;
 }
@@ -36,6 +42,7 @@ export function useStore(store: Store = defaultStore): UseStore {
   const [ready, setReady] = useState(false);
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const [showCorruptNotice, setShowCorruptNotice] = useState(false);
+  const [showRestoredNotice, setShowRestoredNotice] = useState(false);
   const [hasCorruptStash, setHasCorruptStash] = useState(false);
   const [persistenceNotice, setPersistenceNotice] = useState<UseStore['persistenceNotice']>(null);
 
@@ -43,6 +50,7 @@ export function useStore(store: Store = defaultStore): UseStore {
     let alive = true;
     store.load().then(async (loaded) => {
       const corrupt = store.wasLastLoadCorrupt();
+      const restored = store.wasLastLoadRestored();
       const loadIssue = store.lastLoadIssue();
       let stashed = false;
       let stashReadFailed = false;
@@ -54,6 +62,7 @@ export function useStore(store: Store = defaultStore): UseStore {
       if (!alive) return;
       setState(loaded);
       setShowCorruptNotice(corrupt);
+      setShowRestoredNotice(restored);
       setHasCorruptStash(stashed);
       setPersistenceNotice(
         stashReadFailed
@@ -85,15 +94,18 @@ export function useStore(store: Store = defaultStore): UseStore {
 
   const readCorruptStash = useCallback(() => store.readCorruptStash(), [store]);
   const dumpStorage = useCallback(() => store.dumpStorage(), [store]);
+  const clearSnapshots = useCallback(() => store.clearSnapshots(), [store]);
 
   return {
     ready,
     state,
     update,
     showCorruptNotice,
+    showRestoredNotice,
     hasCorruptStash,
     readCorruptStash,
     dumpStorage,
+    clearSnapshots,
     persistenceNotice,
   };
 }

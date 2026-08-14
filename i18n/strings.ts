@@ -184,6 +184,10 @@ export interface Strings {
     title: string;
     message: string;
   };
+  restoredNotice: {
+    title: string;
+    message: string;
+  };
   persistenceNotice: {
     readFailedTitle: string;
     readFailedMessage: string;
@@ -372,6 +376,11 @@ export const en: Strings = {
     title: 'Backup kept',
     message:
       "Your previous data couldn't be read; a backup copy was kept. You can export it from Settings.",
+  },
+  restoredNotice: {
+    title: 'Restored from a backup',
+    message:
+      'Your ledger was missing on launch, so it was restored from the most recent on-device backup.',
   },
   persistenceNotice: {
     readFailedTitle: 'Storage unavailable',
@@ -589,6 +598,10 @@ export const ja: Strings = {
   corruptNotice: {
     title: 'バックアップを保持しました',
     message: '以前のデータを読み込めませんでした。バックアップは保持されています。設定から書き出せます。',
+  },
+  restoredNotice: {
+    title: 'バックアップから復元しました',
+    message: '起動時に帳簿が見つからなかったため、端末内の最新のバックアップから復元しました。',
   },
   persistenceNotice: {
     readFailedTitle: 'ストレージを開けません',

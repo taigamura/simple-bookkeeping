@@ -32,6 +32,8 @@ export default function App() {
     state,
     update,
     showCorruptNotice,
+    showRestoredNotice,
+    clearSnapshots,
     hasCorruptStash,
     readCorruptStash,
     dumpStorage,
@@ -91,6 +93,8 @@ export default function App() {
             state={state}
             update={update}
             showCorruptNotice={showCorruptNotice}
+            showRestoredNotice={showRestoredNotice}
+            clearSnapshots={clearSnapshots}
             hasCorruptStash={hasCorruptStash}
             readCorruptStash={readCorruptStash}
             dumpStorage={dumpStorage}

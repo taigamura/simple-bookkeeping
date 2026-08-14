@@ -68,6 +68,11 @@ interface RootProps {
   update: (patch: Partial<AppState>) => void;
   /** True for this session if boot's load() stashed an unreadable blob (#28). */
   showCorruptNotice: boolean;
+  /** True for this session if boot restored the ledger from a rolling backup. */
+  showRestoredNotice?: boolean;
+  /** Drop the rolling backups on an intentional "Delete all data" so the
+   *  auto-restore can't resurrect the wipe. Optional for render helpers. */
+  clearSnapshots?: () => Promise<void>;
   /** Whether a corrupt-stash blob exists — gates the Settings recovery row. */
   hasCorruptStash: boolean;
   readCorruptStash: () => Promise<string | null>;
@@ -356,6 +361,8 @@ function Shell({
   state,
   update,
   showCorruptNotice,
+  showRestoredNotice = false,
+  clearSnapshots,
   hasCorruptStash,
   readCorruptStash,
   dumpStorage = async () => '{}',
@@ -448,6 +455,12 @@ function Shell({
       notify(strings.corruptNotice.title, strings.corruptNotice.message);
     }
   }, [showCorruptNotice]);
+
+  useEffect(() => {
+    if (showRestoredNotice) {
+      notify(strings.restoredNotice.title, strings.restoredNotice.message);
+    }
+  }, [showRestoredNotice]);
 
   useEffect(() => {
     if (persistenceNotice === 'read-failed') {
@@ -778,6 +791,9 @@ function Shell({
       strings.settings.deleteAllDataConfirmMessage,
       () => {
         update({ entries: [], recurrenceRules: [], budgets: {}, totalBudget: 0 });
+        // Drop the rolling backups too, so this intentional wipe can't be
+        // resurrected by the auto-restore on the next launch.
+        void clearSnapshots?.();
         closeSheet();
       },
       strings.common.delete,
