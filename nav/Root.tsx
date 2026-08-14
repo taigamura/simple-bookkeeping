@@ -56,7 +56,8 @@ import { RepeatsSheet } from '../screens/RepeatsSheet';
 import { SettingsSheet } from '../screens/SettingsSheet';
 import { SummaryScreen } from '../screens/SummaryScreen';
 import type { AppState, UseStore } from '../store';
-import { easings, metrics, useMotion, withAppDelay, withAppTiming } from '../theme';
+import { easings, metrics, useMotion, useTheme, withAppDelay, withAppTiming } from '../theme';
+import { SaveWave } from '../ui';
 import { AppShell } from './AppShell';
 import { BottomSheet, SHEET_ANIMATION_DURATION } from './BottomSheet';
 import { TabBar } from './TabBar';
@@ -363,6 +364,10 @@ function Shell({
   const [tab, setTab] = useState<Tab>('calendar');
   const [sheet, setSheet] = useState<Sheet>(null);
   const { enabled: motionEnabled } = useMotion();
+  const { colors } = useTheme();
+  // Save-confirmation bloom on the app canvas: a nonce bumped once per save so
+  // the wave replays even for two saves in a row (see `SaveWave`).
+  const [saveWaveNonce, setSaveWaveNonce] = useState(0);
   // Which day just received a saved entry, and a bump counter so two saves onto
   // the *same* day still each play the landing pulse. The Calendar screen
   // forwards this to the matching day cell; nothing else reads it.
@@ -633,6 +638,7 @@ function Shell({
       const next = saveLedgerItem(ledger, draft, weekendShift, editing ?? undefined, scope);
       if (next === ledger) return;
       entrySaved();
+      setSaveWaveNonce((nonce) => nonce + 1);
       update({
         ...next,
         ...(draft.type === 'expense'
@@ -920,6 +926,7 @@ function Shell({
           }
         />
       </BottomSheet>
+      <SaveWave nonce={saveWaveNonce} color={colors.positive} testID="save-wave-overlay" />
     </View>
   );
 }
