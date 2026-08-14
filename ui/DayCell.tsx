@@ -198,7 +198,12 @@ function AnimatedDayCell({
   const fill = useSharedValue(selected ? 1 : 0);
   const dotScale = useSharedValue(hasNet ? 1 : 0);
   const dotSizeSV = useSharedValue(dotSize);
-  const pulseProgress = useSharedValue(0);
+  // Rests at 1 (ring fully faded / invisible), not 0. Progress 0 maps to the
+  // bright ring (opacity 0.7), which is the START of a pulse — a fresh nonce
+  // sets it back to 0 then springs to 1. Resting at 0 would paint a permanent
+  // outline on every pulsed day the moment its cell (re)mounts — e.g. after a
+  // tab switch or scrolling the month back into view.
+  const pulseProgress = useSharedValue(1);
   const viewProgress = useSharedValue(view === 'dots' ? 1 : 0);
 
   const prevSelected = useRef(selected);
@@ -284,11 +289,13 @@ function AnimatedDayCell({
       return;
     }
     prevPulse.current = pulse;
+    // Start bright and tight (progress 0 → opacity 0.7, scale 1), then run to 1
+    // so the ring fades to 0 and *stays* invisible. It must NOT reset to 0 on
+    // finish: progress 0 maps to opacity 0.7, so a reset leaves a permanent
+    // blue outline on every day that has ever been pulsed. A fresh nonce
+    // re-arms it by setting progress back to 0 above before springing again.
     pulseProgress.value = 0;
-    pulseProgress.value = withAppSpring(1, springs.pop, (finished) => {
-      'worklet';
-      if (finished) pulseProgress.value = 0;
-    });
+    pulseProgress.value = withAppSpring(1, springs.pop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pulse, enabled]);
 
@@ -394,6 +401,7 @@ function AnimatedDayCell({
       {indicatorNode}
       {pulse != null && (
         <Animated.View
+          testID={`day-pulse-ring-${day}`}
           pointerEvents="none"
           style={[
             styles.ring,
