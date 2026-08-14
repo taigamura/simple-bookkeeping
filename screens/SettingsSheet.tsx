@@ -68,6 +68,9 @@ interface SettingsSheetProps {
   onOpenBudgets: () => void;
   onExportData: () => void;
   onImportData: () => void;
+  /** One-off recovery export: dumps every storage key/value to a file.
+   *  Optional so existing render helpers need not provide it. */
+  onRecoverData?: () => void;
   /** Whether a corrupt-stash blob exists (#28) — gates the recovery row. */
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
@@ -95,6 +98,7 @@ export function SettingsSheet({
   onOpenBudgets,
   onExportData,
   onImportData,
+  onRecoverData = () => {},
   hasCorruptStash,
   onExportCorruptStash,
   onDeleteAllData,
@@ -126,6 +130,7 @@ export function SettingsSheet({
         <DataActions
           onExportData={onExportData}
           onImportData={onImportData}
+          onRecoverData={onRecoverData}
           hasCorruptStash={hasCorruptStash}
           onExportCorruptStash={onExportCorruptStash}
           onDeleteAllData={onDeleteAllData}
@@ -474,12 +479,14 @@ function RepeatsLink({ count, onPress }: { count: number; onPress: () => void })
 function DataActions({
   onExportData,
   onImportData,
+  onRecoverData,
   hasCorruptStash,
   onExportCorruptStash,
   onDeleteAllData,
 }: {
   onExportData: () => void;
   onImportData: () => void;
+  onRecoverData: () => void;
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
   onDeleteAllData: () => void;
@@ -510,6 +517,17 @@ function DataActions({
       >
         <Txt variant="listItem" tone="ink">
           {strings.settings.importData}
+        </Txt>
+      </Pressable>
+
+      <Pressable
+        onPress={onRecoverData}
+        accessibilityRole="button"
+        accessibilityLabel={strings.settings.recoverData}
+        style={rowStyle}
+      >
+        <Txt variant="listItem" tone="ink">
+          {strings.settings.recoverData}
         </Txt>
       </Pressable>
 

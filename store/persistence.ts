@@ -16,6 +16,11 @@ export interface Persistence {
    *  fell back to defaults (#28) — `null` when nothing has been stashed. */
   readCorruptStash(): Promise<string | null>;
   writeCorruptStash(value: string): Promise<void>;
+  /** Every key/value currently in storage, for the one-off recovery export —
+   *  captures ledgers written under any past key (e.g. a build that moved to a
+   *  new storage key and left the original behind). Optional so lightweight test
+   *  fakes need not implement it. */
+  dumpAll?(): Promise<Array<[string, string | null]>>;
 }
 
 /** Single key holding the whole-state JSON envelope. */
@@ -28,6 +33,11 @@ export const asyncStoragePersistence: Persistence = {
   write: (value) => AsyncStorage.setItem(STORAGE_KEY, value),
   readCorruptStash: () => AsyncStorage.getItem(CORRUPT_STASH_KEY),
   writeCorruptStash: (value) => AsyncStorage.setItem(CORRUPT_STASH_KEY, value),
+  dumpAll: async () => {
+    const keys = await AsyncStorage.getAllKeys();
+    const pairs = await AsyncStorage.multiGet(keys);
+    return pairs.map(([key, value]) => [key, value] as [string, string | null]);
+  },
 };
 
 /**
@@ -45,6 +55,12 @@ export function createMemoryPersistence(initial: string | null = null): Persiste
     readCorruptStash: async () => stash,
     writeCorruptStash: async (next) => {
       stash = next;
+    },
+    dumpAll: async () => {
+      const pairs: Array<[string, string | null]> = [];
+      if (value !== null) pairs.push(['kaji:state:v1', value]);
+      if (stash !== null) pairs.push(['kaji:state:v1:corrupt-stash', stash]);
+      return pairs;
     },
   };
 }
