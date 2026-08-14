@@ -13,6 +13,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import { strings } from '../i18n';
 import { ThemeProvider } from '../theme';
 import { MonthPager, buildWindow, pageIndex } from './MonthPager';
 
@@ -68,6 +69,16 @@ describe('MonthPager', () => {
     for (const row of rows) {
       expect(React.Children.count(row.props.children)).toBe(7);
     }
+  });
+
+  it('marks the selected day in only one month, never the neighbours', () => {
+    // Regression: neighbour pages used to preview the carried-over selection,
+    // so more than one month's grid rendered a blue selected cell at once.
+    const list = renderMeasured(() => {});
+    void list;
+    const dayOnes = screen.getAllByLabelText(strings.calendar.dayAccessibilityLabel(1));
+    const selected = dayOnes.filter((cell) => cell.props.accessibilityState?.selected);
+    expect(selected).toHaveLength(1);
   });
 
   it('commits the neighbour month when a swipe settles one page over', () => {

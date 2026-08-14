@@ -366,7 +366,12 @@ function Shell({
   // Which day just received a saved entry, and a bump counter so two saves onto
   // the *same* day still each play the landing pulse. The Calendar screen
   // forwards this to the matching day cell; nothing else reads it.
-  const [savedPulse, setSavedPulse] = useState<{ day: number; nonce: number }>({
+  // The pulse is scoped to the exact month it landed in (y/m), not just the
+  // day: without the month, sliding the pager to another month re-applied the
+  // same nonce to that month's matching day and replayed the ring there.
+  const [savedPulse, setSavedPulse] = useState<{ y: number; m: number; day: number; nonce: number }>({
+    y: 0,
+    m: 0,
     day: 0,
     nonce: 0,
   });
@@ -693,7 +698,7 @@ function Shell({
       // the sheet had slid away. Motion-off skips the wait: `DayCell` no-ops the
       // pulse either way, so there is nothing to time against.
       const fireLandingPulse = () =>
-        setSavedPulse((prev) => ({ day: landing.day, nonce: prev.nonce + 1 }));
+        setSavedPulse((prev) => ({ y: landing.y, m: landing.m, day: landing.day, nonce: prev.nonce + 1 }));
       if (motionEnabled) {
         if (pulseTimer.current !== null) clearTimeout(pulseTimer.current);
         pulseTimer.current = setTimeout(() => {
@@ -800,6 +805,8 @@ function Shell({
         onNextMonth={() => goMonth(1)}
         onMonthChange={setMonth}
         onSettings={openSettings}
+        pulseY={savedPulse.y}
+        pulseM={savedPulse.m}
         pulseDay={savedPulse.day}
         pulseNonce={savedPulse.nonce}
       />
