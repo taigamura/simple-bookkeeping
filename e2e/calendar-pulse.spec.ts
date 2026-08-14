@@ -87,6 +87,26 @@ test('the landing pulse fades out and never rests as a stray outline', async ({ 
   await expect.poll(() => maxRingOpacity(page), { timeout: 4000 }).toBeLessThan(0.05);
 });
 
+test('saving blooms the save-wave confirmation on the app canvas', async ({ page }) => {
+  await saveAnEntry(page);
+  // The overlay is always mounted; on save a wave layer animates up to a
+  // visible opacity. A regression that unwires it leaves every layer at 0.
+  const peak = await page.evaluate(async () => {
+    const host = document.querySelector('[data-testid="save-wave-overlay"]');
+    if (!host) return -1;
+    let max = 0;
+    for (let i = 0; i < 12; i++) {
+      for (const c of host.querySelectorAll('*')) {
+        const op = parseFloat(getComputedStyle(c as HTMLElement).opacity) || 0;
+        if (op > max && op < 1) max = op;
+      }
+      await new Promise((r) => setTimeout(r, 80));
+    }
+    return max;
+  });
+  expect(peak).toBeGreaterThan(0.3);
+});
+
 test('only one day is selected, before and after paging a month', async ({ page }) => {
   await enableMotion(page);
   await coldLoad(page);
