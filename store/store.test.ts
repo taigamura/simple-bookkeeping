@@ -616,4 +616,114 @@ describe('createStore — corrupt-load safety net (#28)', () => {
       expect(await store.dumpStorage()).toBe('{}');
     });
   });
+
+  describe('rolling backups + auto-restore', () => {
+    // A persistence with a controllable primary and preset snapshots, to
+    // simulate a future build that wiped/moved the primary key but left the
+    // rolling backups intact.
+    const withSnapshots = (primary: string | null, snaps: Record<string, string> = {}) => {
+      const snapshots = new Map(Object.entries(snaps));
+      let value = primary;
+      let stash: string | null = null;
+      return {
+        read: async () => value,
+        write: async (v: string) => { value = v; },
+        readCorruptStash: async () => stash,
+        writeCorruptStash: async (v: string) => { stash = v; },
+        snapshotIds: async () => [...snapshots.keys()],
+        readSnapshot: async (id: string) => snapshots.get(id) ?? null,
+        writeSnapshot: async (id: string, v: string) => { snapshots.set(id, v); },
+        deleteSnapshot: async (id: string) => { snapshots.delete(id); },
+        _primary: () => value,
+        _snapshots: () => snapshots,
+      };
+    };
+    const envelope = (over: Partial<AppState> = {}) =>
+      JSON.stringify({ version: SCHEMA_VERSION, state: stateWith(over) });
+
+    it('backs up each non-empty save, capped at the limit, skipping no-op repeats', async () => {
+      const persistence = createMemoryPersistence();
+      const store = createStore(persistence);
+      for (let i = 0; i < 8; i++) {
+        await store.save(stateWith({ entries: [{ ...sampleEntry, amount: 100 + i }] }));
+      }
+      await store.save(stateWith({ entries: [{ ...sampleEntry, amount: 107 }] })); // dup of last
+      const ids = await persistence.snapshotIds!();
+      expect(ids.length).toBe(5); // capped, and the duplicate added nothing
+    });
+
+    it('does not re-back-up on a non-ledger save (theme/currency toggle)', async () => {
+      const persistence = createMemoryPersistence();
+      const store = createStore(persistence);
+      const entries = [sampleEntry]; // same reference across the two saves
+      await store.save(stateWith({ entries }));
+      await store.save(stateWith({ entries, theme: 'light' }));
+      expect((await persistence.snapshotIds!()).length).toBe(1);
+    });
+
+    it('does not back up an empty ledger', async () => {
+      const persistence = createMemoryPersistence();
+      const store = createStore(persistence);
+      await store.save(stateWith({ entries: [] }));
+      expect((await persistence.snapshotIds!()).length).toBe(0);
+    });
+
+    it('restores the newest backup when the primary key is missing', async () => {
+      const persistence = withSnapshots(null, {
+        '1000-000000': envelope({ entries: [{ ...sampleEntry, amount: 500 }] }),
+        '2000-000000': envelope({ entries: [sampleEntry, { ...sampleEntry, id: 'e2', amount: 999 }] }),
+      });
+      const store = createStore(persistence);
+      const loaded = await store.load();
+      expect(loaded.entries).toHaveLength(2); // the newer snapshot
+      expect(store.wasLastLoadRestored()).toBe(true);
+      // it rewrote the restored state to the primary key for the session
+      expect(persistence._primary()).not.toBeNull();
+      expect(JSON.parse(persistence._primary()!).state.entries).toHaveLength(2);
+    });
+
+    it('restores from a backup when the primary blob is corrupt', async () => {
+      const persistence = withSnapshots('{ not valid json', {
+        '1000-000000': envelope({ entries: [sampleEntry] }),
+      });
+      const store = createStore(persistence);
+      const loaded = await store.load();
+      expect(loaded.entries).toHaveLength(1);
+      expect(store.wasLastLoadRestored()).toBe(true);
+      expect(store.wasLastLoadCorrupt()).toBe(true); // the bad blob was still stashed
+    });
+
+    it('respects a valid empty ledger and never resurrects it from a backup', async () => {
+      // A legitimately-empty primary (e.g. entries deleted one by one) must win,
+      // even while older non-empty snapshots still exist.
+      const persistence = withSnapshots(envelope({ entries: [] }), {
+        '1000-000000': envelope({ entries: [sampleEntry] }),
+      });
+      const store = createStore(persistence);
+      const loaded = await store.load();
+      expect(loaded.entries).toHaveLength(0);
+      expect(store.wasLastLoadRestored()).toBe(false);
+    });
+
+    it('falls back to defaults when the primary is missing and no backup exists', async () => {
+      const store = createStore(withSnapshots(null, {}));
+      expect(await store.load()).toEqual(DEFAULT_STATE);
+      expect(store.wasLastLoadRestored()).toBe(false);
+    });
+
+    it('clearSnapshots stops a later restore, so an intentional wipe stays wiped', async () => {
+      const persistence = createMemoryPersistence();
+      const first = createStore(persistence);
+      await first.save(stateWith({ entries: [sampleEntry] }));
+      expect((await persistence.snapshotIds!()).length).toBe(1);
+
+      await first.clearSnapshots();
+      expect((await persistence.snapshotIds!()).length).toBe(0);
+
+      // Simulate the primary going missing after the wipe: no backup to restore.
+      const wiped = createStore(withSnapshots(null, {}));
+      expect(await wiped.load()).toEqual(DEFAULT_STATE);
+      expect(wiped.wasLastLoadRestored()).toBe(false);
+    });
+  });
 });
