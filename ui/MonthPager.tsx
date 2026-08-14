@@ -38,8 +38,12 @@ interface MonthPagerProps {
   today?: RecurrenceDate;
   /** Day-cell variant, passed straight through to every month's grid. */
   view?: CalendarView;
-  /** Landing-pulse target day and nonce (pure pass-through — see `DayCell`).
-   *  Applied only to the committed month's grid, same rule as `onSelectDay`. */
+  /** Landing-pulse target month + day and nonce (pure pass-through — see
+   *  `DayCell`). Applied only to the grid whose month equals `pulseY`/`pulseM`,
+   *  so scrolling another month into view never replays the ring on its
+   *  matching day. */
+  pulseY?: number;
+  pulseM?: number;
   pulseDay?: number;
   pulseNonce?: number;
   onSelectDay: (day: number) => void;
@@ -56,6 +60,8 @@ export function MonthPager({
   selectedDay,
   today,
   view,
+  pulseY,
+  pulseM,
   pulseDay,
   pulseNonce,
   onSelectDay,
@@ -68,21 +74,29 @@ export function MonthPager({
       shift={shiftMonth}
       keyOf={monthKey}
       onCursorChange={onMonthChange}
-      renderPage={(month, isCursor) => (
-        <CalendarGrid
-          y={month.y}
-          m={month.m}
-          monthEntries={monthEntries(entries, month)}
-          // Neighbours preview the carried-over selection, clamped in-range;
-          // only the committed month's grid takes day taps.
-          selectedDay={clampDay(selectedDay, month.y, month.m)}
-          today={today}
-          view={view}
-          pulseDay={isCursor ? pulseDay : undefined}
-          pulseNonce={isCursor ? pulseNonce : undefined}
-          onSelectDay={isCursor ? onSelectDay : () => {}}
-        />
-      )}
+      renderPage={(month, isCursor) => {
+        // The pulse belongs to one specific month; only that month's grid ever
+        // receives the nonce, so scrolling any other month into view can't
+        // replay the ring on its same-numbered day.
+        const isPulseMonth = month.y === pulseY && month.m === pulseM;
+        return (
+          <CalendarGrid
+            y={month.y}
+            m={month.m}
+            monthEntries={monthEntries(entries, month)}
+            // Only the committed month shows the selected (blue) day; neighbours
+            // that momentarily scroll into view during a swipe stay unselected
+            // (0 matches no day) rather than showing a second blue cell. They
+            // still take no day taps.
+            selectedDay={isCursor ? clampDay(selectedDay, month.y, month.m) : 0}
+            today={today}
+            view={view}
+            pulseDay={isPulseMonth ? pulseDay : undefined}
+            pulseNonce={isPulseMonth ? pulseNonce : undefined}
+            onSelectDay={isCursor ? onSelectDay : () => {}}
+          />
+        );
+      }}
     />
   );
 }

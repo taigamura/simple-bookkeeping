@@ -110,7 +110,11 @@ interface CalendarScreenProps {
   /** Pager settle: adopt the absolute month it landed on (#48). */
   onMonthChange: (ym: YM) => void;
   onSettings: () => void;
-  /** The day, within the displayed month, that should play the landing pulse
+  /** The month (y/m) the landing pulse belongs to, so the pager plays it only
+   *  in that month and never replays it when another month scrolls into view. */
+  pulseY?: number;
+  pulseM?: number;
+  /** The day, within `pulseY`/`pulseM`, that should play the landing pulse
    *  after a save — pure pass-through to `MonthPager`. A parent wires these
    *  once saves report back which day they landed on. */
   pulseDay?: number;
@@ -141,6 +145,8 @@ export function CalendarScreen({
   onNextMonth,
   onMonthChange,
   onSettings,
+  pulseY,
+  pulseM,
   pulseDay,
   pulseNonce,
 }: CalendarScreenProps) {
@@ -329,6 +335,8 @@ export function CalendarScreen({
           selectedDay={day}
           today={today}
           view={view}
+          pulseY={pulseY}
+          pulseM={pulseM}
           pulseDay={pulseDay}
           pulseNonce={pulseNonce}
           onSelectDay={onSelectDay}
