@@ -47,6 +47,15 @@ interface AnimatedNumberProps {
   format: (value: number) => string;
   /** `Txt` type variant. Must be a monospace one — see "Layout stability". */
   variant: TypeVariant;
+  /**
+   * Whether value changes roll. Defaults to true. Set false where another
+   * motion already owns the change — the Summary hero's pour fills the whole
+   * card as one gesture (see `HeroPour`), and a per-figure digit-roll underneath
+   * it would be a second, competing animation. With this off the figure cuts
+   * straight to its new value, exactly as it does under reduced motion, so the
+   * pour reveals a settled number rather than a spinning one.
+   */
+  roll?: boolean;
   tone?: Tone;
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
@@ -65,6 +74,7 @@ export function AnimatedNumber({
   initialValue,
   format,
   variant,
+  roll = true,
   tone,
   style,
   numberOfLines,
@@ -79,7 +89,7 @@ export function AnimatedNumber({
   displayRef.current = display;
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !roll) {
       setDisplay(value);
       return;
     }
@@ -103,7 +113,7 @@ export function AnimatedNumber({
     return () => cancelAnimationFrame(frame);
     // displayRef is deliberately not a dependency: reading it at roll start is
     // the point, and depending on `display` would restart the roll every frame.
-  }, [value, enabled]);
+  }, [value, enabled, roll]);
 
   return (
     <Txt
