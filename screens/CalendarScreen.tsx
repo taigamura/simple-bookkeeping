@@ -37,7 +37,7 @@
  *   rather than a flash.
  */
 import React, { useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import {
@@ -60,7 +60,7 @@ import {
   type YM,
 } from '../domain';
 import { strings } from '../i18n';
-import { AnimatedNumber, ListRow, MonthPager } from '../ui';
+import { AnimatedNumber, ListRow, MonthPager, useOverscrollSlosh } from '../ui';
 import {
   useTheme,
   metrics,
@@ -215,6 +215,14 @@ export function CalendarScreen({
 
   const dayListAnimatedStyle = useAnimatedStyle(() => ({ opacity: dayListOpacity.value }));
 
+  // Overscroll slosh on the day list: pulling its rows past the top lets the
+  // day header above them (the selected day's label + net) trail and spring-
+  // settle. Attached here, not to the top In/Out/Net strip, because that strip
+  // sits above the month grid outside any scroll — the day list is the only
+  // pull source, so its own header is the spatially-coherent thing to slosh.
+  // Device-only (web never rubber-bands); applied only when motion is on.
+  const { scrollHandler, sloshStyle } = useOverscrollSlosh();
+
   // The pager mounts its measured FlatList one layout pass after the first
   // render. Without a small wrapper animation that implementation detail reads
   // as the dates popping into place when returning from Summary. Animate only
@@ -345,17 +353,19 @@ export function CalendarScreen({
       </Animated.View>
 
       <Animated.View style={[styles.dayList, enabled && dayListAnimatedStyle]}>
-        <View style={[styles.dayHeader, { borderBottomColor: colors.line }]}>
-          <Txt variant="microLabel" tone="muted">
-            {dayLabel(y, m, day)}
-          </Txt>
-          <AnimatedNumber
-            value={dNet}
-            format={(n) => signed(n, symbol)}
-            variant="inlineAmount"
-            tone={netTone(dNet)}
-          />
-        </View>
+        <Animated.View style={enabled ? sloshStyle : undefined}>
+          <View style={[styles.dayHeader, { borderBottomColor: colors.line }]}>
+            <Txt variant="microLabel" tone="muted">
+              {dayLabel(y, m, day)}
+            </Txt>
+            <AnimatedNumber
+              value={dNet}
+              format={(n) => signed(n, symbol)}
+              variant="inlineAmount"
+              tone={netTone(dNet)}
+            />
+          </View>
+        </Animated.View>
 
         {rows.length === 0 ? (
           <View style={styles.empty}>
@@ -364,7 +374,12 @@ export function CalendarScreen({
             </Txt>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+          <Animated.ScrollView
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+          >
             <View style={styles.dayCard}>
               {rows.map((entry, i) => (
                 <ListRow
@@ -381,7 +396,7 @@ export function CalendarScreen({
                 />
               ))}
             </View>
-          </ScrollView>
+          </Animated.ScrollView>
         )}
       </Animated.View>
     </View>
