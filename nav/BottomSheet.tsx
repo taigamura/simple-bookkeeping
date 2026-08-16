@@ -46,6 +46,8 @@ import Animated, {
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
+  useSharedValue,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -198,22 +200,47 @@ function SheetHandle() {
  * the fading backdrop and is swallowed, so nav never changes and the sheet looks
  * wedged shut (invisible on dev web, where animations are instant).
  *
- * Here `pointerEvents` is driven off `animatedIndex` on the UI thread and drops
- * to 'none' the instant the sheet starts descending from rest (index < ~0), so
- * the very next tap passes straight through to the FAB/gear underneath. Opacity
- * still fades smoothly over the whole close. The tap routes through `onClose`
- * (not gorhom's own close) so a backdrop dismiss takes the same app-driven path
- * as the ✕ button, which the sheet host's phase machine reconciles.
+ * Interactivity is gated off the host's committed open/closing intent, NOT off
+ * `animatedIndex`. Opacity still fades smoothly per-frame off the index, but the
+ * tap-catching `pointerEvents` follows a `SharedValue<boolean>` (`openShared`)
+ * the host flips in its phase machine, so it never trails the animation:
+ *   - it goes true synchronously with `present()` (phase → 'open'), ~200ms
+ *     before the sheet finishes rising, so the backdrop is reliably tappable by
+ *     the time the sheet looks settled — no lag window before it accepts a
+ *     dismiss tap. That window was the intermittent CI flake: the old
+ *     `animatedIndex`-crossing gate only raised `pointerEvents` a couple render
+ *     cycles *after* the sheet visually settled, so a tap fired the instant it
+ *     looked settled was silently dropped and the sheet wedged open.
+ *   - it goes false the instant the app decides to close (✕ / backdrop / swap
+ *     all route through onClose → phase → 'dismissing'), at or before the
+ *     descent starts, so the backdrop is already click-through as the sheet
+ *     slides down and an immediate reopen/swap tap passes to the FAB/gear
+ *     underneath (#63), with no fade-out window to race.
+ * Why a SharedValue and not a plain prop: gorhom renders the backdrop once and
+ * does not re-invoke `backdropComponent` when the host re-renders with a new
+ * phase, so a plain `open` prop would freeze at its mount value. A SharedValue
+ * is observed via `useAnimatedReaction` and stays live across the backdrop's
+ * whole mounted life. The reaction mirrors it into local state for the DOM
+ * `pointerEvents` prop (reanimated does not drive `pointerEvents` per-frame on
+ * web); the runOnJS hop is harmless here because both flips happen with a large
+ * timing margin from anything a tap races, unlike the old per-frame crossing.
+ * The tap routes through `onClose` (not gorhom's own close) so a backdrop
+ * dismiss takes the same app-driven path as the ✕ button.
+ *
+ * (A drag-to-close pan-down keeps the sheet 'open' until gorhom's onDismiss
+ * fires at the end of the drag; the backdrop stays interactive during that
+ * self-initiated descent. Harmless — the user's finger is on the sheet, not the
+ * FAB — and no spec exercises it; every programmatic close is covered above.)
  */
 function SheetBackdrop({
   animatedIndex,
   style,
   onClose,
-}: BottomSheetBackdropProps & { onClose: () => void }) {
-  // At rest the sheet sits at index 0; any descent toward −1 is a close.
+  openShared,
+}: BottomSheetBackdropProps & { onClose: () => void; openShared: SharedValue<boolean> }) {
   const [interactive, setInteractive] = useState(false);
   useAnimatedReaction(
-    () => animatedIndex.value > -0.02,
+    () => openShared.value,
     (open, prev) => {
       if (open !== prev) runOnJS(setInteractive)(open);
     },
@@ -359,9 +386,20 @@ export function BottomSheet({
   // Dimmed backdrop; tap dismisses through onClose (the app-driven path, same as
   // the ✕ button). See SheetBackdrop for why it's a custom component rather than
   // gorhom's BottomSheetBackdrop (#63 ghost-backdrop fix).
+  // Live open/closing intent for the backdrop's pointer-events gate. Driven off
+  // the phase machine (not animatedIndex) so the backdrop turns tappable/
+  // click-through with the committed intent, never trailing the slide animation.
+  // A SharedValue because gorhom won't re-invoke renderBackdrop on re-render, so
+  // the backdrop must observe this live rather than receive it as a frozen prop.
+  const backdropOpen = useSharedValue(false);
+  useEffect(() => {
+    backdropOpen.value = phase === 'open';
+  }, [backdropOpen, phase]);
   const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => <SheetBackdrop {...props} onClose={onClose} />,
-    [onClose],
+    (props: BottomSheetBackdropProps) => (
+      <SheetBackdrop {...props} onClose={onClose} openShared={backdropOpen} />
+    ),
+    [backdropOpen, onClose],
   );
 
   return (
