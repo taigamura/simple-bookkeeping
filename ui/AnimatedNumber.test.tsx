@@ -122,30 +122,6 @@ describe('AnimatedNumber', () => {
     expect(shown()).not.toContain('.');
   });
 
-  it('cuts straight to the value without rolling when roll is disabled', async () => {
-    // The Summary hero sets roll={false} so its pour, not a digit-roll, owns the
-    // change. Even with motion fully on, a value change must land instantly and
-    // schedule no frames — same end behaviour as reduced motion.
-    const noRoll = (value: number) => (
-      <ThemeProvider>
-        <MotionProvider initialPreference="full">
-          <AnimatedNumber
-            testID="figure"
-            value={value}
-            roll={false}
-            format={format}
-            variant="summaryNet"
-          />
-        </MotionProvider>
-      </ThemeProvider>
-    );
-    const view = render(noRoll(-42300));
-    await settleInitialRead();
-    view.rerender(noRoll(-48900));
-    expect(shown()).toBe('−¥48,900');
-    expect(frameCallbacks).toHaveLength(0);
-  });
-
   it('cuts straight to the value under reduced motion, scheduling no frames', async () => {
     const view = renderNumber(-42300, false);
     await settleInitialRead();

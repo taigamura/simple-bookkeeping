@@ -1,8 +1,6 @@
 /** Shared UI primitives (build-decisions "Components"). */
 export { PressScale, type PressScaleProps } from './PressScale';
 export { AnimatedNumber } from './AnimatedNumber';
-export { HeroPour } from './HeroPour';
-export { useOverscrollSlosh, sloshTranslateY } from './useOverscrollSlosh';
 export { SaveWave } from './SaveWave';
 export { SegmentedToggle, type SegmentOption } from './SegmentedToggle';
 export { Keypad } from './Keypad';

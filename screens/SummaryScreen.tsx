@@ -25,20 +25,22 @@
  *
  * ## Motion
  *
- * The whole hero block — net, both Legend values, budget-left — changes as one
- * on a period swap: `HeroPour` fills the card like a vessel, a single rising
- * front carrying every figure to its new value together. The figures are still
- * `AnimatedNumber`s (and still mono variants, `Legend` still handing it the raw
- * number plus a formatter rather than a pre-baked string) but each passes
- * `roll={false}`: the pour owns the change, and a per-figure digit-roll
- * underneath it would be a second, competing animation on the same numbers. The
- * roll is kept for the Calendar's In/Out/Net strip, which has no pour.
+ * Every headline figure here — the hero net, the two Legend values, the
+ * budget-left line — is a mono variant, which is the one precondition
+ * `AnimatedNumber` needs to roll safely (see its header): a period swap or a
+ * new entry now reads as that number *moving* to its new value rather than
+ * being replaced by an unrelated one.  `Legend` used to take a preformatted
+ * string; it now takes the raw number plus the same formatter the caller
+ * would have used, so it can hand both to `AnimatedNumber` instead of
+ * pre-baking the string this screen can no longer see the animation of.
  *
- * That single shared front is why the hero card sits *outside* the pager and
- * only the category list pages under the finger. Putting the hero inside would
- * give each page its own card and its own `HeroPour`/`AnimatedNumber` instances,
- * so the headline figure would hard-cut per page instead of pouring once at the
- * settle — the one place on the screen most worth animating.
+ * That number-roll is why the hero card sits *outside* the pager and only the
+ * category list pages under the finger. It mirrors the Calendar exactly, where
+ * the title and In/Out/Net strip are fixed and roll at the settle while the
+ * month grid is the paged element. Putting the hero inside the pager would give
+ * each page its own card and its own `AnimatedNumber` instance, so the headline
+ * figure would hard-cut per page — the one number on the screen most worth
+ * animating, and the only one Calendar animates in the same position.
  *
  * The period subtitle slides `TITLE_TRAVEL` and cross-fades in the direction
  * the period moved, the same hand-rolled treatment (and the same reason for it
@@ -70,7 +72,7 @@
  * the fix, not a redundant safety net.
  */
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, {
   FadeInDown,
   LinearTransition,
@@ -96,15 +98,7 @@ import {
   type YM,
 } from '../domain';
 import { strings } from '../i18n';
-import {
-  CategoryBar,
-  SplitBar,
-  AnimatedNumber,
-  HeroPour,
-  PeriodPager,
-  SegmentedToggle,
-  useOverscrollSlosh,
-} from '../ui';
+import { CategoryBar, SplitBar, AnimatedNumber, PeriodPager, SegmentedToggle } from '../ui';
 import {
   useTheme,
   useMotion,
@@ -202,11 +196,6 @@ export function SummaryScreen({
     transform: [{ translateX: titleTranslate.value }],
   }));
 
-  // Overscroll slosh: pulling the screen past the top lets the hero trail the
-  // pulled content and spring-settle on release (device-only; web never
-  // rubber-bands). Applied to the hero only when motion is on.
-  const { scrollHandler, sloshStyle } = useOverscrollSlosh();
-
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
@@ -235,34 +224,21 @@ export function SummaryScreen({
         />
       </View>
 
-      <Animated.ScrollView
+      <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
       >
         {/* The `deep` hero block — Kippu's one saturated surface, and the only
             place the headline number lives. Everything inside reads on-deep.
-            Fixed, outside the pager, so its figures change on a period swap.
-
-            `HeroPour` is the change's motion: on every period swap the card
-            fills like a vessel, one rising front carrying net + legend + budget
-            into place together. The figures inside therefore pass `roll={false}`
-            so a digit-roll doesn't compete with the pour (see `HeroPour`). */}
-        <Animated.View style={motionEnabled ? sloshStyle : undefined}>
-        <HeroPour
-          trigger={periodKey(cursor, granularity)}
-          radius={metrics.heroRadius}
-          testID="summary-hero-pour"
-        >
+            Fixed, outside the pager, so its figures roll on a period swap. */}
         <View style={[styles.card, { backgroundColor: colors.deep }]}>
           <Txt variant="microLabel" tone="onDeepMuted">
             {annual ? strings.summary.netThisYear : strings.summary.netThisMonth}
           </Txt>
           <AnimatedNumber
             value={total}
-            roll={false}
+            initialValue={0}
             format={(n) => signed(n, symbol)}
             variant="summaryNet"
             tone="onDeep"
@@ -301,7 +277,6 @@ export function SummaryScreen({
               </Txt>
               <AnimatedNumber
                 value={remaining}
-                roll={false}
                 format={(n) => (n < 0 ? signed(n, symbol) : yen(n, symbol))}
                 variant="inlineAmount"
                 tone={remaining < 0 ? 'onDeep' : 'onDeepMuted'}
@@ -309,8 +284,6 @@ export function SummaryScreen({
             </View>
           )}
         </View>
-        </HeroPour>
-        </Animated.View>
 
         <Txt variant="microLabel" tone="dim" style={styles.sectionLabel}>
           {strings.summary.spendingByCategory}
@@ -338,7 +311,7 @@ export function SummaryScreen({
             />
           )}
         />
-      </Animated.ScrollView>
+      </ScrollView>
     </View>
   );
 }
@@ -416,10 +389,8 @@ const HERO_RULE = 'rgba(255,255,255,.22)';
  * matches its SplitBar segment; expense takes the translucent one.
  *
  * Takes the raw number plus a formatter — rather than a preformatted string —
- * so it can hand both to `AnimatedNumber`. It passes `roll={false}` for the same
- * reason the hero net does: on a period swap the whole hero pours in as one
- * front (see `HeroPour`), and these totals ride that front rather than each
- * digit-rolling on its own beat.
+ * so it can hand both to `AnimatedNumber` and let the in/out totals roll along
+ * with the hero net instead of jumping a beat behind it.
  */
 function Legend({
   label,
@@ -446,7 +417,6 @@ function Legend({
       </Txt>
       <AnimatedNumber
         value={value}
-        roll={false}
         format={format}
         variant="inlineAmount"
         tone={income ? 'onDeep' : 'onDeepMuted'}

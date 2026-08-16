@@ -57,17 +57,6 @@
  * Renders nothing at all until it has been fired once and has a measurement,
  * so it costs nothing on every other frame of the sheet's life.
  *
- * ## The droplet ring
- *
- * Riding the bloom's leading edge is a single hairline ring — the impact edge of
- * a droplet meeting water, to the bloom's body of water. It shares the bloom's
- * `spread` so the two grow as one gesture (an independent size track would read
- * as two unrelated events), sized a hair larger (`RING_LEAD`) so it sits just
- * ahead of the fill rather than on top of it. Its own faster fade (`ringFade`,
- * `RING_FADE_SCALE` of the bloom's duration) is why it reads as a crisp pulse
- * that outruns and then vanishes, leaving the slower colour bloom behind — the
- * water character asked for without adding a second, competing animation.
- *
  * ## Why growth is real `width`/`height`, not `transform: scale`
  *
  * The obvious way to animate a growing circle is a fixed-size box scaled up
@@ -126,7 +115,6 @@ export function SaveWave({
   const [box, setBox] = useState({ width: 0, height: 0 });
   const spread = useSharedValue(0);
   const fade = useSharedValue(0);
-  const ringFade = useSharedValue(0);
 
   useEffect(() => {
     if (!enabled || nonce === 0) return;
@@ -134,7 +122,6 @@ export function SaveWave({
     // rather than continuing the first one's flight.
     spread.value = 0;
     fade.value = 0.9;
-    ringFade.value = RING_FADE_FROM;
     spread.value = withAppTiming(1, {
       duration: Math.round(durations.wave * 0.7),
       // Ease in, not out — see the file header ("Why spread eases in, not
@@ -142,13 +129,7 @@ export function SaveWave({
       easing: easings.exit,
     });
     fade.value = withAppTiming(0, { duration: durations.wave, easing: easings.inOut });
-    // The ring fades faster than the bloom so it reads as a crisp leading pulse
-    // that clears before the colour does — see "The droplet ring" above.
-    ringFade.value = withAppTiming(0, {
-      duration: Math.round(durations.wave * RING_FADE_SCALE),
-      easing: easings.standard,
-    });
-  }, [nonce, enabled, spread, fade, ringFade]);
+  }, [nonce, enabled, spread, fade]);
 
   const onLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -159,21 +140,6 @@ export function SaveWave({
   // number — recomputed each render from `box`, same as any other render-time
   // constant — not a shared value, since it never needs to change mid-flight.
   const fullDiameter = Math.max(box.width, box.height) * 2.2;
-
-  // Ring size mirrors the bloom's own growth math (same `spread`, same origin)
-  // so the two are one gesture, scaled `RING_LEAD` larger so the outline sits
-  // just past the fill's edge instead of exactly on it.
-  const ringAnimatedStyle = useAnimatedStyle(() => {
-    const size = fullDiameter * (0.04 + spread.value) * RING_LEAD;
-    return {
-      opacity: ringFade.value,
-      width: size,
-      height: size,
-      borderRadius: size / 2,
-      left: box.width / 2 - size / 2,
-      bottom: originFromBottom - size / 2,
-    };
-  });
 
   const animatedStyle = useAnimatedStyle(() => {
     // Starts as a dot at the CTA rather than at literal zero: a diameter of 0
@@ -205,33 +171,13 @@ export function SaveWave({
       style={styles.host}
     >
       {shouldRenderCircle && (
-        <>
-          <Animated.View
-            style={[{ position: 'absolute', backgroundColor: color }, animatedStyle]}
-          />
-          {/* The leading droplet ring: a hollow outline in the same accent,
-              riding just ahead of the bloom's edge. */}
-          <Animated.View
-            testID={testID ? `${testID}-ring` : undefined}
-            style={[
-              { position: 'absolute', borderWidth: RING_WIDTH, borderColor: color },
-              ringAnimatedStyle,
-            ]}
-          />
-        </>
+        <Animated.View
+          style={[{ position: 'absolute', backgroundColor: color }, animatedStyle]}
+        />
       )}
     </Animated.View>
   );
 }
-
-/** How far past the bloom's edge the ring sits (1 = exactly on the edge). */
-const RING_LEAD = 1.08;
-/** Ring stroke width, in px. Hairline-ish so it reads as an edge, not a band. */
-const RING_WIDTH = 2;
-/** The ring's starting opacity — below the bloom's so it stays a light accent. */
-const RING_FADE_FROM = 0.55;
-/** Fraction of the bloom's fade duration the ring gets, so it clears first. */
-const RING_FADE_SCALE = 0.55;
 
 const styles = StyleSheet.create({
   // Fills the app canvas without claiming the OS-owned status-bar or home-
