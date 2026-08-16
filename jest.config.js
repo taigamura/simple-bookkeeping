@@ -12,6 +12,12 @@ module.exports = {
   // letting the animation stack (MonthPager, #45) import cleanly in tests.
   resolver: 'react-native-worklets/jest/resolver.js',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  // Heavy suites (nav/Root.test.tsx renders the full app root 34 times) can
+  // push individual `waitFor` assertions past jest's 5s default when workers
+  // contend for CPU — the same test finishes in ~200ms in isolation. Raise the
+  // ceiling so a scheduling stall never flakes the release gate. This only
+  // widens the wall-clock budget; no assertion, retry, or skip is involved.
+  testTimeout: 20000,
   // The Playwright suite (#58) uses jest's default `.spec.ts` naming — keep
   // jest out of it (and out of exported web builds).
   testPathIgnorePatterns: ['/node_modules/', '<rootDir>/e2e/', '<rootDir>/dist/'],
