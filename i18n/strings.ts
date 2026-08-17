@@ -137,7 +137,8 @@ export interface Strings {
     exportData: string;
     importFromZaim: string;
     importData: string;
-    recoverData: string;
+    loadSampleData: string;
+    loadSampleDataConfirmMessage: string;
     exportUnreadableBackup: string;
     deleteAllData: string;
     deleteAllDataConfirmMessage: string;
@@ -335,7 +336,8 @@ export const en: Strings = {
     exportData: 'Export data',
     importFromZaim: 'Import from Zaim',
     importData: 'Import data',
-    recoverData: 'Recover data (export raw storage)',
+    loadSampleData: 'Load sample data',
+    loadSampleDataConfirmMessage: 'This replaces your current entries and budgets with fictitious sample data for App Store screenshots. Categories are updated to match; theme, currency, and other settings are preserved.',
     exportUnreadableBackup: 'Export unreadable backup',
     deleteAllData: 'Delete all data',
     deleteAllDataConfirmMessage: 'This will permanently delete all entries, repeating series, and budgets. Categories, currency, and settings will be preserved.',
@@ -558,7 +560,8 @@ export const ja: Strings = {
     exportData: 'データを書き出す',
     importFromZaim: 'Zaimから読み込む',
     importData: 'データを読み込む',
-    recoverData: 'データを復元（ストレージを書き出す）',
+    loadSampleData: 'サンプルデータを読み込む',
+    loadSampleDataConfirmMessage: 'App Store用のスクリーンショット向けに、現在の記録と予算を架空のサンプルデータで置き換えます。カテゴリも合わせて更新されますが、テーマ、通貨、その他の設定は保持されます。',
     exportUnreadableBackup: '読み取れないバックアップを書き出す',
     deleteAllData: 'すべてのデータを削除',
     deleteAllDataConfirmMessage: 'すべての記録、繰り返し、および予算が完全に削除されます。カテゴリ、通貨、および設定は保持されます。',

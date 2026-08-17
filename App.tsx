@@ -36,7 +36,6 @@ export default function App() {
     clearSnapshots,
     hasCorruptStash,
     readCorruptStash,
-    dumpStorage,
     persistenceNotice,
   } = useStore();
   const appReady = fontsLoaded && ready;
@@ -97,7 +96,6 @@ export default function App() {
             clearSnapshots={clearSnapshots}
             hasCorruptStash={hasCorruptStash}
             readCorruptStash={readCorruptStash}
-            dumpStorage={dumpStorage}
             persistenceNotice={persistenceNotice}
           />
           {!openingComplete ? (

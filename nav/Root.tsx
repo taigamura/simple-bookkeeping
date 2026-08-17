@@ -33,6 +33,9 @@ import {
   previewImportBytes,
   promoteCategory,
   pruneBudgets,
+  sampleLedger,
+  SAMPLE_MONTH,
+  SAMPLE_SELECTED_DAY,
   saveLedgerItem,
   shiftPeriod,
   serializeZaimCsv,
@@ -76,9 +79,6 @@ interface RootProps {
   /** Whether a corrupt-stash blob exists — gates the Settings recovery row. */
   hasCorruptStash: boolean;
   readCorruptStash: () => Promise<string | null>;
-  /** One-off recovery export: dumps every storage key/value to a file.
-   *  Optional so existing render helpers need not provide it. */
-  dumpStorage?: () => Promise<string>;
   persistenceNotice?: UseStore['persistenceNotice'];
 }
 
@@ -365,7 +365,6 @@ function Shell({
   clearSnapshots,
   hasCorruptStash,
   readCorruptStash,
-  dumpStorage = async () => '{}',
   persistenceNotice = null,
 }: RootProps) {
   const [tab, setTab] = useState<Tab>('calendar');
@@ -535,17 +534,25 @@ function Shell({
     }
   };
 
-  // recoverData(): one-off recovery export. Dumps every AsyncStorage key/value
-  // to a file, so a ledger left behind under a superseded storage key (e.g. a
-  // prior build that moved to a new key on migration) can be pulled off the
-  // device and re-imported, even though this build never reads that key.
-  const recoverData = async () => {
-    try {
-      const dump = await dumpStorage();
-      await shareTextFile('kaji-storage-dump.json', dump);
-    } catch {
-      notify(strings.zaim.exportFailedTitle, strings.zaim.exportFailedMessage);
-    }
+  // loadSampleData(): replace the ledger with the fictitious demo set for App
+  // Store screenshots (#79). Guarded by an explicit confirm so it can never be
+  // mistaken for real history, then jumps the calendar to the sample month with
+  // a populated day selected so a capture lands on data.
+  const loadSampleData = () => {
+    confirm(
+      strings.settings.loadSampleData,
+      strings.settings.loadSampleDataConfirmMessage,
+      () => {
+        update(sampleLedger());
+        // Drop rolling backups so the auto-restore can't merge the demo with a
+        // prior ledger on next launch.
+        void clearSnapshots?.();
+        setCursor(SAMPLE_MONTH);
+        setSelectedDay(SAMPLE_SELECTED_DAY);
+        closeSheet();
+      },
+      strings.settings.loadSampleData,
+    );
   };
 
   // importData(): pick a CSV export → let each provider adapter attempt to
@@ -908,7 +915,7 @@ function Shell({
             onOpenBudgets={openBudgets}
             onExportData={exportData}
             onImportData={importData}
-            onRecoverData={recoverData}
+            onLoadSampleData={loadSampleData}
             hasCorruptStash={hasCorruptStash}
             onExportCorruptStash={exportCorruptStash}
             onDeleteAllData={deleteAllData}
