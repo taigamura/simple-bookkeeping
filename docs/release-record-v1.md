@@ -14,25 +14,25 @@ final gates complete; submit only the exact build recorded here.
 | Expo slug | `kaji` |
 | EAS project id | `130c36b5-0731-4688-9e25-e7dd5dd87615` |
 | Marketing version | `1.0.0` |
-| iOS build number | ⏳ (EAS remote + autoIncrement; was 54 → next production build **55**) |
+| iOS build number | **61** (EAS remote autoIncrement, 60 → 61) |
 
 ## Release commit
 
 | Field | Value |
 |---|---|
-| Commit SHA | ⏳ |
-| Git tag | ⏳ (e.g. `v1.0.0`) |
-| Branch | ⏳ |
+| Commit SHA | `b96f06d` (merge of PR #136 into main) |
+| Git tag | `v1.0.0-build61` (annotated, pushed) |
+| Branch | `main` |
 
-## Automated quality gate — 2026-08-17 (working tree, pre-commit)
+## Automated quality gate — 2026-08-17 (candidate commit `b96f06d`)
 
-Re-run on the exact tagged commit before building; these results are from the
+Re-run on the exact candidate commit before building; these results are from the
 identical tree that became the candidate.
 
 | Gate | Command | Result |
 |---|---|---|
 | Strict TypeScript | `npm run typecheck` | ✅ pass |
-| Jest (warning-clean) | `npm test` | ✅ 39 suites / 466 tests, 0 `act()` / console warnings |
+| Jest (warning-clean) | `npm test` | ✅ 41 suites / 478 tests, 0 `act()` / console warnings |
 | Production web export | `npm run e2e:export` | ✅ clean export to `e2e/.web-build` |
 | Canonical Playwright | `npm run e2e:test -- --workers=2` | ✅ 22/22 (Chromium, CI-matching 2 workers) |
 
@@ -43,9 +43,9 @@ Notes: Playwright is authoritative at CI's 2-worker config. Full local paralleli
 
 | Field | Value |
 |---|---|
-| EAS build id / URL | ⏳ |
+| EAS build id / URL | local build (Mac build server); artifact `build-1786952228653.ipa` (20.3 MB) |
 | Profile | `production` (`eas.json`) |
-| Built from tag | ⏳ |
+| Built from tag | `v1.0.0-build61` (`b96f06d`) |
 
 ## Native smoke test (TestFlight — exact candidate)
 
@@ -83,13 +83,13 @@ Holds only while the DSN stays blank; filling it reopens this answer and privacy
 | Privacy Policy URL | https://taigamura.github.io/simple-bookkeeping/privacy.html (live, HTTP 200) |
 | Support URL | https://github.com/taigamura/simple-bookkeeping |
 | Support email | taigamura.dev@gmail.com |
-| Screenshots (JP + EN) | ⏳ captured from the certified candidate — see Part 5 matrix |
+| Screenshots (JP + EN) | ✅ 8 shots @ 1320×2868 (6.9"): EN + JP × Calendar/Summary/Entry/Settings, captured from build 61 via iOS 26.3 simulator + sample data, clean 9:41 status bar |
 
 ## Submission
 
 | Field | Value |
 |---|---|
-| Uploaded to App Store Connect | ⏳ |
+| Uploaded to App Store Connect | ✅ 2026-08-17 (build 61; EAS submission `e7ead3a4-0231-4ff8-be6e-25478ed168cb`; processing on Apple side) |
 | App Review contact email set | ⏳ (taigamura.dev@gmail.com) |
 | Submitted for review | ⏳ |
 
