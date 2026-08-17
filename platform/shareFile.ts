@@ -28,8 +28,17 @@ export async function shareTextFile(filename: string, contents: string): Promise
   }
 }
 
+// Pick a sensible MIME from the extension so a downloaded file is labeled as
+// what it is — the JSON backup (#: repeat-preserving backup) must not inherit
+// the CSV export's type. Falls back to plain text for anything else.
+function webMimeFor(filename: string): string {
+  if (filename.endsWith('.json')) return 'application/json;charset=utf-8';
+  if (filename.endsWith('.csv')) return 'text/csv;charset=utf-8';
+  return 'text/plain;charset=utf-8';
+}
+
 function shareTextFileWeb(filename: string, contents: string) {
-  const blob = new Blob([contents], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob([contents], { type: webMimeFor(filename) });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

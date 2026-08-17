@@ -25,6 +25,8 @@ const renderSheet = (over: Partial<React.ComponentProps<typeof SettingsSheet>> =
         onOpenBudgets={() => {}}
         onExportData={() => {}}
         onImportData={() => {}}
+        onBackupData={() => {}}
+        onRestoreData={() => {}}
         hasCorruptStash={false}
         onExportCorruptStash={() => {}}
         onDeleteAllData={() => {}}

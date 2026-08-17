@@ -137,6 +137,9 @@ export interface Strings {
     exportData: string;
     importFromZaim: string;
     importData: string;
+    backupData: string;
+    restoreData: string;
+    restoreConfirmMessage: string;
     loadSampleData: string;
     loadSampleDataConfirmMessage: string;
     exportUnreadableBackup: string;
@@ -227,6 +230,15 @@ export interface Strings {
     completeTitle: string;
     complete: (provider: string, imported: number) => string;
     skip: ImportSkipStrings;
+  };
+  /** Native full-ledger backup/restore (faithful, repeat-preserving). */
+  backup: {
+    exportFailedTitle: string;
+    exportFailedMessage: string;
+    invalidTitle: string;
+    invalidMessage: string;
+    restoreFailedTitle: string;
+    restoreFailedMessage: string;
   };
 }
 
@@ -336,6 +348,9 @@ export const en: Strings = {
     exportData: 'Export data',
     importFromZaim: 'Import from Zaim',
     importData: 'Import data',
+    backupData: 'Back up all data',
+    restoreData: 'Restore from backup',
+    restoreConfirmMessage: 'This replaces everything in the app with the contents of the backup file: entries, repeating series, budgets, categories, currency, and settings. Your current data will be overwritten.',
     loadSampleData: 'Load sample data',
     loadSampleDataConfirmMessage: 'This replaces your current entries and budgets with fictitious sample data for App Store screenshots. Categories are updated to match; theme, currency, and other settings are preserved.',
     exportUnreadableBackup: 'Export unreadable backup',
@@ -452,6 +467,15 @@ export const en: Strings = {
       unsupportedField: (n) => `${n} unsupported row${n === 1 ? '' : 's'} skipped`,
     },
   },
+  backup: {
+    exportFailedTitle: 'Backup failed',
+    exportFailedMessage: 'Your backup file could not be created. Please try again.',
+    invalidTitle: 'Not a valid backup',
+    invalidMessage:
+      "This file isn't a backup this version can restore. Your data was not changed.",
+    restoreFailedTitle: 'Restore failed',
+    restoreFailedMessage: 'Your data was not changed. Choose a backup file and try again.',
+  },
 };
 
 export const ja: Strings = {
@@ -560,6 +584,9 @@ export const ja: Strings = {
     exportData: 'データを書き出す',
     importFromZaim: 'Zaimから読み込む',
     importData: 'データを読み込む',
+    backupData: 'すべてのデータをバックアップ',
+    restoreData: 'バックアップから復元',
+    restoreConfirmMessage: 'アプリ内のすべて（記録、繰り返し、予算、カテゴリ、通貨、設定）をバックアップファイルの内容で置き換えます。現在のデータは上書きされます。',
     loadSampleData: 'サンプルデータを読み込む',
     loadSampleDataConfirmMessage: 'App Store用のスクリーンショット向けに、現在の記録と予算を架空のサンプルデータで置き換えます。カテゴリも合わせて更新されますが、テーマ、通貨、その他の設定は保持されます。',
     exportUnreadableBackup: '読み取れないバックアップを書き出す',
@@ -669,5 +696,13 @@ export const ja: Strings = {
       currencyMismatch: (n) => `通貨が一致しない行${n}件をスキップしました`,
       unsupportedField: (n) => `未対応の行${n}件をスキップしました`,
     },
+  },
+  backup: {
+    exportFailedTitle: 'バックアップに失敗しました',
+    exportFailedMessage: 'バックアップファイルを作成できませんでした。もう一度お試しください。',
+    invalidTitle: '有効なバックアップではありません',
+    invalidMessage: 'このファイルはこのバージョンで復元できるバックアップではありません。データは変更されていません。',
+    restoreFailedTitle: '復元に失敗しました',
+    restoreFailedMessage: 'データは変更されていません。バックアップファイルを選んでもう一度お試しください。',
   },
 };
