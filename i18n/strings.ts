@@ -134,6 +134,10 @@ export interface Strings {
     moveCategoryDown: (name: string) => string;
     removeCategory: (name: string) => string;
     data: string;
+    dataTransfer: string;
+    dataTransferHint: string;
+    dataBackup: string;
+    dataBackupHint: string;
     exportData: string;
     importFromZaim: string;
     importData: string;
@@ -345,6 +349,10 @@ export const en: Strings = {
     moveCategoryDown: (name) => `Move ${name} down`,
     removeCategory: (name) => `Remove ${name}`,
     data: 'Data',
+    dataTransfer: 'Transfer with other apps',
+    dataTransferHint: 'Move transactions in and out as CSV, to share with other budgeting apps. Importing merges into your current data.',
+    dataBackup: 'Backup & restore',
+    dataBackupHint: 'A complete snapshot only this app can read, for a new phone or recovery. Restoring replaces everything.',
     exportData: 'Export data',
     importFromZaim: 'Import from Zaim',
     importData: 'Import data',
@@ -581,6 +589,10 @@ export const ja: Strings = {
     moveCategoryDown: (name) => `${name}を下に移動`,
     removeCategory: (name) => `${name}を削除`,
     data: 'データ',
+    dataTransfer: '他アプリとの連携',
+    dataTransferHint: 'CSV形式で取引を書き出し・読み込みして、他の家計簿アプリと共有できます。読み込みは現在のデータに統合されます。',
+    dataBackup: 'バックアップと復元',
+    dataBackupHint: 'このアプリだけが読み込める完全なスナップショット。機種変更や復旧に使います。復元はすべてを置き換えます。',
     exportData: 'データを書き出す',
     importFromZaim: 'Zaimから読み込む',
     importData: 'データを読み込む',
