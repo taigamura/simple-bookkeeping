@@ -92,11 +92,16 @@ describe('SettingsSheet', () => {
     expect(onImportData).toHaveBeenCalled();
   });
 
-  it('renders a "Recover data" action that fires its callback', () => {
-    const onRecoverData = jest.fn();
-    renderSheet({ onRecoverData });
-    fireEvent.press(screen.getByLabelText('Recover data (export raw storage)'));
-    expect(onRecoverData).toHaveBeenCalled();
+  it('renders a "Load sample data" action that fires its callback', () => {
+    const onLoadSampleData = jest.fn();
+    renderSheet({ onLoadSampleData });
+    fireEvent.press(screen.getByLabelText('Load sample data'));
+    expect(onLoadSampleData).toHaveBeenCalled();
+  });
+
+  it('no longer offers the raw-storage "Recover data" export', () => {
+    renderSheet();
+    expect(screen.queryByText('Recover data (export raw storage)')).toBeNull();
   });
 
   it('renders an "Export data" action that fires its callback', () => {
@@ -104,11 +109,6 @@ describe('SettingsSheet', () => {
     renderSheet({ onExportData });
     fireEvent.press(screen.getByLabelText('Export data'));
     expect(onExportData).toHaveBeenCalled();
-  });
-
-  it('does not offer sample data loading', () => {
-    renderSheet();
-    expect(screen.queryByText('Load sample data')).toBeNull();
   });
 
   it('renders no Premium/Remove-ads toggle (stripped for v1, #23)', () => {

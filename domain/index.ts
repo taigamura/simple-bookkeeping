@@ -129,3 +129,9 @@ export {
   AMOUNT_MAX_DIGITS,
   type KeypadKey,
 } from './keypad';
+export {
+  sampleLedger,
+  SAMPLE_MONTH,
+  SAMPLE_SELECTED_DAY,
+  type SampleLedger,
+} from './sampleData';

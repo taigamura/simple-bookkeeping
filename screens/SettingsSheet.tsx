@@ -68,9 +68,9 @@ interface SettingsSheetProps {
   onOpenBudgets: () => void;
   onExportData: () => void;
   onImportData: () => void;
-  /** One-off recovery export: dumps every storage key/value to a file.
+  /** Load the fictitious demo ledger for App Store screenshots (#79).
    *  Optional so existing render helpers need not provide it. */
-  onRecoverData?: () => void;
+  onLoadSampleData?: () => void;
   /** Whether a corrupt-stash blob exists (#28) — gates the recovery row. */
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
@@ -98,7 +98,7 @@ export function SettingsSheet({
   onOpenBudgets,
   onExportData,
   onImportData,
-  onRecoverData = () => {},
+  onLoadSampleData = () => {},
   hasCorruptStash,
   onExportCorruptStash,
   onDeleteAllData,
@@ -130,7 +130,7 @@ export function SettingsSheet({
         <DataActions
           onExportData={onExportData}
           onImportData={onImportData}
-          onRecoverData={onRecoverData}
+          onLoadSampleData={onLoadSampleData}
           hasCorruptStash={hasCorruptStash}
           onExportCorruptStash={onExportCorruptStash}
           onDeleteAllData={onDeleteAllData}
@@ -472,21 +472,21 @@ function RepeatsLink({ count, onPress }: { count: number; onPress: () => void })
 }
 
 /**
- * Export/Import-from-Zaim (#24, #12), the conditional unreadable-backup
- * recovery row (#28), and
+ * Export/Import-from-Zaim (#24, #12), the Load sample data action for App Store
+ * screenshots (#79), the conditional unreadable-backup recovery row (#28), and
  * the Delete all data action (#67). Premium/ads stripped for v1 (#23).
  */
 function DataActions({
   onExportData,
   onImportData,
-  onRecoverData,
+  onLoadSampleData,
   hasCorruptStash,
   onExportCorruptStash,
   onDeleteAllData,
 }: {
   onExportData: () => void;
   onImportData: () => void;
-  onRecoverData: () => void;
+  onLoadSampleData: () => void;
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
   onDeleteAllData: () => void;
@@ -521,13 +521,13 @@ function DataActions({
       </Pressable>
 
       <Pressable
-        onPress={onRecoverData}
+        onPress={onLoadSampleData}
         accessibilityRole="button"
-        accessibilityLabel={strings.settings.recoverData}
+        accessibilityLabel={strings.settings.loadSampleData}
         style={rowStyle}
       >
         <Txt variant="listItem" tone="ink">
-          {strings.settings.recoverData}
+          {strings.settings.loadSampleData}
         </Txt>
       </Pressable>
 

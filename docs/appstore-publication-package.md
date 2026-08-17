@@ -233,7 +233,7 @@ Use this fictitious, non-sensitive data across all locales:
 
 **Sample Transactions (June 2026):**
 - June 5: Food, -¥2,500 (or equivalent in chosen currency)
-- June 8: Income, +¥50,000 (salary)
+- June 8: Income, +¥350,000 (salary)
 - June 12: Rent, -¥80,000
 - June 15: Transport, -¥3,000
 - June 18: Entertainment, -¥5,000
