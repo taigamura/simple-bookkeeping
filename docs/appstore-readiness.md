@@ -79,7 +79,12 @@ currency conversion.
       on-device copy, icons containing text, privacy policy, support copy, and
       App Store metadata consistently. Do not change the existing bundle
       identifier casually.
-- [ ] Reconcile package and Expo version metadata for the official V1 release.
+- [x] Reconcile package and Expo version metadata for the official V1 release.
+      Marketing version `1.0.0` (app.json). iOS build number owned by EAS
+      remote (`appVersionSource: remote` + `autoIncrement`; currently 54, next
+      55) — this guarantees a unique build number per upload. Removed the
+      ignored `ios.buildNumber` from app.json and bumped `package.json` to
+      `1.0.0` (2026-08-17).
 - [x] Remove the unused Premium state and dead ad component while keeping
       legacy `premium` values harmless on load.
 - [x] Update durable build decisions that still describe removed Premium/ad
