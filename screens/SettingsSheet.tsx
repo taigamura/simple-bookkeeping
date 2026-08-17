@@ -508,98 +508,120 @@ function DataActions({
     { backgroundColor: pressed ? colors.card3 : colors.card2 },
   ];
   return (
-    <Section label={strings.settings.data}>
-      <Pressable
-        onPress={onExportData}
-        accessibilityRole="button"
-        accessibilityLabel={strings.settings.exportData}
-        style={rowStyle}
-      >
-        <Txt variant="listItem" tone="ink">
-          {strings.settings.exportData}
-        </Txt>
-      </Pressable>
-
-      <Pressable
-        onPress={onImportData}
-        accessibilityRole="button"
-        accessibilityLabel={strings.settings.importData}
-        style={rowStyle}
-      >
-        <Txt variant="listItem" tone="ink">
-          {strings.settings.importData}
-        </Txt>
-      </Pressable>
-
-      <Pressable
-        onPress={onBackupData}
-        accessibilityRole="button"
-        accessibilityLabel={strings.settings.backupData}
-        style={rowStyle}
-      >
-        <Txt variant="listItem" tone="ink">
-          {strings.settings.backupData}
-        </Txt>
-      </Pressable>
-
-      <Pressable
-        onPress={onRestoreData}
-        accessibilityRole="button"
-        accessibilityLabel={strings.settings.restoreData}
-        accessibilityHint={strings.settings.restoreConfirmMessage}
-        style={rowStyle}
-      >
-        <Txt variant="listItem" tone="ink">
-          {strings.settings.restoreData}
-        </Txt>
-      </Pressable>
-
-      <Pressable
-        onPress={onLoadSampleData}
-        accessibilityRole="button"
-        accessibilityLabel={strings.settings.loadSampleData}
-        style={rowStyle}
-      >
-        <Txt variant="listItem" tone="ink">
-          {strings.settings.loadSampleData}
-        </Txt>
-      </Pressable>
-
-      {hasCorruptStash && (
+    <>
+      {/* Interop with other budgeting apps: lossy CSV, in and out. Import merges. */}
+      <Section label={strings.settings.dataTransfer} hint={strings.settings.dataTransferHint}>
         <Pressable
-          onPress={onExportCorruptStash}
+          onPress={onExportData}
           accessibilityRole="button"
-          accessibilityLabel={strings.settings.exportUnreadableBackup}
+          accessibilityLabel={strings.settings.exportData}
+          style={rowStyle}
+        >
+          <Txt variant="listItem" tone="ink">
+            {strings.settings.exportData}
+          </Txt>
+        </Pressable>
+
+        <Pressable
+          onPress={onImportData}
+          accessibilityRole="button"
+          accessibilityLabel={strings.settings.importData}
+          style={rowStyle}
+        >
+          <Txt variant="listItem" tone="ink">
+            {strings.settings.importData}
+          </Txt>
+        </Pressable>
+      </Section>
+
+      {/* Native full-state snapshot: faithful, round-trippable. Restore replaces all. */}
+      <Section label={strings.settings.dataBackup} hint={strings.settings.dataBackupHint}>
+        <Pressable
+          onPress={onBackupData}
+          accessibilityRole="button"
+          accessibilityLabel={strings.settings.backupData}
+          style={rowStyle}
+        >
+          <Txt variant="listItem" tone="ink">
+            {strings.settings.backupData}
+          </Txt>
+        </Pressable>
+
+        <Pressable
+          onPress={onRestoreData}
+          accessibilityRole="button"
+          accessibilityLabel={strings.settings.restoreData}
+          accessibilityHint={strings.settings.restoreConfirmMessage}
+          style={rowStyle}
+        >
+          <Txt variant="listItem" tone="ink">
+            {strings.settings.restoreData}
+          </Txt>
+        </Pressable>
+      </Section>
+
+      {/* Data-management actions: demo data, #28 recovery, and the destructive wipe. */}
+      <Section label={strings.settings.data}>
+        <Pressable
+          onPress={onLoadSampleData}
+          accessibilityRole="button"
+          accessibilityLabel={strings.settings.loadSampleData}
+          style={rowStyle}
+        >
+          <Txt variant="listItem" tone="ink">
+            {strings.settings.loadSampleData}
+          </Txt>
+        </Pressable>
+
+        {hasCorruptStash && (
+          <Pressable
+            onPress={onExportCorruptStash}
+            accessibilityRole="button"
+            accessibilityLabel={strings.settings.exportUnreadableBackup}
+            style={rowStyle}
+          >
+            <Txt variant="listItem" tone="negative">
+              {strings.settings.exportUnreadableBackup}
+            </Txt>
+          </Pressable>
+        )}
+
+        <Pressable
+          onPress={onDeleteAllData}
+          accessibilityRole="button"
+          accessibilityLabel={strings.settings.deleteAllData}
+          accessibilityHint={strings.settings.deleteAllDataConfirmMessage}
           style={rowStyle}
         >
           <Txt variant="listItem" tone="negative">
-            {strings.settings.exportUnreadableBackup}
+            {strings.settings.deleteAllData}
           </Txt>
         </Pressable>
-      )}
-
-      <Pressable
-        onPress={onDeleteAllData}
-        accessibilityRole="button"
-        accessibilityLabel={strings.settings.deleteAllData}
-        accessibilityHint={strings.settings.deleteAllDataConfirmMessage}
-        style={rowStyle}
-      >
-        <Txt variant="listItem" tone="negative">
-          {strings.settings.deleteAllData}
-        </Txt>
-      </Pressable>
-    </Section>
+      </Section>
+    </>
   );
 }
 
-/** A titled settings block: micro-label over its content. */
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
+/** A titled settings block: micro-label (with an optional caption) over its content. */
+function Section({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <View style={styles.section}>
       <Txt variant="microLabel" tone="dim">
         {label}
       </Txt>
+      {hint ? (
+        <Txt variant="secondary" tone="dim" style={styles.sectionHint}>
+          {hint}
+        </Txt>
+      ) : null}
       {children}
     </View>
   );
@@ -619,6 +641,9 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, minHeight: 0 },
   scrollBody: { gap: 22, paddingBottom: 4 },
   section: { gap: 10 },
+  // Bind the caption to the micro-label above it (counters the section's 10px
+  // gap) and give the two-line copy comfortable leading.
+  sectionHint: { marginTop: -5, lineHeight: 16 },
   pill: {
     paddingHorizontal: 16,
     height: 32,
