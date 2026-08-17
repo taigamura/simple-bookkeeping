@@ -68,6 +68,9 @@ interface SettingsSheetProps {
   onOpenBudgets: () => void;
   onExportData: () => void;
   onImportData: () => void;
+  /** Native full-ledger backup (JSON) and restore — faithful, repeat-preserving. */
+  onBackupData: () => void;
+  onRestoreData: () => void;
   /** Load the fictitious demo ledger for App Store screenshots (#79).
    *  Optional so existing render helpers need not provide it. */
   onLoadSampleData?: () => void;
@@ -98,6 +101,8 @@ export function SettingsSheet({
   onOpenBudgets,
   onExportData,
   onImportData,
+  onBackupData,
+  onRestoreData,
   onLoadSampleData = () => {},
   hasCorruptStash,
   onExportCorruptStash,
@@ -130,6 +135,8 @@ export function SettingsSheet({
         <DataActions
           onExportData={onExportData}
           onImportData={onImportData}
+          onBackupData={onBackupData}
+          onRestoreData={onRestoreData}
           onLoadSampleData={onLoadSampleData}
           hasCorruptStash={hasCorruptStash}
           onExportCorruptStash={onExportCorruptStash}
@@ -479,6 +486,8 @@ function RepeatsLink({ count, onPress }: { count: number; onPress: () => void })
 function DataActions({
   onExportData,
   onImportData,
+  onBackupData,
+  onRestoreData,
   onLoadSampleData,
   hasCorruptStash,
   onExportCorruptStash,
@@ -486,6 +495,8 @@ function DataActions({
 }: {
   onExportData: () => void;
   onImportData: () => void;
+  onBackupData: () => void;
+  onRestoreData: () => void;
   onLoadSampleData: () => void;
   hasCorruptStash: boolean;
   onExportCorruptStash: () => void;
@@ -517,6 +528,29 @@ function DataActions({
       >
         <Txt variant="listItem" tone="ink">
           {strings.settings.importData}
+        </Txt>
+      </Pressable>
+
+      <Pressable
+        onPress={onBackupData}
+        accessibilityRole="button"
+        accessibilityLabel={strings.settings.backupData}
+        style={rowStyle}
+      >
+        <Txt variant="listItem" tone="ink">
+          {strings.settings.backupData}
+        </Txt>
+      </Pressable>
+
+      <Pressable
+        onPress={onRestoreData}
+        accessibilityRole="button"
+        accessibilityLabel={strings.settings.restoreData}
+        accessibilityHint={strings.settings.restoreConfirmMessage}
+        style={rowStyle}
+      >
+        <Txt variant="listItem" tone="ink">
+          {strings.settings.restoreData}
         </Txt>
       </Pressable>
 

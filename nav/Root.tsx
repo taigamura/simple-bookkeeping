@@ -58,7 +58,7 @@ import { EntrySheet } from '../screens/EntrySheet';
 import { RepeatsSheet } from '../screens/RepeatsSheet';
 import { SettingsSheet } from '../screens/SettingsSheet';
 import { SummaryScreen } from '../screens/SummaryScreen';
-import type { AppState, UseStore } from '../store';
+import { parseBackup, serializeBackup, type AppState, type UseStore } from '../store';
 import { easings, metrics, useMotion, useTheme, withAppDelay, withAppTiming } from '../theme';
 import { SaveWave } from '../ui';
 import { AppShell } from './AppShell';
@@ -523,6 +523,63 @@ function Shell({
     }
   };
 
+  // backupData(): share a native, full-ledger JSON backup. Unlike the Zaim CSV
+  // export above — which flattens recurrence into concrete rows through today
+  // and drops the rules — this writes the whole persisted state verbatim, so
+  // restore brings repeats back as rules and re-projects every occurrence.
+  const backupData = async () => {
+    try {
+      await shareTextFile('kaji-backup.json', serializeBackup(state));
+    } catch {
+      notify(strings.backup.exportFailedTitle, strings.backup.exportFailedMessage);
+    }
+  };
+
+  // restoreData(): pick a backup JSON → validate it through the store's own
+  // load-time normalizer (parseBackup) → confirm the destructive full replace →
+  // swap in the restored state and drop rolling backups so the auto-restore
+  // can't later resurrect the pre-restore ledger. Canceling either the picker
+  // or the confirmation writes nothing.
+  const restoreData = async () => {
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
+      if (picked.canceled) return;
+
+      const asset = picked.assets[0];
+      const buffer =
+        Platform.OS === 'web'
+          ? await asset.file!.arrayBuffer()
+          : await new File(asset.uri).arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      if (bytes.length > 5 * 1024 * 1024) {
+        notify(strings.backup.invalidTitle, strings.backup.invalidMessage);
+        return;
+      }
+
+      const restored = parseBackup(new TextDecoder('utf-8').decode(bytes));
+      if (!restored) {
+        notify(strings.backup.invalidTitle, strings.backup.invalidMessage);
+        return;
+      }
+
+      confirm(
+        strings.settings.restoreData,
+        strings.settings.restoreConfirmMessage,
+        () => {
+          update(restored);
+          void clearSnapshots?.();
+          setCursor({ y: todayDate.y, m: todayDate.m });
+          setSelectedDay(todayDate.day);
+          setSheet(null);
+        },
+        strings.settings.restoreData,
+        true,
+      );
+    } catch {
+      notify(strings.backup.restoreFailedTitle, strings.backup.restoreFailedMessage);
+    }
+  };
+
   // exportCorruptStash(): share the raw unreadable blob kept by the #28 safety
   // net, so a stuck user can get their pre-corruption data off the device.
   const exportCorruptStash = async () => {
@@ -915,6 +972,8 @@ function Shell({
             onOpenBudgets={openBudgets}
             onExportData={exportData}
             onImportData={importData}
+            onBackupData={backupData}
+            onRestoreData={restoreData}
             onLoadSampleData={loadSampleData}
             hasCorruptStash={hasCorruptStash}
             onExportCorruptStash={exportCorruptStash}

@@ -15,3 +15,4 @@ export {
   type AppState,
   type PersistedEnvelope,
 } from './schema';
+export { serializeBackup, parseBackup } from './backup';
