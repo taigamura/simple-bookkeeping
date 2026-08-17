@@ -13,7 +13,6 @@
       },
       "supportsTablet": false,
       "bundleIdentifier": "com.taigamura.kaji",
-      "buildNumber": "1",
       "config": { "usesNonExemptEncryption": false }
     },
     "android": {
