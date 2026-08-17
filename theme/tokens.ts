@@ -65,8 +65,15 @@ export interface Colors {
   positive: string;
   /** Second tone of the Kippu brand mark; distinct from the Summary hero. */
   brandSecondary: string;
-  /** Alarm only — over-budget, destructive actions. Never plain expenses. */
+  /** Alarm only — destructive actions. Never plain expenses or over-budget. */
   negative: string;
+  /**
+   * Over-budget attention: category spend past its budget, a negative budget
+   * remainder. A softer amber than `negative` — over-budget wants attention,
+   * not the "you did something wrong" weight of red (ADR-0002). Dark enough to
+   * clear WCAG AA as small mono text on the ground, and used as a bar fill too.
+   */
+  warning: string;
   /** Text/icons on a `positive` surface. */
   onPositive: string;
   /** Text/icons on a `negative` surface. */
@@ -100,6 +107,9 @@ export const palettes: Record<ThemeMode, Colors> = {
     positive: '#2B33E8',
     brandSecondary: '#1E2499',
     negative: '#C93B31',
+    // Burnt amber — 4.9:1 on the off-white ground, clearing AA for the 10px
+    // mono amounts it carries. Distinct from both the blue accent and red.
+    warning: '#B45309',
     onPositive: '#FFFFFF',
     onNegative: '#FFFFFF',
     deep: '#1E2499',
@@ -122,6 +132,9 @@ export const palettes: Record<ThemeMode, Colors> = {
     positive: '#6B72FF',
     brandSecondary: '#3A42D8',
     negative: '#FF6B60',
+    // Lifted amber for the dark ground, mirroring how `negative` lightens —
+    // ~9:1 on #0F0F13 as text, and a legible bar fill.
+    warning: '#F5A623',
     // Near-black rather than white: on the lifted blue it reads 5.0:1 where
     // white would only manage 3.8:1.
     onPositive: '#0F0F13',

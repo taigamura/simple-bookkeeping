@@ -2,7 +2,7 @@
  * SummaryScreen budget display (#51/#66): the net card's budget-left line
  * (hidden until any budget is active in the current mode, mode-aware remaining
  * calculation, same as Calendar strip) and the category bars' spent / budget
- * annotation (red when over budget, in total mode all bars show spend only),
+ * annotation (amber warning when over budget, in total mode all bars show spend only),
  * plus the Monthly/Annual granularity toggle: which period the hero figure and
  * the category bars aggregate, and the deliberate suppression of every budget
  * affordance in annual mode.
@@ -100,16 +100,19 @@ describe('SummaryScreen category bar budget annotation (#51)', () => {
     expect(screen.getByText('¥3,000')).toBeTruthy(); // Hobby, plain amount
   });
 
-  it('renders the amount red when the category is over budget', () => {
+  it('renders the amount in amber warning when the category is over budget', () => {
     renderSummary([tx({ amount: 45000 })], { Food: 30000 });
     const amount = StyleSheet.flatten(screen.getByText('¥45,000 / ¥30,000').props.style);
-    expect(amount.color).toBe(light.negative);
+    expect(amount.color).toBe(light.warning);
+    // Over-budget is amber attention, never the red reserved for destructive
+    // actions (ADR-0002).
+    expect(amount.color).not.toBe(light.negative);
   });
 
-  it('keeps the amount un-red while within budget', () => {
+  it('keeps the amount un-warned while within budget', () => {
     renderSummary(entries, { Food: 30000 });
     const amount = StyleSheet.flatten(screen.getByText('¥12,000 / ¥30,000').props.style);
-    expect(amount.color).not.toBe(light.negative);
+    expect(amount.color).not.toBe(light.warning);
   });
 });
 

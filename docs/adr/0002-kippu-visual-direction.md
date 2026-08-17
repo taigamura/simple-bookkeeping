@@ -23,11 +23,20 @@ first pass was replaced with soft-filled rounded rectangles.
 the only accent the UI carries — income, primary CTAs, selection. One saturated
 `deep` block owns the headline number on Summary.
 
-**Expenses read as ink, not red.** Red (`negative`) is reserved for things that
-are *wrong*: over-budget category bars, a negative budget remainder, and
-destructive actions. A month of ordinary spending is not an error state, and
-colouring it red spent the strongest signal we have on the least urgent
+**Expenses read as ink, not red.** Red (`negative`) is reserved for
+*destructive* actions only. A month of ordinary spending is not an error state,
+and colouring it red spent the strongest signal we have on the least urgent
 information.
+
+**Over-budget is amber attention, not red** (revised 2026-08-18). The first cut
+put over-budget category bars and a negative budget remainder on `negative`
+(red) alongside destructive actions. Red carries a "you did something wrong"
+weight that overstates being over budget: it wants attention, not alarm. Those
+cases now use a dedicated amber `warning` token — the category bar fill and its
+amount, and the Calendar strip's BUDGET column. Red is now destructive-only.
+(The Summary hero's own over-budget remainder was never red: on the saturated
+`deep` block it is called out by full-strength white, which holds up where a red
+would not.)
 
 **Accents are per-mode, not shared.** The old `accents` constant assumed one set
 of accent colours worked in both themes. It doesn't: `#2B33E8` is right on white

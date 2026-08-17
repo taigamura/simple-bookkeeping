@@ -3,8 +3,9 @@
  * top, a track bar below whose accent fill is scaled to the largest category
  * (`fraction`). The amount reads muted since these are all expenses. A budgeted
  * category (#51) shows "spent / budget" instead, and both fill and amount flip
- * to the negative accent once spending exceeds the budget — one of the few
- * places red still appears, because there it means something is wrong.
+ * to the amber `warning` accent once spending exceeds the budget: over-budget
+ * wants attention, not the red "error" weight reserved for destructive actions
+ * (ADR-0002).
  *
  * ## Fill motion
  *
@@ -84,7 +85,7 @@ export function CategoryBar({
         <Txt variant="listItem" numberOfLines={1} style={styles.label}>
           {category}
         </Txt>
-        <Txt variant="inlineAmount" tone={overBudget ? 'negative' : 'muted'}>
+        <Txt variant="inlineAmount" tone={overBudget ? 'warning' : 'muted'}>
           {budget !== undefined
             ? `${yen(total, symbol)} / ${yen(budget, symbol)}`
             : yen(total, symbol)}
@@ -94,7 +95,7 @@ export function CategoryBar({
         <Animated.View
           style={[
             styles.fill,
-            { backgroundColor: overBudget ? colors.negative : colors.positive },
+            { backgroundColor: overBudget ? colors.warning : colors.positive },
             animatedFillStyle,
           ]}
         />

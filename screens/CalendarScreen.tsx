@@ -122,8 +122,8 @@ interface CalendarScreenProps {
   pulseNonce?: number;
 }
 
-// Income is the only tinted figure; a negative net is plain ink rather than
-// red, which is reserved for over-budget and destructive actions.
+// Income is the only tinted figure; a negative net is plain ink. Red is
+// reserved for destructive actions; over-budget reads as amber `warning`.
 const netTone = (n: number): Tone => (n > 0 ? 'positive' : n < 0 ? 'ink' : 'muted');
 
 export function CalendarScreen({
@@ -316,13 +316,15 @@ export function CalendarScreen({
         {/* BUDGET column (#50/#66): only exists once any budget is active in the
             current mode, so the strip stays three columns until opted in.
             Remaining is a magnitude while positive; overspend shows the true
-            negative (signed, red), never clamped to zero. */}
+            negative (signed, amber `warning`), never clamped to zero. Amber
+            rather than red: over-budget wants attention, not the "error" weight
+            red carries for destructive actions (ADR-0002). */}
         {budgetActive && (
           <StripCol
             label={strings.calendar.budget}
             value={remaining}
             format={(n) => (n < 0 ? signed(n, symbol) : yen(n, symbol))}
-            tone={remaining < 0 ? 'negative' : 'ink'}
+            tone={remaining < 0 ? 'warning' : 'ink'}
           />
         )}
       </View>

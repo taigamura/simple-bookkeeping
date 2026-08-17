@@ -24,6 +24,8 @@ export type Tone =
   | 'faint'
   | 'positive'
   | 'negative'
+  /** Over-budget attention — amber, softer than `negative`. */
+  | 'warning'
   | 'onPositive'
   | 'onNegative'
   | 'onDeep'
