@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --gray:#f2f2f0;
+    --indigo:#2b33e8;
+    --ink:#16181d;
+    --sub:#565961;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:100vw;height:100vh;overflow:hidden;background:var(--gray);}
+  .panel{
+    width:100vw;height:100vh;background:var(--gray);
+    display:flex;flex-direction:column;align-items:center;
+    padding:7vh 8vw 0;
+    font-family:__FONT__;
+    -webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;
+  }
+  .headline{
+    font-size:7.7vw;line-height:1.06;font-weight:700;color:var(--ink);
+    text-align:center;letter-spacing:-0.02em;
+  }
+  .headline .hl{color:var(--indigo);}
+  .subline{
+    font-size:3.35vw;line-height:1.3;font-weight:500;color:var(--sub);
+    text-align:center;margin-top:2.4vh;max-width:82vw;
+  }
+  .phonewrap{margin-top:auto;margin-bottom:auto;padding-bottom:2vh;}
+  .phone{
+    background:#0b0b0d;padding:1.15vw;border-radius:8vw;
+    box-shadow:0 3vh 6vh rgba(22,22,55,.20);
+  }
+  .phone img{display:block;width:76vw;border-radius:6.9vw;}
+</style>
+</head>
+<body>
+  <div class="panel">
+    <div class="headline">__HL__</div>
+    <div class="subline">__SUB__</div>
+    <div class="phonewrap">
+      <div class="phone"><img src="__SCREEN__"></div>
+    </div>
+  </div>
+</body>
+</html>
