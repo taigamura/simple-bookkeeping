@@ -334,6 +334,20 @@ export function EntrySheet({
     if (!catsFor(nextType).includes(category)) setCategory(catsFor(nextType)[0]);
   };
 
+  // jumpToToday(): the quick "Today" action shared by both date UIs — the
+  // native iOS spinner and the web/Android text fields. Keeps the entered
+  // time-of-day set to the current clock time, same as first opening the sheet.
+  const jumpToToday = () => {
+    const now = new Date();
+    const nextDate = dateTimeFromParts(today, {
+      hours: now.getHours(),
+      minutes: now.getMinutes(),
+    });
+    setDateTime(nextDate);
+    setDateText(formatDate(today));
+    setTimeText(formatTime(nextDate));
+  };
+
   const save = () => {
     if (!enteredDate || !enteredDateTime || saving) return;
     const draft = {
@@ -410,21 +424,33 @@ export function EntrySheet({
             </Txt>
             {NativeDateTimePicker ? (
               <View style={styles.nativeDateTimeControls}>
-                <Pressable
-                  onPress={() => setDateTimePickerVisible((visible) => !visible)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${strings.entry.dateRowLabel} ${dateText} ${timeText}`}
-                  accessibilityValue={{ text: `${dateText} ${timeText}` }}
-                  accessibilityHint="Tap to choose the date and time"
-                  style={({ pressed }) => [styles.nativeDateField, pressed && { opacity: 0.65 }]}
-                >
-                  <Txt variant="listItem" tone="ink">
-                    {dateText}
-                  </Txt>
-                  <Txt variant="optionLabel" tone="dim">
-                    {timeText}
-                  </Txt>
-                </Pressable>
+                <View style={styles.nativeDateFieldRow}>
+                  <Pressable
+                    onPress={jumpToToday}
+                    accessibilityRole="button"
+                    accessibilityLabel={strings.entry.useToday}
+                    style={({ pressed }) => [styles.todayButton, pressed && { opacity: 0.6 }]}
+                  >
+                    <Txt variant="optionLabel" tone="positive">
+                      {strings.entry.today}
+                    </Txt>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setDateTimePickerVisible((visible) => !visible)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${strings.entry.dateRowLabel} ${dateText} ${timeText}`}
+                    accessibilityValue={{ text: `${dateText} ${timeText}` }}
+                    accessibilityHint="Tap to choose the date and time"
+                    style={({ pressed }) => [styles.nativeDateField, pressed && { opacity: 0.65 }]}
+                  >
+                    <Txt variant="listItem" tone="ink">
+                      {dateText}
+                    </Txt>
+                    <Txt variant="optionLabel" tone="dim">
+                      {timeText}
+                    </Txt>
+                  </Pressable>
+                </View>
                 {dateTimePickerVisible && (
                   <View style={styles.nativeDatePickerFrame}>
                     <NativeDateTimePicker
@@ -475,16 +501,7 @@ export function EntrySheet({
                   style={[styles.timeInput, { color: colors.ink }]}
                 />
                 <Pressable
-                  onPress={() => {
-                    const now = new Date();
-                    const nextDate = dateTimeFromParts(today, {
-                      hours: now.getHours(),
-                      minutes: now.getMinutes(),
-                    });
-                    setDateTime(nextDate);
-                    setDateText(formatDate(today));
-                    setTimeText(formatTime(nextDate));
-                  }}
+                  onPress={jumpToToday}
                   accessibilityRole="button"
                   accessibilityLabel={strings.entry.useToday}
                   style={({ pressed }) => [styles.todayButton, pressed && { opacity: 0.6 }]}
@@ -708,6 +725,10 @@ const styles = StyleSheet.create({
   nativeDateTimeControls: {
     alignItems: 'flex-end',
     flexShrink: 1,
+  },
+  nativeDateFieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   nativeDateField: {
     minHeight: 40,

@@ -38,9 +38,12 @@ import { Alert, StyleSheet } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 
 import {
+  MONTH_NAMES,
   entriesThrough,
+  periodLabel,
   saveLedgerItem,
   serializeZaimCsv,
+  shiftMonth,
   type EntryDraft,
   type Transaction,
 } from '../domain';
@@ -818,6 +821,75 @@ describe('Root sheet state management (#60)', () => {
     expect(alert).not.toHaveBeenCalled();
     expect(update).toHaveBeenCalledTimes(1);
     alert.mockRestore();
+  });
+});
+
+describe('Root tab re-tap returns to now', () => {
+  function renderRoot() {
+    render(
+      <ThemeProvider>
+        <Root
+          state={DEFAULT_STATE}
+          update={jest.fn()}
+          showCorruptNotice={false}
+          hasCorruptStash={false}
+          readCorruptStash={async () => null}
+        />
+      </ThemeProvider>,
+    );
+  }
+
+  it('re-tapping the active Calendar tab jumps back to the current month', () => {
+    const now = new Date();
+    const current = { y: now.getFullYear(), m: now.getMonth() };
+    const prev = shiftMonth(current, -1);
+
+    // The title renders the month name and the year as separate text nodes,
+    // so match the month name node on its own with a regex.
+    const monthTitle = (m: number) => new RegExp(`^${MONTH_NAMES[m]}`);
+
+    renderRoot();
+    // Starts on the current month.
+    expect(screen.getByText(monthTitle(current.m))).toBeTruthy();
+
+    // Navigate a month back so re-tapping has somewhere to return from.
+    fireEvent.press(screen.getByLabelText(strings.calendar.previousMonth));
+    expect(screen.getByText(monthTitle(prev.m))).toBeTruthy();
+
+    // Re-tapping the tab you are already on snaps back to today's month.
+    fireEvent.press(screen.getByLabelText(strings.nav.calendar));
+    expect(screen.getByText(monthTitle(current.m))).toBeTruthy();
+  });
+
+  it('re-tapping the active Summary tab jumps back to the current period', () => {
+    const now = new Date();
+    const current = { y: now.getFullYear(), m: now.getMonth() };
+    const prev = shiftMonth(current, -1);
+
+    renderRoot();
+    // Move the shared cursor a month back on the Calendar, then switch to
+    // Summary — which pages off the same cursor, so it opens on that period.
+    fireEvent.press(screen.getByLabelText(strings.calendar.previousMonth));
+    fireEvent.press(screen.getByLabelText(strings.nav.summary));
+    expect(screen.getByText(periodLabel(prev, 'monthly'))).toBeTruthy();
+
+    // Re-tapping Summary while already on it returns to the current period.
+    fireEvent.press(screen.getByLabelText(strings.nav.summary));
+    expect(screen.getByText(periodLabel(current, 'monthly'))).toBeTruthy();
+  });
+
+  it('tapping the other tab is a plain switch and does not move the cursor', () => {
+    const now = new Date();
+    const current = { y: now.getFullYear(), m: now.getMonth() };
+    const prev = shiftMonth(current, -1);
+
+    renderRoot();
+    // Park the cursor a month back, then cross to Summary. A switch (not a
+    // re-tap) must preserve the browsed period rather than snapping to now.
+    fireEvent.press(screen.getByLabelText(strings.calendar.previousMonth));
+    fireEvent.press(screen.getByLabelText(strings.nav.summary));
+    expect(screen.getByText(periodLabel(prev, 'monthly'))).toBeTruthy();
+    expect(screen.queryByText(periodLabel(current, 'monthly'))).toBeNull();
   });
 });
 

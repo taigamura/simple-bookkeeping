@@ -706,6 +706,21 @@ function Shell({
   };
   const goMonth = (delta: number) => setMonth(shiftMonth(cursor, delta));
 
+  // selectTab(): tab presses. Re-tapping the tab you are already on jumps back
+  // to "now" — the Calendar returns to today's month with today selected, the
+  // Summary returns to the current period (this month or this year, per its
+  // granularity). Both are just a reset of the shared `cursor`, which the
+  // month/period pagers follow externally. Tapping the *other* tab is a plain
+  // switch and never moves the cursor.
+  const selectTab = (next: Tab) => {
+    if (next === tab) {
+      setCursor({ y: today.getFullYear(), m: today.getMonth() });
+      if (next === 'calendar') setSelectedDay(today.getDate());
+      return;
+    }
+    setTab(next);
+  };
+
   // handleSubmit(): persist a one-time entry or recurrence rule. Editing a
   // projected occurrence splits its rule so past history remains unchanged —
   // `commit` does the actual persistence once a scope is settled; the check
@@ -921,7 +936,7 @@ function Shell({
           Calendar while Summary is exiting still shows the right figures). */}
       <TabSwitcher tab={tab} style={styles.body} render={renderTab} />
 
-      <TabBar tab={tab} onSelect={setTab} onAdd={openEntry} />
+      <TabBar tab={tab} onSelect={selectTab} onAdd={openEntry} />
 
       {/* Unified sheet host (#60): single BottomSheetModal for entry/settings/budgets.
           The sheet state selects which body renders. Transitions between non-null
