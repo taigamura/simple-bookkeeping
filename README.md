@@ -1,5 +1,13 @@
 # Suito (家計)
 
+<p align="center">
+  <img src="docs/appstore-screenshots/en-1-calendar.png" alt="Calendar" width="19%">
+  <img src="docs/appstore-screenshots/en-2-summary.png" alt="Monthly summary" width="19%">
+  <img src="docs/appstore-screenshots/en-3-entry.png" alt="Add entry" width="19%">
+  <img src="docs/appstore-screenshots/en-4-settings.png" alt="Settings" width="19%">
+  <img src="docs/appstore-screenshots/en-5-calendar-dark.png" alt="Dark mode" width="19%">
+</p>
+
 A minimal, iOS-style personal money-in/out tracker. Log daily income and
 expenses against a calendar, set either a total monthly budget or budgets by
 expense category, see monthly totals and category breakdowns, and import or
