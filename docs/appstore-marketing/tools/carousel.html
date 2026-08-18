@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root{ --gray:#f2f2f0; --indigo:#2b33e8; --ink:#16181d; --sub:#565961; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:3240px;height:1350px;overflow:hidden;background:var(--gray);
+            font-family:'Liberation Sans','Helvetica Neue',Arial,sans-serif;
+            -webkit-font-smoothing:antialiased;}
+  .master{width:3240px;height:1350px;position:relative;background:var(--gray);}
+  /* continuous brand wordmark, centered across the whole scene (lands on slide 2) */
+  .brand{position:absolute;top:70px;left:0;width:3240px;text-align:center;
+         font-size:30px;font-weight:700;letter-spacing:14px;color:#b7b8be;}
+  .tiles{display:flex;width:3240px;height:1350px;}
+  .tile{width:1080px;height:1350px;display:flex;flex-direction:column;align-items:center;
+        padding-top:190px;}
+  .cap{font-size:52px;font-weight:700;color:var(--ink);text-align:center;letter-spacing:-0.02em;line-height:1.1;}
+  .cap .hl{color:var(--indigo);}
+  .csub{font-size:27px;color:var(--sub);margin-top:16px;font-weight:500;}
+  /* phones share one baseline for a continuous scene */
+  .phone{position:absolute;bottom:-70px;background:#0b0b0d;padding:9px;border-radius:60px;
+         box-shadow:0 34px 60px rgba(22,22,55,.18);}
+  .phone img{display:block;width:460px;border-radius:52px;}
+  .t1 .phone{left:310px;} .t2 .phone{left:1390px;} .t3 .phone{left:2470px;}
+  /* faint seam guides (only for the guide-master; removed in the real render) */
+</style>
+</head>
+<body>
+  <div class="master">
+    <div class="brand">S U I T O</div>
+    <div class="tiles">
+      <div class="tile t1">
+        <div class="cap">Your <span class="hl">month</span></div>
+        <div class="csub">at a glance</div>
+      </div>
+      <div class="tile t2">
+        <div class="cap">See <span class="hl">where</span> it goes</div>
+        <div class="csub">In and out, one card</div>
+      </div>
+      <div class="tile t3">
+        <div class="cap"><span class="hl">Logged</span> in seconds</div>
+        <div class="csub">Amount, category, done</div>
+      </div>
+    </div>
+    <div class="phone" style="left:310px"><img src="__S1__"></div>
+    <div class="phone" style="left:1390px"><img src="__S2__"></div>
+    <div class="phone" style="left:2470px"><img src="__S3__"></div>
+  </div>
+</body>
+</html>
