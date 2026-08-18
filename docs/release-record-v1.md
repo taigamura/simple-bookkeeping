@@ -89,9 +89,10 @@ Holds only while the DSN stays blank; filling it reopens this answer and privacy
 
 | Field | Value |
 |---|---|
-| Uploaded to App Store Connect | ✅ 2026-08-17 (build 61; EAS submission `e7ead3a4-0231-4ff8-be6e-25478ed168cb`; processing on Apple side) |
-| App Review contact email set | ⏳ (taigamura.dev@gmail.com) |
-| Submitted for review | ⏳ |
+| Uploaded to App Store Connect | ✅ 2026-08-17 (build 61; EAS submission `e7ead3a4-0231-4ff8-be6e-25478ed168cb`). Final selected build for submission = **64**. |
+| Store listing populated in ASC | ✅ 2026-08-18 (EN+JP metadata, screenshots 1284×2778, build 64 selected, copyright, App Privacy = Data Not Collected, Pricing = Free) |
+| App Review contact email set | ✅ 2026-08-18 (taigamura.dev@gmail.com) |
+| Submitted for review | ✅ 2026-08-18 8:01 PM (build 64; submission ID `8b48724a-485b-4b5b-845d-6de17268d47b`; submitted by Taiga Kimura). Awaiting Apple review. |
 
 ---
 
