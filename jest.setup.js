@@ -27,3 +27,26 @@ jest.mock('@expo/vector-icons', () => {
   const Feather = ({ name, ...props }) => React.createElement(Text, props, name);
   return { Feather };
 });
+
+// `expo-blur`'s BlurView is a native view with no jest implementation (it throws
+// at import trying to reach its native module). The floating TabBar renders one
+// as its glass background; swap it for a plain View so the bar — and anything
+// else adopting the glass material — mounts in tests. It forwards `style` so the
+// absolute-fill positioning the capsule relies on is still assertable.
+jest.mock('expo-blur', () => {
+  const { View } = require('react-native');
+  const React = require('react');
+  const BlurView = ({ children, ...props }) => React.createElement(View, props, children);
+  return { BlurView };
+});
+
+// `expo-linear-gradient` is likewise a native view with no jest implementation.
+// The TabBar uses it for the glass sheen (bar + selection lens); stub it to a
+// plain View that forwards style so the bar mounts and its layout is assertable.
+jest.mock('expo-linear-gradient', () => {
+  const { View } = require('react-native');
+  const React = require('react');
+  const LinearGradient = ({ children, colors, start, end, locations, ...props }) =>
+    React.createElement(View, props, children);
+  return { LinearGradient };
+});
