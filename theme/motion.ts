@@ -130,6 +130,15 @@ export const springs = {
    * celebration and it is over in a third of a second.
    */
   pop: { damping: 12, stiffness: 220, mass: 0.7 },
+  /**
+   * The floating tab bar's selection lens gliding between tabs. Softer and a
+   * touch slower than `snap` (lower stiffness, a hair less damping) so the travel
+   * is *visible* as a glide with a small settle, not a two-frame teleport — the
+   * lens crosses the width of the bar (past the ＋), so unlike a segmented pill's
+   * short hop the motion wants to be seen. Damping ratio ~0.6: a gentle overshoot
+   * that reads as the glass having momentum.
+   */
+  slide: { damping: 16, stiffness: 190, mass: 0.9 },
 } as const;
 
 /**

@@ -19,6 +19,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import {
@@ -371,6 +372,10 @@ function Shell({
   const [sheet, setSheet] = useState<Sheet>(null);
   const { enabled: motionEnabled } = useMotion();
   const { colors } = useTheme();
+  // The TabBar floats (absolute) now, so it no longer reserves layout space of
+  // its own. Pad the tab body by the space the old flush bar used to occupy so
+  // no screen content hides behind the floating capsule.
+  const insets = useSafeAreaInsets();
   // Save-confirmation bloom on the app canvas: a nonce bumped once per save so
   // the wave replays even for two saves in a row (see `SaveWave`).
   const [saveWaveNonce, setSaveWaveNonce] = useState(0);
@@ -934,7 +939,11 @@ function Shell({
           body is rendered on demand from `renderTab`, so the layer that is on
           its way out keeps receiving fresh props (a save that lands on the
           Calendar while Summary is exiting still shows the right figures). */}
-      <TabSwitcher tab={tab} style={styles.body} render={renderTab} />
+      <TabSwitcher
+        tab={tab}
+        style={[styles.body, { paddingBottom: metrics.tabBarHeight + insets.bottom }]}
+        render={renderTab}
+      />
 
       <TabBar tab={tab} onSelect={selectTab} onAdd={openEntry} />
 

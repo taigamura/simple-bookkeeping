@@ -71,16 +71,18 @@ describe('TabBar', () => {
     expect(onSelect).toHaveBeenCalledWith('summary');
   });
 
-  it('anchors to the bottom edge: pads by and grows into the safe-area inset (#41)', () => {
+  it('floats above the bottom edge: offset by the safe-area inset plus the float margin (#41)', () => {
     renderBar();
-    // Climb from the FAB to the bar view — the one carrying the inset padding.
+    // Climb from the FAB to the floating wrapper — the first absolutely
+    // positioned ancestor (the glass fill/blur layers are siblings, not
+    // ancestors, so they are not reached on the way up).
     let node: ReturnType<typeof screen.getByLabelText> | null =
       screen.getByLabelText('Add entry');
-    while (node && StyleSheet.flatten(node.props.style)?.paddingBottom === undefined) {
+    while (node && StyleSheet.flatten(node.props.style)?.position !== 'absolute') {
       node = node.parent;
     }
-    const bar = StyleSheet.flatten(node?.props.style);
-    expect(bar.paddingBottom).toBe(BOTTOM_INSET);
-    expect(bar.height).toBe(metrics.tabBarHeight + BOTTOM_INSET);
+    const wrapper = StyleSheet.flatten(node?.props.style);
+    expect(wrapper.position).toBe('absolute');
+    expect(wrapper.bottom).toBe(BOTTOM_INSET + metrics.tabBarFloatMargin);
   });
 });

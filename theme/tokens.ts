@@ -283,6 +283,8 @@ export const metrics = {
   progressRadius: 999,
   progressHeight: 8,
   tabBarHeight: 92,
+  /** Gap between the safe-area bottom and the floating Liquid Glass tab bar. */
+  tabBarFloatMargin: 14,
   keypadCols: 3,
   keypadGap: 9,
   keypadKeySize: 52,
