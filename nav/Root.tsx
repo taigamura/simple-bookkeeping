@@ -64,6 +64,8 @@ import { easings, metrics, useMotion, useTheme, withAppDelay, withAppTiming } fr
 import { SaveWave } from '../ui';
 import { AppShell } from './AppShell';
 import { BottomSheet, SHEET_ANIMATION_DURATION } from './BottomSheet';
+import { NativeTabHost } from './NativeTabHost';
+import { NATIVE_TABS } from './nativeTabs';
 import { TabBar } from './TabBar';
 import type { Sheet, Tab } from './types';
 
@@ -939,13 +941,22 @@ function Shell({
           body is rendered on demand from `renderTab`, so the layer that is on
           its way out keeps receiving fresh props (a save that lands on the
           Calendar while Summary is exiting still shows the right figures). */}
-      <TabSwitcher
-        tab={tab}
-        style={[styles.body, { paddingBottom: metrics.tabBarHeight + insets.bottom }]}
-        render={renderTab}
-      />
-
-      <TabBar tab={tab} onSelect={selectTab} onAdd={openEntry} />
+      {NATIVE_TABS ? (
+        // iOS: the system UITabBar (genuine Liquid Glass on iOS 26). It owns
+        // the tab switch animation and the bottom inset itself.
+        <View style={styles.body}>
+          <NativeTabHost tab={tab} onSelect={selectTab} onAdd={openEntry} render={renderTab} />
+        </View>
+      ) : (
+        <>
+          <TabSwitcher
+            tab={tab}
+            style={[styles.body, { paddingBottom: metrics.tabBarHeight + insets.bottom }]}
+            render={renderTab}
+          />
+          <TabBar tab={tab} onSelect={selectTab} onAdd={openEntry} />
+        </>
+      )}
 
       {/* Unified sheet host (#60): single BottomSheetModal for entry/settings/budgets.
           The sheet state selects which body renders. Transitions between non-null

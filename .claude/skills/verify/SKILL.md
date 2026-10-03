@@ -20,8 +20,9 @@ CI=1 EXPO_NO_TELEMETRY=1 npx expo start --web --port 8090   # run in background
 
 ## Drive (Playwright)
 
-- **Chromium does NOT launch here** (bare WSL2, no `libasound.so.2`, no sudo).
-  Use Firefox with the repo's ALSA stub:
+- Chromium now launches here (verified 2026-10-02: `npx playwright test` runs
+  green). If it ever fails on missing `libasound.so.2`, fall back to Firefox
+  with the repo's ALSA stub:
   ```bash
   PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true \
   LD_LIBRARY_PATH=$PWD/e2e/.alsa-stub \
@@ -40,6 +41,12 @@ CI=1 EXPO_NO_TELEMETRY=1 npx expo start --web --port 8090   # run in background
   DOM while translated below the viewport. Assert geometry like
   `expectSheetOpen` does (`box.y >= 0 && box.y + box.height <= viewport.height`),
   and wait ~1s for the present animation before screenshots.
+
+## Mandatory for every change
+
+Driving the app by hand is not enough on its own: every implementation also
+adds/updates a Playwright browser test + `toHaveScreenshot` baseline in `e2e/`
+(see CLAUDE.md "Visual testing is mandatory" and `e2e/tabbar.spec.ts`).
 
 ## e2e suite (prod export)
 
