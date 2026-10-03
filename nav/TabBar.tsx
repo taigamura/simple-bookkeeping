@@ -32,8 +32,9 @@
  * The bar floats: an absolute, `box-none` wrapper lets taps fall through its
  * transparent margins; the capsule is lifted off the bottom by the safe-area
  * inset plus a margin; Root's tab body reserves the space so nothing hides behind
- * it. The lens is ONE shared element that slides (a spring `translateX`) between
- * the two tabs' measured frames, with a gel squash-stretch across the travel. The
+ * it. The lens is ONE shared element that slides (a spring `translateX`, easing
+ * its width) between the two tabs' measured frames — each tab's own frame, since
+ * the labels make them unequal widths — and is vertically centred on the tab. The
  * two tabs report their frames via `onLayout` → `onMeasure`; the row carries no
  * horizontal padding (the capsule does) so a tab's measured `x` and the lens's
  * `left` share one coordinate origin.
@@ -92,6 +93,18 @@ const TABS: TabDef[] = [
   { key: 'summary', label: strings.nav.summary, icon: 'bar-chart-2' },
 ];
 
+/** A tab's onLayout frame, in the row's coordinates. */
+interface TabFrame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+function sameFrame(a: TabFrame, b: TabFrame): boolean {
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
 /** Horizontal inset of the lens inside a tab's frame, and its fixed height. The
  *  height nearly fills the bar's interior (the ＋ tile is 54) so the selected
  *  pill reads as a sibling of the ＋, not a short chip. Same on every platform —
@@ -141,31 +154,23 @@ export function TabBar({ tab, onSelect, onAdd }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const g = glass(mode, colors.positive);
 
-  // Measured tab geometry (row coordinates); the two tabs are equal width.
-  const frames = useRef<{ x0?: number; x1?: number; w?: number }>({});
-  const [geo, setGeo] = useState<{ x0: number; x1: number; w: number } | null>(null);
+  // Measured tab frames (row coordinates). The tabs are NOT equal width — the
+  // labels differ ("Calendar" vs "Summary", カレンダー vs 集計) — so the lens takes
+  // each tab's own x and width, never tab 0's width for both.
+  const frames = useRef<(TabFrame | undefined)[]>([]);
+  const [geo, setGeo] = useState<[TabFrame, TabFrame] | null>(null);
 
-  const onMeasure = (index: number, x: number, width: number) => {
-    if (index === 0) {
-      frames.current.x0 = x;
-      frames.current.w = width;
-    } else {
-      frames.current.x1 = x;
-    }
-    const { x0, x1, w } = frames.current;
-    if (x0 != null && x1 != null && w != null) {
-      setGeo((prev) =>
-        prev && prev.x0 === x0 && prev.x1 === x1 && prev.w === w ? prev : { x0, x1, w },
-      );
+  const onMeasure = (index: number, frame: TabFrame) => {
+    frames.current[index] = frame;
+    const [a, b] = frames.current;
+    if (a && b) {
+      setGeo((prev) => (prev && sameFrame(prev[0], a) && sameFrame(prev[1], b) ? prev : [a, b]));
     }
   };
 
-  const lensW = geo ? geo.w - LENS_INSET * 2 : 0;
-  const deltaX = geo ? geo.x1 - geo.x0 : 0;
-
   // Traveling selection: 0 = Calendar, 1 = Summary. Springs on tab change so the
   // lens slides between the two tab frames. No scale pulse — the pill keeps a
-  // constant size; it only moves.
+  // constant height; it only moves (and eases its width between the tabs').
   const selection = useSharedValue(tab === 'summary' ? 1 : 0);
 
   useEffect(() => {
@@ -174,9 +179,15 @@ export function TabBar({ tab, onSelect, onAdd }: TabBarProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, enabled]);
 
-  const lensStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: selection.value * deltaX }],
-  }));
+  const lensStyle = useAnimatedStyle(() => {
+    if (!geo) return {};
+    const [a, b] = geo;
+    const t = selection.value;
+    return {
+      width: a.width + (b.width - a.width) * t - LENS_INSET * 2,
+      transform: [{ translateX: (b.x - a.x) * t }],
+    };
+  });
 
   return (
     // box-none: the capsule captures its own touches; the empty margins on either
@@ -186,7 +197,7 @@ export function TabBar({ tab, onSelect, onAdd }: TabBarProps) {
       style={[styles.wrapper, { bottom: insets.bottom + metrics.tabBarFloatMargin }]}
     >
       {/* Shadow on its own node (no overflow) so iOS doesn't clip it. */}
-      <View style={styles.float}>
+      <View testID="tab-bar" style={styles.float}>
         <View style={[styles.capsule, NATIVE_GLASS ? null : { borderColor: g.barEdge }]}>
           {/* Bar material. */}
           {NATIVE_GLASS ? (
@@ -214,9 +225,17 @@ export function TabBar({ tab, onSelect, onAdd }: TabBarProps) {
             {/* One shared selection lens, behind the glyphs, sliding between tabs. */}
             {geo && (
               <Animated.View
+                testID="tab-lens"
                 style={[
                   styles.lens,
-                  { left: geo.x0 + LENS_INSET, width: lensW, height: LENS_HEIGHT },
+                  {
+                    left: geo[0].x + LENS_INSET,
+                    // Centre on the tab's own frame: an absolute child's `top` is
+                    // measured from the row's padding edge, so `top: 0` would ride
+                    // the row's paddingVertical above the tabs and the ＋.
+                    top: geo[0].y + (geo[0].height - LENS_HEIGHT) / 2,
+                    height: LENS_HEIGHT,
+                  },
                   lensStyle,
                 ]}
                 pointerEvents="none"
@@ -315,7 +334,7 @@ function TabButton({
   index: number;
   active: boolean;
   onPress: (tab: Tab) => void;
-  onMeasure: (index: number, x: number, width: number) => void;
+  onMeasure: (index: number, frame: TabFrame) => void;
 }) {
   const { colors } = useTheme();
   const { enabled } = useMotion();
@@ -349,8 +368,8 @@ function TabButton({
   }));
 
   const handleLayout = (e: LayoutChangeEvent) => {
-    const { x, width } = e.nativeEvent.layout;
-    onMeasure(index, x, width);
+    const { x, y, width, height } = e.nativeEvent.layout;
+    onMeasure(index, { x, y, width, height });
   };
 
   return (
@@ -410,12 +429,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   tabLabel: { marginTop: 1 },
-  // The shared selection lens; left/width/height set inline from measured geo.
-  // Height matches the ＋ tile (54), so `top: 0` fills the row's content height
-  // and the selected pill sits level with the ＋.
+  // The shared selection lens; left/top/height set inline from the measured tab
+  // frames, width + translateX animated. Height matches the ＋ tile (54) and it
+  // is centred on the tab, so the selected pill sits level with the ＋.
   lens: {
     position: 'absolute',
-    top: 0,
   },
   lensClip: {
     position: 'absolute',

@@ -50,3 +50,8 @@ jest.mock('expo-linear-gradient', () => {
     React.createElement(View, props, children);
   return { LinearGradient };
 });
+
+// The iOS tab bar is the native UITabBar (nav/NativeTabHost), which can't run
+// under jest. Keep the suite on the custom JS TabBar; NativeTabHost.test.tsx
+// covers the native host with a JS stand-in for the library.
+jest.mock('./nav/nativeTabs', () => ({ NATIVE_TABS: false }));
