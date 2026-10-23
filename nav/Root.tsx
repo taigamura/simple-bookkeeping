@@ -442,7 +442,14 @@ function Shell({
   const buildHandoff = (question: string) =>
     buildHandoffPrompt({
       question,
-      facts: buildFacts(state, todayDate.y, todayDate.m, todayDate, locale),
+      // This month and last month, so an early or empty month still carries totals.
+      // Fact labels already name their month.
+      facts: [
+        ...buildFacts(state, todayDate.y, todayDate.m, todayDate, locale),
+        ...(todayDate.m === 0
+          ? buildFacts(state, todayDate.y - 1, 11, todayDate, locale)
+          : buildFacts(state, todayDate.y, todayDate.m - 1, todayDate, locale)),
+      ],
       entries: buildSiriSnapshot(state, todayDate, locale, [], new Date()).entries,
       locale,
     });

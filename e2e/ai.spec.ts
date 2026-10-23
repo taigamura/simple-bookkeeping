@@ -68,6 +68,8 @@ async function openSummaryNow(page: Page) {
   // July is empty: wait for the hero's number roll from June to land, so a
   // screenshot never catches it mid-roll.
   await expect(page.getByText('+¥0', { exact: true }).first()).toBeVisible();
+  // ...and for June's category rows to finish leaving, so the list shows July's empty state.
+  await expect(page.getByText('No spending this month.').first()).toBeVisible();
 }
 
 test('unavailable: no AI surface anywhere without the on-device model', async ({ page }) => {

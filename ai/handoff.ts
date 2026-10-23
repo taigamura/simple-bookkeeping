@@ -68,7 +68,12 @@ export function buildHandoffPrompt(input: HandoffInput): string {
   const clean = (s: string) => replaceEmDashes(s, locale);
   const lines: string[] = [c.intro, '', `${c.question}: ${clean(input.question.trim())}`, '', `${c.facts}:`];
   if (input.facts.length === 0) lines.push(c.none);
-  for (const f of input.facts) lines.push(`- ${clean(f.label)}: ${clean(f.display)}`);
+  for (const f of input.facts) {
+    // Most labels already carry their value; print it once.
+    const label = clean(f.label);
+    const display = clean(f.display);
+    lines.push(label.includes(display) ? `- ${label}` : `- ${label}: ${display}`);
+  }
   lines.push('', `${c.entries}:`);
   const picked = pickEntries(input.entries, input.question);
   if (picked.length === 0) lines.push(c.none);
