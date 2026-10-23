@@ -41,6 +41,12 @@ struct NudgeRequestIn: Decodable {
   var locale: String
 }
 
+struct LineRequestIn: Decodable {
+  var kind: String // forecast | day | repeat
+  var facts: [FactIn]
+  var locale: String
+}
+
 struct AskTurnIn: Decodable {
   var role: String
   var text: String
@@ -65,14 +71,16 @@ private func decode<T: Decodable>(_ type: T.Type, _ json: String) throws -> T {
 
 public class SuitoAiModule: Module {
   static let askTextEvent = "onAskText"
+  static let listenEvent = "onListen"
 
   private let tasksLock = NSLock()
   private var askTasks: [String: Task<Void, Never>] = [:]
+  private let listener = SuitoListen()
 
   public func definition() -> ModuleDefinition {
     Name("SuitoAi")
 
-    Events(SuitoAiModule.askTextEvent)
+    Events(SuitoAiModule.askTextEvent, SuitoAiModule.listenEvent)
 
     AsyncFunction("availability") { () -> [String: String] in
       ["onDevice": SuitoAiModule.onDeviceAvailability(), "system": "available"]
@@ -136,6 +144,50 @@ public class SuitoAiModule: Module {
 
     Function("cancelAsk") { (requestId: String) -> Void in
       self.cancelTask(requestId)
+    }
+
+    // Voice (Calendar orb). On-device speech only; resolves a status, never rejects.
+    AsyncFunction("startListening") { (locale: String, promise: Promise) in
+      let listener = self.listener
+      Task { [weak self] in
+        let status = await listener.start(locale: locale) { level, text in
+          self?.sendEvent(SuitoAiModule.listenEvent, ["level": level, "text": text])
+        }
+        promise.resolve(status)
+      }
+    }
+
+    AsyncFunction("stopListening") { (promise: Promise) in
+      let listener = self.listener
+      Task {
+        promise.resolve(await listener.stop())
+      }
+    }
+
+    Function("cancelListening") { () -> Void in
+      self.listener.cancel()
+    }
+
+    // Receipt scan: document camera + OCR + on-device parse. Resolves a status, never rejects.
+    AsyncFunction("scanReceipt") { (ctxJson: String, promise: Promise) in
+      Task {
+        guard let ctx = try? decode(ParseContextIn.self, ctxJson) else {
+          promise.resolve(["status": "none"])
+          return
+        }
+        promise.resolve(await SuitoReceipt.scan(ctx))
+      }
+    }
+
+    // One-liners (forecast / day / repeat). Never rejects: nil on any failure.
+    AsyncFunction("wordLine") { (json: String, promise: Promise) in
+      Task {
+        guard let req = try? decode(LineRequestIn.self, json) else {
+          promise.resolve(nil)
+          return
+        }
+        promise.resolve(await SuitoAiModule.wordLine(req))
+      }
     }
 
     AsyncFunction("writeSiriSnapshot") { (json: String) throws -> Void in
@@ -237,14 +289,40 @@ public class SuitoAiModule: Module {
       text: TokenEstimator.truncate(text, toTokens: 300),
       expCats: Array(ctx.expCats.prefix(60)), incCats: Array(ctx.incCats.prefix(30)), today: todayString)
     let gen = try await session.respond(to: prompt, generating: GenParsedEntry.self, options: options).content
+    return buildEntry(gen, source: text, ctx: ctx, today: today, receipt: false)
+  }
 
+  // MARK: scanReceipt (OCR text -> entry; the camera + OCR live in SuitoReceipt.swift)
+
+  static func parseReceipt(_ ocrText: String, _ ctx: ParseContextIn) async throws -> [String: Any]? {
+    let text = ocrText.trimmingCharacters(in: .whitespacesAndNewlines)
+    if text.isEmpty { return nil }
+    try requireAvailable()
+    let today = SuitoPostProcess.Day(y: ctx.today.y, m: ctx.today.m + 1, d: ctx.today.day)
+    let todayString = String(format: "%04d-%02d-%02d", today.y, today.m, today.d)
+
+    let session = LanguageModelSession(model: .default, instructions: SuitoPrompts.receiptInstructions(locale: ctx.locale))
+    let options = GenerationOptions(temperature: 0.1, maximumResponseTokens: 200)
+    let prompt = SuitoPrompts.receiptPrompt(
+      text: TokenEstimator.truncate(text, toTokens: SuitoReceipt.ocrTokens),
+      expCats: Array(ctx.expCats.prefix(60)), today: todayString)
+    let gen = try await session.respond(to: prompt, generating: GenParsedEntry.self, options: options).content
+    return buildEntry(gen, source: text, ctx: ctx, today: today, receipt: true)
+  }
+
+  /// Shared post-processing for parseEntry and parseReceipt. A receipt is always an expense,
+  /// its amount must be printed on the receipt (preferring the 合計 line), its date comes from
+  /// the printed date, and the note is the store name.
+  static func buildEntry(
+    _ gen: GenParsedEntry, source text: String, ctx: ParseContextIn, today: SuitoPostProcess.Day, receipt: Bool
+  ) -> [String: Any]? {
     var out: [String: Any] = [:]
 
     // Category: must be one of the passed cats; it also decides the type.
-    var type: String = gen.type == .income ? "income" : "expense"
+    var type: String = !receipt && gen.type == .income ? "income" : "expense"
     if let raw = gen.category {
       let preferred = type == "income" ? ctx.incCats : ctx.expCats
-      let other = type == "income" ? ctx.expCats : ctx.incCats
+      let other = receipt ? [] : (type == "income" ? ctx.expCats : ctx.incCats)
       if let hit = SuitoSiriStore.matchCategory(raw, candidates: preferred) {
         out["category"] = hit
       } else if let hit = SuitoSiriStore.matchCategory(raw, candidates: other) {
@@ -253,20 +331,36 @@ public class SuitoAiModule: Module {
       }
     }
 
-    // Amount: trust the model unless it's clearly a date number; fall back to the phrase.
     let candidates = SuitoPostProcess.amountCandidates(text)
-    if let amount = gen.amount, amount > 0, candidates.isEmpty || candidates.contains(amount) {
-      out["amount"] = amount
-    } else if let last = candidates.last {
-      out["amount"] = last
-    } else if let amount = gen.amount, amount > 0 {
-      out["amount"] = amount // e.g. 「千円」 with no digits
+    if receipt {
+      // The model's amount only if it's printed on the receipt; else the largest total line.
+      let totals = SuitoPostProcess.receiptTotals(text)
+      if let amount = gen.amount, amount > 0, totals.contains(amount) || (totals.isEmpty && candidates.contains(amount)) {
+        out["amount"] = amount
+      } else if let total = totals.max() {
+        out["amount"] = total
+      }
+    } else {
+      // Amount: trust the model unless it's clearly a date number; fall back to the phrase.
+      if let amount = gen.amount, amount > 0, candidates.isEmpty || candidates.contains(amount) {
+        out["amount"] = amount
+      } else if let last = candidates.last {
+        out["amount"] = last
+      } else if let amount = gen.amount, amount > 0 {
+        out["amount"] = amount // e.g. 「千円」 with no digits
+      }
     }
 
     if out["amount"] == nil && out["category"] == nil { return nil }
     out["type"] = type
 
-    if let day = SuitoPostProcess.resolveDate(gen.dateText, today: today) ?? SuitoPostProcess.resolveDate(text, today: today) {
+    let day: SuitoPostProcess.Day?
+    if receipt {
+      day = SuitoPostProcess.receiptDate(gen.dateText, today: today) ?? SuitoPostProcess.receiptDate(text, today: today)
+    } else {
+      day = SuitoPostProcess.resolveDate(gen.dateText, today: today) ?? SuitoPostProcess.resolveDate(text, today: today)
+    }
+    if let day {
       out["date"] = ["y": day.y, "m": day.m - 1, "day": day.d]
     }
 
@@ -306,6 +400,25 @@ public class SuitoAiModule: Module {
     let gen = try await session.respond(to: SuitoPrompts.nudgePrompt(facts: facts), generating: GenNudge.self, options: options).content
     if gen.skip { return nil }
     guard let text = SuitoPostProcess.nudgeText(gen.text, known: Set(facts.map { $0.id }), locale: req.locale) else { return nil }
+    return ["text": text]
+  }
+
+  // MARK: wordLine (forecast / day / repeat)
+
+  static let lineKinds: Set<String> = ["forecast", "day", "repeat"]
+
+  /// Never throws: nil when the model is unavailable, skips, fails, or the line breaks a rule.
+  static func wordLine(_ req: LineRequestIn) async -> [String: Any]? {
+    let facts = Array(req.facts.prefix(24))
+    if facts.isEmpty || !lineKinds.contains(req.kind) { return nil }
+    if onDeviceAvailability() != "available" { return nil }
+    let session = LanguageModelSession(
+      model: .default, instructions: SuitoPrompts.lineInstructions(kind: req.kind, locale: req.locale))
+    let options = GenerationOptions(temperature: 0.4, maximumResponseTokens: 160)
+    guard let gen = try? await session.respond(to: SuitoPrompts.linePrompt(facts: facts), generating: GenLine.self, options: options).content
+    else { return nil }
+    if gen.skip { return nil }
+    guard let text = SuitoPostProcess.lineText(gen.text, known: Set(facts.map { $0.id }), locale: req.locale) else { return nil }
     return ["text": text]
   }
 }

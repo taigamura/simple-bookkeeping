@@ -42,6 +42,15 @@ struct GenNudge {
   var text: String
 }
 
+@Generable(description: "One short line for the app, or nothing")
+struct GenLine {
+  @Guide(description: "true when nothing is worth saying; then the text is ignored")
+  var skip: Bool
+
+  @Guide(description: "One short sentence that cites at least one fact token like {f:forecast-total}. Empty when skip is true.")
+  var text: String
+}
+
 @Generable(description: "What kind of question the user asked about their money")
 enum GenAskKind {
   /// A lookup the ledger can answer: totals, a category, entries, comparisons between periods.

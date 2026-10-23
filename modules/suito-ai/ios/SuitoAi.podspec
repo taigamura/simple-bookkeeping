@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
   s.name           = 'SuitoAi'
   s.version        = '1.0.0'
-  s.summary        = 'Suito AI: on-device Foundation Models, Siri snapshot/inbox files, Spotlight'
+  s.summary        = 'Suito AI: on-device Foundation Models, speech, receipt OCR, Siri snapshot/inbox files, Spotlight'
   s.description    = s.summary
   s.license        = { :type => 'Proprietary' }
   s.author         = 'Taiga Kimura'
@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
   s.static_framework = true
 
   s.dependency 'ExpoModulesCore'
-  s.frameworks = 'FoundationModels', 'CoreSpotlight', 'UniformTypeIdentifiers'
+  s.frameworks = 'FoundationModels', 'CoreSpotlight', 'UniformTypeIdentifiers', 'Speech', 'AVFoundation', 'Vision', 'VisionKit', 'UIKit'
 
   s.source_files = '**/*.{h,m,swift}'
   # DEFINES_MODULE: the App Intents compiled into the app target `import SuitoAi` for SuitoSiriStore.

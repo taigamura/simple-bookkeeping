@@ -14,7 +14,12 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.taigamura.kaji",
       "deploymentTarget": "26.0",
-      "config": { "usesNonExemptEncryption": false }
+      "config": { "usesNonExemptEncryption": false },
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Suito uses the microphone only while you hold the button, so you can say an entry. Your voice stays on your iPhone.",
+        "NSSpeechRecognitionUsageDescription": "Suito turns what you say into text on your iPhone to fill in an entry. Nothing is sent anywhere.",
+        "NSCameraUsageDescription": "Suito uses the camera to scan a receipt and fill in an entry. The receipt is read on your iPhone and the photo is not saved."
+      }
     },
     "android": {
       "adaptiveIcon": {

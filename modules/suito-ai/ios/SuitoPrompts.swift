@@ -44,6 +44,36 @@ enum SuitoPrompts {
     """
   }
 
+  // MARK: receipt
+
+  static func receiptInstructions(locale: String) -> String {
+    """
+    You read the text of one shop receipt (レシート), recognised by OCR from a photo, and fill in \
+    one expense entry for a household budget app (家計簿). \(localeLine(locale))
+    The OCR text may contain mistakes and the lines may be out of order.
+    amount: the total actually paid, on the line marked 合計, 税込, お買上, ご請求, TOTAL or AMOUNT DUE. \
+    Never use 小計 (subtotal), a tax line (消費税, 内税, 外税, 対象, TAX), お預り (cash given), お釣り \
+    (change), a point balance, a phone number or an item price.
+    dateText: the purchase date exactly as printed on the receipt (e.g. 2026年10月3日, 2026/10/03). \
+    Empty if no date is printed.
+    note: the shop or store name, usually at the top of the receipt (e.g. ローソン, スターバックス). \
+    Short, without the branch name, address or phone number.
+    category: exactly one name copied from the expense category list that fits what was bought, \
+    or omit it if none fits. type is always expense.
+    """
+  }
+
+  static func receiptPrompt(text: String, expCats: [String], today: String) -> String {
+    """
+    Today: \(today)
+    Expense categories: \(expCats.joined(separator: ", "))
+    Receipt text:
+    \"\"\"
+    \(text)
+    \"\"\"
+    """
+  }
+
   // MARK: letter / nudge
 
   static func letterInstructions(locale: String) -> String {
@@ -70,6 +100,40 @@ enum SuitoPrompts {
     \(kindRules)
     \(noDashLine)
     """
+  }
+
+  /// One code-computed line (wordLine). Same citation and kindness rules as the nudge.
+  static func lineInstructions(kind: String, locale: String) -> String {
+    let task: String
+    switch kind {
+    case "forecast":
+      task = """
+      You write one short line for the top of the Calendar screen saying where this month's \
+      spending is heading, based on the forecast facts.
+      """
+    case "repeat":
+      task = """
+      The user has paid the same thing several times. You write one short, friendly question \
+      asking whether they would like to make this payment repeat monthly in the app.
+      """
+    default:
+      task = """
+      You write one short note about the day the user selected on the Calendar screen, such as \
+      what the money went to or that it was a no-spend day.
+      """
+    }
+    return """
+    \(task) This is for a household budget app. \(localeLine(locale))
+    Set skip to true when nothing is worth saying. The line is one short sentence (about forty \
+    Japanese characters or fifteen English words at most) and must cite at least one fact with its token.
+    \(tokenRules)
+    \(kindRules)
+    \(noDashLine)
+    """
+  }
+
+  static func linePrompt(facts: [FactIn]) -> String {
+    nudgePrompt(facts: facts)
   }
 
   /// Facts as id + label + tone. The model cites `{f:<id>}`; the app renders the display string.

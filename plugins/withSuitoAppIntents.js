@@ -14,6 +14,8 @@
 //    phrases in languages the app is localized in) and ja.lproj/Localizable.strings (action,
 //    parameter and summary titles in Shortcuts). This makes `ja` a bundle localization, so
 //    UIKit's own strings (edit menus, system alerts) also appear in Japanese on Japanese devices.
+//    Also ja.lproj/InfoPlist.strings: the mic / speech / camera permission prompts (English in
+//    app.json `ios.infoPlist`).
 //
 // No App Group, no new entitlements: the intents share the app's own Documents dir.
 // Idempotent; re-runs on every prebuild.
@@ -84,6 +86,14 @@ const JA_LOCALIZABLE = {
   'Last year': '去年',
 };
 
+// Japanese permission prompts (ja.lproj/InfoPlist.strings). The English base strings live in
+// app.json `ios.infoPlist`; every key there needs a Japanese line here (plugin test checks it).
+const JA_INFO_PLIST = {
+  NSMicrophoneUsageDescription: 'ボタンを押している間だけマイクを使い、話した内容から記録を作ります。音声はiPhoneの外に出ません。',
+  NSSpeechRecognitionUsageDescription: '話した内容はiPhoneの中だけで文字にします。どこにも送りません。',
+  NSCameraUsageDescription: 'レシートを読み取って記録を作ります。読み取りはiPhoneの中だけで行い、写真は保存しません。',
+};
+
 /** `.strings` lines need quoted keys; IOSConfig.Locales.writeStringsFile quotes only values. */
 function stringsMap(obj) {
   const esc = (s) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -95,6 +105,7 @@ async function addJapaneseStrings(project, projectRoot, projectName) {
   for (const [fileName, map] of [
     ['AppShortcuts.strings', JA_APP_SHORTCUTS],
     ['Localizable.strings', JA_LOCALIZABLE],
+    ['InfoPlist.strings', JA_INFO_PLIST],
   ]) {
     project = await IOSConfig.Locales.writeStringsFile({
       localesMap: { ja: stringsMap(map) },
@@ -176,3 +187,4 @@ module.exports = withSuitoAppIntents;
 module.exports.DEPLOYMENT_TARGET = DEPLOYMENT_TARGET;
 module.exports.JA_APP_SHORTCUTS = JA_APP_SHORTCUTS;
 module.exports.JA_LOCALIZABLE = JA_LOCALIZABLE;
+module.exports.JA_INFO_PLIST = JA_INFO_PLIST;

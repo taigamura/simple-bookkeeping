@@ -115,6 +115,60 @@ enum SuitoPostProcess {
     return clean
   }
 
+  // MARK: kindness (mirrors ai/cite.ts, which re-checks in JS)
+
+  private static let jaBlock = ["使いすぎ", "無駄遣い", "浪費", "ダメ", "反省しましょう", "我慢"]
+  private static let enBlock = try! NSRegularExpression(
+    pattern: "\\b(overspent|wasteful|waste|bad|should have|failed)\\b", options: [.caseInsensitive])
+
+  /// False when the prose outside the tokens scolds.
+  static func isKind(_ text: String) -> Bool {
+    let prose = replace(strictToken, in: text) { _ in " " }
+    if jaBlock.contains(where: { prose.contains($0) }) { return false }
+    let ns = prose as NSString
+    return enBlock.firstMatch(in: prose, range: NSRange(location: 0, length: ns.length)) == nil
+  }
+
+  /// wordLine: the nudge rules (one sentence, >= 1 known fact, no digits, no dashes) plus kindness.
+  static func lineText(_ raw: String, known: Set<String>, locale: String) -> String? {
+    guard let text = nudgeText(raw, known: known, locale: locale), isKind(text) else { return nil }
+    return text
+  }
+
+  // MARK: receipts
+
+  private static let totalWords = ["合計", "総計", "税込", "お買上", "お買い上げ", "ご請求", "お支払", "total", "amount due"]
+  private static let notTotalWords = [
+    "小計", "消費税", "内税", "外税", "税額", "対象", "点数", "お預", "預り", "釣", "ポイント", "残高",
+    "subtotal", "sub total", "tax", "change", "cash", "points",
+  ]
+
+  /// Amounts printed on total lines (合計 / 税込 / TOTAL ...), excluding subtotal, tax, cash and
+  /// change lines. Used to check or replace the model's amount.
+  static func receiptTotals(_ text: String) -> [Int] {
+    var out: [Int] = []
+    for rawLine in text.split(whereSeparator: { $0.isNewline }) {
+      let line = (String(rawLine).applyingTransform(.fullwidthToHalfwidth, reverse: false) ?? String(rawLine)).lowercased()
+      guard totalWords.contains(where: { line.contains($0) }) else { continue }
+      if notTotalWords.contains(where: { line.contains($0) }) { continue }
+      out.append(contentsOf: amountCandidates(line))
+    }
+    return out
+  }
+
+  /// The purchase date printed on a receipt: YYYY年M月D日, YYYY/M/D, YYYY-MM-DD, YYYY.M.D.
+  /// Dates after today (OCR misreads) are rejected.
+  static func receiptDate(_ raw: String, today: Day) -> Day? {
+    let text = raw.applyingTransform(.fullwidthToHalfwidth, reverse: false) ?? raw
+    guard let groups = match(text, pattern: "(20\\d{2})\\s*[年/.-]\\s*(\\d{1,2})\\s*[月/.-]\\s*(\\d{1,2})"), groups.count == 3 else {
+      return nil
+    }
+    let day = Day(y: groups[0], m: groups[1], d: groups[2])
+    if !isValid(day) { return nil }
+    if (day.y, day.m, day.d) > (today.y, today.m, today.d) { return nil }
+    return day
+  }
+
   // MARK: parseEntry: dates
 
   struct Day: Equatable {
