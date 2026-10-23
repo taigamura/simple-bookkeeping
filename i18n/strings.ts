@@ -281,6 +281,13 @@ export interface Strings {
     nudgesExplain: string;
     spotlightSwitch: string;
     spotlightExplain: string;
+    receipt: {
+      button: string;
+      hint: string;
+      working: string;
+      none: string;
+      denied: string;
+    };
   };
 }
 
@@ -560,6 +567,13 @@ export const en: Strings = {
     nudgesExplain: 'A monthly recap and one small observation, written by the model on this iPhone. Everything stays on this iPhone.',
     spotlightSwitch: 'Siri & Search',
     spotlightExplain: 'Lets Siri and Spotlight find your entries. The index stays on this iPhone.',
+    receipt: {
+      button: 'Scan a receipt',
+      hint: 'Fills in the amount, date, category and store. The photo is read on this iPhone and not kept. Nothing is saved until you tap the button.',
+      working: 'Reading',
+      none: 'Couldn’t read that receipt',
+      denied: 'Allow the camera in Settings',
+    },
   },
 };
 
@@ -828,5 +842,12 @@ export const ja: Strings = {
     nudgesExplain: '月のふりかえりと小さな気づきを、このiPhoneの中のAIが書きます。データは外に出ません。',
     spotlightSwitch: 'Siriと検索',
     spotlightExplain: 'Siriとスポットライト検索で記録を探せます。索引はこのiPhoneの中だけです。',
+    receipt: {
+      button: 'レシートを読み取る',
+      hint: '金額・日付・カテゴリ・店名を入力します。写真はこのiPhoneの中で読み取り、保存しません。ボタンを押すまで記録されません。',
+      working: '読み取り中',
+      none: 'レシートを読み取れませんでした',
+      denied: '設定でカメラを許可してください',
+    },
   },
 };

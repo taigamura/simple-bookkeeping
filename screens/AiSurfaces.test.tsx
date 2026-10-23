@@ -242,6 +242,85 @@ describe('Entry text line', () => {
   });
 });
 
+describe('Entry receipt scan', () => {
+  const scanButton = () => screen.getByLabelText(strings.ai.receipt.button);
+
+  it('is absent when the on-device model is unavailable', async () => {
+    renderEntry(createFakeSuitoAi({ availability: SYSTEM_ONLY }));
+    await settle();
+    expect(screen.queryByLabelText(strings.ai.receipt.button)).toBeNull();
+  });
+
+  it('ok: fills ¥1,280, Food and the store note; Save is still the user’s tap', async () => {
+    const ai = createFakeSuitoAi();
+    const scan = jest.spyOn(ai, 'scanReceipt');
+    const onSave = renderEntry(ai);
+    await settle();
+    fireEvent.press(scanButton());
+    await waitFor(() => expect(screen.getByText('¥1,280')).toBeTruthy(), { timeout: 3000 });
+    expect(scan).toHaveBeenCalledWith(
+      expect.objectContaining({ expCats: ['Food', 'Rent'], today: { y: 2026, m: 9, day: 23 } }),
+    );
+    expect(screen.getByTestId('ai-entry-filled')).toBeTruthy();
+    expect(onSave).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByLabelText(strings.entry.addExpense));
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      type: 'expense',
+      amountStr: '1280',
+      category: 'Food',
+      note: 'Lawson',
+      day: 23,
+    });
+  });
+
+  it('shows a busy state while the scan runs', async () => {
+    let resolve!: (r: { status: 'cancelled' }) => void;
+    const ai = createFakeSuitoAi();
+    jest.spyOn(ai, 'scanReceipt').mockImplementation(() => new Promise((r) => (resolve = r)));
+    renderEntry(ai);
+    await settle();
+    fireEvent.press(scanButton());
+    expect(scanButton()).toBeDisabled();
+    expect(screen.getByTestId('ai-entry-working')).toBeTruthy();
+    await act(async () => resolve({ status: 'cancelled' }));
+    expect(scanButton()).not.toBeDisabled();
+    expect(screen.queryByTestId('ai-entry-working')).toBeNull();
+  });
+
+  it('none: says the receipt could not be read and leaves the form untouched', async () => {
+    const onSave = renderEntry(createFakeSuitoAi({ receiptStatus: 'none' }));
+    await settle();
+    fireEvent.press(scanButton());
+    await waitFor(() => expect(screen.getByText(strings.ai.receipt.none)).toBeTruthy());
+    expect(screen.getByText('¥0')).toBeTruthy();
+    expect(screen.queryByTestId('ai-entry-filled')).toBeNull();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('denied: hints to allow the camera in Settings', async () => {
+    renderEntry(createFakeSuitoAi({ receiptStatus: 'denied' }));
+    await settle();
+    fireEvent.press(scanButton());
+    await waitFor(() => expect(screen.getByText(strings.ai.receipt.denied)).toBeTruthy());
+    expect(screen.getByText('¥0')).toBeTruthy();
+  });
+
+  it('cancelled: nothing changes and nothing is said', async () => {
+    const onSave = renderEntry(createFakeSuitoAi({ receiptStatus: 'cancelled' }));
+    await settle();
+    fireEvent.press(scanButton());
+    await settle();
+    await settle();
+    expect(screen.getByText('¥0')).toBeTruthy();
+    expect(screen.queryByText(strings.ai.receipt.none)).toBeNull();
+    expect(screen.queryByText(strings.ai.receipt.denied)).toBeNull();
+    expect(screen.queryByTestId('ai-entry-filled')).toBeNull();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
 // ------------------------------------------------------------------- Settings
 
 function renderSettings(availability: Availability) {

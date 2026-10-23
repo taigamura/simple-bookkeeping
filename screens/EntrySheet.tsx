@@ -441,6 +441,7 @@ export function EntrySheet({
         <AiEntryLine
           parse={(text) => ai.parseEntry(text, parseContext)}
           onParsed={applyParsed}
+          scanReceipt={() => ai.scanReceipt(parseContext)}
         />
       )}
 
