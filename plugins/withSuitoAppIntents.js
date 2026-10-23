@@ -92,6 +92,7 @@ const JA_INFO_PLIST = {
   NSMicrophoneUsageDescription: 'ボタンを押している間だけマイクを使い、話した内容から記録を作ります。音声はiPhoneの外に出ません。',
   NSSpeechRecognitionUsageDescription: '話した内容はiPhoneの中だけで文字にします。どこにも送りません。',
   NSCameraUsageDescription: 'レシートを読み取って記録を作ります。読み取りはiPhoneの中だけで行い、写真は保存しません。',
+  NSPhotoLibraryUsageDescription: '写真ライブラリは読みません。レシートはカメラで読み取り、iPhoneの中だけで処理します。写真の保存や送信はしません。',
 };
 
 /** `.strings` lines need quoted keys; IOSConfig.Locales.writeStringsFile quotes only values. */

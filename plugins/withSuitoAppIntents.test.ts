@@ -42,7 +42,7 @@ describe('withSuitoAppIntents', () => {
     const infoPlist: Record<string, string> = appJson.expo.ios.infoPlist;
     const usageKeys = Object.keys(infoPlist).filter((k) => k.endsWith('UsageDescription'));
     expect(usageKeys.sort()).toEqual(
-      ['NSCameraUsageDescription', 'NSMicrophoneUsageDescription', 'NSSpeechRecognitionUsageDescription'].sort(),
+      ['NSCameraUsageDescription', 'NSMicrophoneUsageDescription', 'NSPhotoLibraryUsageDescription', 'NSSpeechRecognitionUsageDescription'].sort(),
     );
     expect(Object.keys(plugin.JA_INFO_PLIST).sort()).toEqual(usageKeys.sort());
   });
