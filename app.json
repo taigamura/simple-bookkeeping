@@ -13,6 +13,7 @@
       },
       "supportsTablet": false,
       "bundleIdentifier": "com.taigamura.kaji",
+      "deploymentTarget": "26.0",
       "config": { "usesNonExemptEncryption": false }
     },
     "android": {
@@ -43,7 +44,8 @@
           }
         }
       ],
-      "@sentry/react-native/expo"
+      "@sentry/react-native/expo",
+      "./plugins/withSuitoAppIntents.js"
     ],
     "extra": {
       "sentryDsn": "",
