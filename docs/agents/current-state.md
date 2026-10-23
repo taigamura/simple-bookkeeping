@@ -44,6 +44,9 @@ _Last updated: 2026-10-23_
 
 ## Open items
 
+- **1.1.0 scope grew (PRD #145, 2026-10-23):** Calendar AI orb (hold = voice
+  entry, tap = Ask), receipt scan, repeat suggestions, month-end forecast, day
+  note. Build on `feat/suito-ai`, new TestFlight build before review.
 - **1.0.1 is live without the real-iPhone check** (native glass bar; ＋ opens
   the Entry sheet *above* the bar; nothing hidden behind it). Check on device.
 - **Suito AI on-device checklist** (TestFlight): see PRD #143 testing section

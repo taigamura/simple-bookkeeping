@@ -3,7 +3,7 @@
  * the e2e baselines and the screen tests can rely on exactly what it returns.
  */
 import type { Fact, ParseContext } from './contract';
-import { createFakeSuitoAi, fakeParse } from './fake';
+import { createFakeSuitoAi, fakeParse, FAKE_RECEIPT, FAKE_TRANSCRIPT } from './fake';
 
 const ja: ParseContext = {
   expCats: ['食費', '交通費', '日用品'],
@@ -120,5 +120,52 @@ describe('createFakeSuitoAi', () => {
     });
     await pending;
     expect(seen).toHaveLength(1);
+  });
+});
+
+describe('fake voice, receipt and one-liners', () => {
+  const ctx = { expCats: ['食費', '交通費'], incCats: ['給料'], today: { y: 2026, m: 9, day: 23 }, locale: 'ja' as const };
+
+  it('streams partial words while listening and returns the locale transcript', async () => {
+    jest.useFakeTimers();
+    try {
+      const ai = createFakeSuitoAi();
+      const events: { level: number; text: string }[] = [];
+      await expect(ai.startListening('ja', (e) => events.push(e))).resolves.toBe('started');
+      jest.advanceTimersByTime(250);
+      expect(events.length).toBeGreaterThanOrEqual(3);
+      expect(events.at(-1)!.text).toBe(FAKE_TRANSCRIPT.ja);
+      await expect(ai.stopListening()).resolves.toBe(FAKE_TRANSCRIPT.ja);
+      await expect(ai.stopListening()).resolves.toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('honours forced listen outcomes and cancel', async () => {
+    await expect(createFakeSuitoAi({ listenStart: 'denied' }).startListening('en', () => {})).resolves.toBe('denied');
+    const ai = createFakeSuitoAi();
+    await ai.startListening('en', () => {});
+    ai.cancelListening();
+    await expect(ai.stopListening()).resolves.toBeNull();
+  });
+
+  it('scans a receipt into an entry from the passed categories', async () => {
+    await expect(createFakeSuitoAi().scanReceipt(ctx)).resolves.toEqual({
+      status: 'ok',
+      entry: { type: 'expense', amount: FAKE_RECEIPT.amount, category: '食費', date: ctx.today, note: 'ローソン' },
+    });
+    await expect(createFakeSuitoAi({ receiptStatus: 'denied' }).scanReceipt(ctx)).resolves.toEqual({ status: 'denied' });
+  });
+
+  it('words a line per kind citing the first fact, and says nothing without facts', async () => {
+    const ai = createFakeSuitoAi();
+    const fact = { id: 'forecast-total', label: 'l', display: '¥182,000', value: 182000, tone: 'neutral' as const };
+    for (const kind of ['forecast', 'day', 'repeat'] as const) {
+      const line = await ai.wordLine({ kind, facts: [fact], locale: 'en' });
+      expect(line!.text).toContain('{f:forecast-total}');
+      expect(line!.text).not.toMatch(/\d/);
+    }
+    await expect(ai.wordLine({ kind: 'day', facts: [], locale: 'ja' })).resolves.toBeNull();
   });
 });

@@ -20,6 +20,10 @@ import type {
   Fact,
   LetterDraft,
   LetterRequest,
+  LineDraft,
+  LineRequest,
+  ListenEvent,
+  Locale,
   NudgeDraft,
   NudgeRequest,
   ParseContext,
@@ -34,7 +38,19 @@ export interface FakeOptions {
   chunkDelayMs?: number;
   /** Simulated model latency for parse/letter/nudge (ms). */
   latencyMs?: number;
+  /** What the fake "hears" while listening; defaults per locale (FAKE_TRANSCRIPT). */
+  transcript?: string;
+  /** Force a listen outcome (permission tests). */
+  listenStart?: 'started' | 'denied' | 'unavailable';
+  /** Force a receipt outcome; default 'ok' with FAKE_RECEIPT. */
+  receiptStatus?: 'ok' | 'cancelled' | 'denied' | 'none';
 }
+
+export const FAKE_TRANSCRIPT: Record<Locale, string> = { ja: '昨日ランチ 850円', en: 'lunch 850 yesterday' };
+/** Store name + amount the fake receipt scan returns (category resolved from ctx). */
+export const FAKE_RECEIPT = { amount: 1280, note: { ja: 'ローソン', en: 'Lawson' } } as const;
+/** Level sequence emitted while listening, one step per ~80 ms. */
+const LEVELS = [0.2, 0.55, 0.8, 0.45, 0.7, 0.3];
 
 export const FAKE_AVAILABLE: Availability = { onDevice: 'available', system: 'available' };
 
@@ -159,6 +175,20 @@ function nudgeFor(req: NudgeRequest): NudgeDraft {
   return null;
 }
 
+function lineFor(req: LineRequest): LineDraft {
+  const f = req.facts[0];
+  if (!f) return null;
+  const ja = req.locale === 'ja';
+  switch (req.kind) {
+    case 'forecast':
+      return { text: ja ? `このペースだと月末は {f:${f.id}} になりそう。` : `At this pace the month ends near {f:${f.id}}.` };
+    case 'day':
+      return { text: ja ? `この日は {f:${f.id}}。` : `This day: {f:${f.id}}.` };
+    case 'repeat':
+      return { text: ja ? `{f:${f.id}} は毎月の支払いにしますか？` : `Make {f:${f.id}} a monthly payment?` };
+  }
+}
+
 const ANSWER: Record<'ja' | 'en', { plain: string[]; stronger: string[] }> = {
   ja: {
     plain: ['今月の記録を見ると、', '支出はいつものペースで', '落ち着いています。'],
@@ -183,6 +213,10 @@ export function createFakeSuitoAi(options: FakeOptions = {}): SuitoAi {
   const chunkDelay = options.chunkDelayMs ?? 120;
   const latency = options.latencyMs ?? 0;
   const cancelled = new Set<string>();
+  let listening: { locale: Locale; timer: ReturnType<typeof setInterval> } | null = null;
+  const stopTimer = () => {
+    if (listening) clearInterval(listening.timer);
+  };
 
   return {
     availability: async () => availability,
@@ -214,6 +248,45 @@ export function createFakeSuitoAi(options: FakeOptions = {}): SuitoAi {
     },
     cancelAsk: (requestId) => {
       cancelled.add(requestId);
+    },
+    startListening: async (locale, onEvent: (event: ListenEvent) => void) => {
+      const start = options.listenStart ?? 'started';
+      if (start !== 'started') return start;
+      stopTimer();
+      const words = (options.transcript ?? FAKE_TRANSCRIPT[locale]).split(' ');
+      let i = 0;
+      const timer = setInterval(() => {
+        i += 1;
+        onEvent({ level: LEVELS[i % LEVELS.length], text: words.slice(0, Math.min(i, words.length)).join(' ') });
+      }, 80);
+      listening = { locale, timer };
+      return 'started';
+    },
+    stopListening: async () => {
+      if (!listening) return null;
+      stopTimer();
+      const { locale } = listening;
+      listening = null;
+      if (latency) await wait(latency);
+      return options.transcript ?? FAKE_TRANSCRIPT[locale];
+    },
+    cancelListening: () => {
+      stopTimer();
+      listening = null;
+    },
+    scanReceipt: async (ctx) => {
+      const status = options.receiptStatus ?? 'ok';
+      if (latency) await wait(latency);
+      if (status !== 'ok') return { status };
+      const category = ['食費', 'Food'].find((c) => ctx.expCats.includes(c)) ?? ctx.expCats[0];
+      return {
+        status: 'ok',
+        entry: { type: 'expense', amount: FAKE_RECEIPT.amount, category, date: ctx.today, note: FAKE_RECEIPT.note[ctx.locale] },
+      };
+    },
+    wordLine: async (req) => {
+      if (latency) await wait(latency);
+      return lineFor(req);
     },
     writeSiriSnapshot: async () => {},
     readSiriInbox: async () => [],

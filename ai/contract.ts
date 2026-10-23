@@ -167,6 +167,44 @@ export interface SpotlightRequest {
   entries: SnapshotEntry[];
 }
 
+// ---------------------------------------------------------------- voice (Calendar orb)
+
+/** Streamed while listening: mic level 0..1 and the cumulative partial transcript. */
+export interface ListenEvent {
+  level: number;
+  text: string;
+}
+
+/** 'denied' = mic or speech permission refused; 'unavailable' = no on-device
+ *  recognizer for the locale (server recognition is never used). */
+export type ListenStart = 'started' | 'denied' | 'unavailable';
+
+// ---------------------------------------------------------------- receipt scan
+
+export type ReceiptResult =
+  | { status: 'ok'; entry: ParsedEntry }
+  /** User closed the scanner. */
+  | { status: 'cancelled' }
+  /** Camera permission refused. */
+  | { status: 'denied' }
+  /** Scanned, but no amount or category could be read. */
+  | { status: 'none' };
+
+// ---------------------------------------------------------------- one-liners
+
+/** Forecast line (Calendar header), day note (selected day), repeat
+ *  suggestion (day panel). Same citation + kindness rules as `pickNudge`. */
+export type LineKind = 'forecast' | 'day' | 'repeat';
+
+export interface LineRequest {
+  kind: LineKind;
+  facts: Fact[];
+  locale: Locale;
+}
+
+/** `null` = nothing worth saying. `text` holds `{f:<id>}` tokens, no digits. */
+export type LineDraft = { text: string } | null;
+
 // ---------------------------------------------------------------- the seam
 
 export interface SuitoAi {
@@ -177,6 +215,21 @@ export interface SuitoAi {
   /** Streams cumulative text (each call gets the full text so far). */
   ask(req: AskRequest, onText: (textSoFar: string) => void): Promise<AskResult>;
   cancelAsk(requestId: string): void;
+
+  /** On-device speech only. Resolves once the mic is live (or why it isn't). */
+  startListening(locale: Locale, onEvent: (event: ListenEvent) => void): Promise<ListenStart>;
+  /** Stops and resolves the final transcript, or null when nothing was heard. */
+  stopListening(): Promise<string | null>;
+  /** Stops and discards. */
+  cancelListening(): void;
+
+  /** Presents the system document camera, reads the receipt on device, and
+   *  parses it like `parseEntry` (store name goes to `note`). The image is
+   *  never kept. */
+  scanReceipt(ctx: ParseContext): Promise<ReceiptResult>;
+
+  /** Words one code-computed line. Never rejects; failures resolve null. */
+  wordLine(req: LineRequest): Promise<LineDraft>;
 
   writeSiriSnapshot(snapshot: SiriSnapshot): Promise<void>;
   readSiriInbox(): Promise<InboxEntry[]>;
@@ -194,6 +247,11 @@ export const UNAVAILABLE_AI: SuitoAi = {
   pickNudge: async () => null,
   ask: async () => ({ text: '', needsStrongerModel: false }),
   cancelAsk: () => {},
+  startListening: async () => 'unavailable',
+  stopListening: async () => null,
+  cancelListening: () => {},
+  scanReceipt: async () => ({ status: 'cancelled' }),
+  wordLine: async () => null,
   writeSiriSnapshot: async () => {},
   readSiriInbox: async () => [],
   clearSiriInbox: async () => {},

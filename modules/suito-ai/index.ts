@@ -17,7 +17,9 @@
  *   ERR_INPUT        malformed JSON input
  *   ERR_IO           snapshot / inbox / Spotlight write failed
  *   ERR_GENERATION   anything else
- * `parseEntry` / `writeLetter` / `pickNudge` never reject: any failure resolves `null`.
+ * `startListening` resolves 'denied' / 'unavailable' instead of rejecting; `stopListening` resolves
+ * null on failure. `scanReceipt` resolves a status, never rejects.
+ * `parseEntry` / `writeLetter` / `pickNudge` / `wordLine` never reject: any failure resolves `null`.
  *
  * Post-processing done natively (JS still re-checks via ai/cite.ts):
  *   - parseEntry: category is always one of ctx.expCats / ctx.incCats (it also decides the type);
@@ -34,7 +36,11 @@ import type {
   Availability,
   InboxEntry,
   LetterDraft,
+  LineDraft,
+  ListenEvent,
+  ListenStart,
   NudgeDraft,
+  ReceiptResult,
   ParsedEntry,
   SuitoAi,
 } from '../../ai/contract';
@@ -51,11 +57,21 @@ export interface SuitoAiNative {
   pickNudge(reqJson: string): Promise<{ text: string } | null>;
   ask(reqJson: string): Promise<AskResult>;
   cancelAsk(requestId: string): void;
+  startListening(locale: string): Promise<ListenStart>;
+  stopListening(): Promise<string | null>;
+  cancelListening(): void;
+  scanReceipt(ctxJson: string): Promise<ReceiptResult>;
+  wordLine(reqJson: string): Promise<{ text: string } | null>;
   writeSiriSnapshot(json: string): Promise<void>;
   readSiriInbox(): Promise<string>;
   clearSiriInbox(ids: string[]): Promise<void>;
   setSpotlight(enabled: boolean, entriesJson: string): Promise<void>;
-  addListener(event: 'onAskText', listener: (event: AskTextEvent) => void): Subscription;
+  addListener<E extends keyof NativeEvents>(event: E, listener: (event: NativeEvents[E]) => void): Subscription;
+}
+
+export interface NativeEvents {
+  onAskText: AskTextEvent;
+  onListen: ListenEvent;
 }
 
 async function orNull<T>(p: () => Promise<T | null>): Promise<T | null> {
@@ -76,6 +92,12 @@ function parseInbox(json: string): InboxEntry[] {
 }
 
 export function createNativeSuitoAi(mod: SuitoAiNative): SuitoAi {
+  let listenSub: Subscription | null = null;
+  const dropListenSub = () => {
+    listenSub?.remove();
+    listenSub = null;
+  };
+
   return {
     availability: () => mod.availability(),
 
@@ -100,6 +122,44 @@ export function createNativeSuitoAi(mod: SuitoAiNative): SuitoAi {
     },
 
     cancelAsk: (requestId) => mod.cancelAsk(requestId),
+
+    startListening: async (locale, onEvent) => {
+      dropListenSub();
+      listenSub = mod.addListener('onListen', onEvent);
+      let start: ListenStart;
+      try {
+        start = await mod.startListening(locale);
+      } catch {
+        start = 'unavailable';
+      }
+      if (start !== 'started') dropListenSub();
+      return start;
+    },
+    stopListening: async () => {
+      try {
+        const text = await mod.stopListening();
+        return text?.trim() ? text.trim() : null;
+      } catch {
+        return null;
+      } finally {
+        dropListenSub();
+      }
+    },
+    cancelListening: () => {
+      dropListenSub();
+      mod.cancelListening();
+    },
+
+    scanReceipt: async (ctx) => {
+      try {
+        return await mod.scanReceipt(JSON.stringify(ctx));
+      } catch {
+        return { status: 'none' };
+      }
+    },
+
+    wordLine: (req): Promise<LineDraft> =>
+      req.facts.length ? orNull(() => mod.wordLine(JSON.stringify(req))) : Promise.resolve(null),
 
     writeSiriSnapshot: (snapshot) => mod.writeSiriSnapshot(JSON.stringify(snapshot)),
     readSiriInbox: async () => parseInbox(await mod.readSiriInbox()),
