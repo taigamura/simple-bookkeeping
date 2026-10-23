@@ -53,6 +53,8 @@ import {
   type ImportSkipTally,
 } from '../domain';
 import { buildFacts, buildHandoffPrompt, buildSiriSnapshot } from '../ai';
+import { useOnDeviceAi } from '../ai/AiProvider';
+import type { ParsedEntry } from '../ai/contract';
 import { useAiFeatures } from '../ai/useAiFeatures';
 import { detectLanguage, strings } from '../i18n';
 import { entrySaved } from '../platform/haptics';
@@ -70,6 +72,7 @@ import { easings, metrics, useMotion, useTheme, withAppDelay, withAppTiming } fr
 import { SaveWave } from '../ui';
 import { AppShell } from './AppShell';
 import { BottomSheet, SHEET_ANIMATION_DURATION } from './BottomSheet';
+import { CalendarOrb, ORB_RESERVE } from './CalendarOrb';
 import { NativeTabHost } from './NativeTabHost';
 import { NATIVE_TABS } from './nativeTabs';
 import { TabBar } from './TabBar';
@@ -423,6 +426,11 @@ function Shell({
   // repeat preset to monthly. Scoped to that entry so no other edit inherits it.
   const [repeatPresetFor, setRepeatPresetFor] = useState<string | null>(null);
   const [entryContentHeight, setEntryContentHeight] = useState(0);
+  // Calendar orb: the voice parse the next Entry sheet opens with, and the
+  // month an orb-opened Ask is about (null = the Summary's unscoped Ask).
+  const [entryPrefill, setEntryPrefill] = useState<ParsedEntry | undefined>(undefined);
+  const [askScope, setAskScope] = useState<{ y: number; m: number } | null>(null);
+  const orbOn = useOnDeviceAi();
 
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
   // real current month, with the selected day defaulting to today.
@@ -534,6 +542,20 @@ function Shell({
   // openEntry(): the ＋ button — always create mode (clear any prior editing).
   const openEntry = () => {
     setEditing(null);
+    setEntryPrefill(undefined);
+    setEntryContentHeight(0);
+    setSheet('entry');
+  };
+
+  // Calendar orb (PRD #145). Tap: Ask about the visible month. Hold + speak:
+  // a create-mode Entry sheet filled from the parse (Save is still a tap).
+  const openAsk = (scope: { y: number; m: number } | null) => {
+    setAskScope(scope);
+    setSheet('ask');
+  };
+  const openVoiceEntry = (entry: ParsedEntry) => {
+    setEditing(null);
+    setEntryPrefill(entry);
     setEntryContentHeight(0);
     setSheet('entry');
   };
@@ -542,6 +564,7 @@ function Shell({
   // Calendar returns to it after save/delete.
   const openEdit = (entry: Transaction) => {
     setEditing(entry);
+    setEntryPrefill(undefined);
     setEntryContentHeight(0);
     setSelectedDay(entry.day);
     setSheet('entry');
@@ -991,7 +1014,7 @@ function Shell({
         ai={{
           state: state.ai,
           today: { y: todayDate.y, m: todayDate.m },
-          onAsk: () => setSheet('ask'),
+          onAsk: () => openAsk(null),
           onSetLetterDismissed: (key, dismissed) =>
             updateAi((ai) =>
               ai.letters[key]
@@ -1002,6 +1025,37 @@ function Shell({
             updateAi((ai) => (ai.nudge ? { ...ai, nudge: { ...ai.nudge, dismissed: true } } : ai)),
         }}
       />
+    );
+
+  // renderBody(): `renderTab` plus the Calendar orb (PRD #145) when the
+  // on-device model is available. The Calendar gives up a bottom band of
+  // `ORB_RESERVE` so the orb, floating just above the ＋, never covers the grid,
+  // the day list or the bar; Summary is untouched.
+  // The custom bar floats over its tab layers (they are absoluteFill, so the
+  // TabSwitcher padding doesn't reach them); the native Scene ends at the bar.
+  const orbBarInset = NATIVE_TABS ? 0 : metrics.tabBarHeight + insets.bottom;
+  const renderBody = (which: Tab) =>
+    which === 'calendar' && orbOn ? (
+      <View style={styles.flex}>
+        <View style={[styles.flex, { marginBottom: ORB_RESERVE + orbBarInset }]}>
+          {renderTab(which)}
+        </View>
+        <CalendarOrb
+          active={tab === 'calendar' && sheet === null}
+          barInset={orbBarInset}
+          locale={locale}
+          parseContext={() => ({
+            expCats: state.expCats,
+            incCats: state.incCats,
+            today: todayDate,
+            locale,
+          })}
+          onAsk={() => openAsk({ y: cursor.y, m: cursor.m })}
+          onParsed={openVoiceEntry}
+        />
+      </View>
+    ) : (
+      renderTab(which)
     );
 
   return (
@@ -1015,14 +1069,14 @@ function Shell({
         // iOS: the system UITabBar (genuine Liquid Glass on iOS 26). It owns
         // the tab switch animation and the bottom inset itself.
         <View style={styles.body}>
-          <NativeTabHost tab={tab} onSelect={selectTab} onAdd={openEntry} render={renderTab} />
+          <NativeTabHost tab={tab} onSelect={selectTab} onAdd={openEntry} render={renderBody} />
         </View>
       ) : (
         <>
           <TabSwitcher
             tab={tab}
             style={[styles.body, { paddingBottom: metrics.tabBarHeight + insets.bottom }]}
-            render={renderTab}
+            render={renderBody}
           />
           <TabBar tab={tab} onSelect={selectTab} onAdd={openEntry} />
         </>
@@ -1055,6 +1109,7 @@ function Shell({
             symbol={symbol}
             editing={editing ?? undefined}
             initialRepeat={editing && editing.id === repeatPresetFor ? 'monthly' : undefined}
+            prefill={sheet === 'entry' ? entryPrefill : undefined}
             repeatManagement={sheet === 'repeat-entry'}
             onSave={handleSubmit}
             onDelete={handleDelete}
@@ -1095,6 +1150,7 @@ function Shell({
           ask={
             <AskSheet
               locale={locale}
+              scope={askScope ?? undefined}
               buildHandoff={buildHandoff}
               onClose={closeSheet}
               ScrollContainer={BottomSheetScrollView}

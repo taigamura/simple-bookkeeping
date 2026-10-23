@@ -271,6 +271,22 @@ export interface Strings {
     handoffExplain: string;
     handoffShare: string;
     handoffBack: string;
+    /** The Calendar orb (voice entry + Ask). */
+    orb: {
+      label: string;
+      hint: string;
+      listening: string;
+      reading: string;
+      tooShort: string;
+      notHeard: string;
+      notUnderstood: string;
+      denied: string;
+      unavailable: string;
+      /** The month an orb-opened Ask is about. */
+      scopeLabel: (y: number, m: number) => string;
+      /** What is sent to the model for a scoped question (the shown text stays the question). */
+      scopeQuestion: (y: number, m: number, question: string) => string;
+    };
     letterTitle: (m: number) => string;
     letterDismiss: string;
     letterReopen: (m: number) => string;
@@ -566,6 +582,19 @@ export const en: Strings = {
     handoffExplain: 'Suito sends nothing. You pick the app in the share sheet.',
     handoffShare: 'Share',
     handoffBack: 'Back',
+    orb: {
+      label: 'Suito AI',
+      hint: 'Tap to ask about this month. Touch and hold to say an entry, then let go.',
+      listening: 'Listening',
+      reading: 'Reading',
+      tooShort: 'Hold a little longer while you speak',
+      notHeard: "Didn't catch that",
+      notUnderstood: "Couldn't find an entry in that",
+      denied: 'Allow Microphone and Speech Recognition for Suito in Settings. Tapping still opens Ask.',
+      unavailable: "Voice entry isn't available on this iPhone. Tap to ask instead.",
+      scopeLabel: (y, m) => `${MONTHS_EN[m]} ${y}`,
+      scopeQuestion: (y, m, q) => `About ${MONTHS_EN[m]} ${y}: ${q}`,
+    },
     letterTitle: (m) => `Your ${MONTHS_EN[m]} recap`,
     letterDismiss: 'Hide recap',
     letterReopen: (m) => `Read your ${MONTHS_EN[m]} recap`,
@@ -849,6 +878,19 @@ export const ja: Strings = {
     handoffExplain: 'Suitoからは何も送信しません。共有シートで送り先を選んでください。',
     handoffShare: '共有する',
     handoffBack: '戻る',
+    orb: {
+      label: 'Suito AI',
+      hint: 'タップで今月について聞けます。長押ししながら話すと記録を入力できます。',
+      listening: '聞いています',
+      reading: '読み取り中',
+      tooShort: 'もう少し長く押したまま話してください',
+      notHeard: '聞き取れませんでした',
+      notUnderstood: '記録の内容を読み取れませんでした',
+      denied: '設定でSuitoのマイクと音声認識を許可してください。タップで「聞く」は使えます。',
+      unavailable: 'このiPhoneでは声の入力が使えません。タップで聞いてください。',
+      scopeLabel: (y, m) => `${y}年${m + 1}月`,
+      scopeQuestion: (y, m, q) => `${y}年${m + 1}月について: ${q}`,
+    },
     letterTitle: (m) => `${m + 1}月のふりかえり`,
     letterDismiss: 'ふりかえりを閉じる',
     letterReopen: (m) => `${m + 1}月のふりかえりを読む`,
