@@ -70,6 +70,9 @@ interface EntrySheetProps {
   editing?: Transaction;
   /** Draft supplied by quick-entry flows before the sheet is shown. */
   initialDraft?: EntryDraft;
+  /** AI result (Calendar orb voice entry) applied once on open, like the AI
+   *  text line's parse: fills what it found, nothing is saved until the CTA. */
+  prefill?: ParsedEntry;
   /** Settings management route: recurring cadences only and explicit stop copy. */
   repeatManagement?: boolean;
   /** Collects the draft on save; the host stores or splits the corresponding ledger item. */
@@ -253,6 +256,7 @@ export function EntrySheet({
   symbol,
   editing,
   initialDraft,
+  prefill,
   repeatManagement = false,
   onSave,
   onDelete,
@@ -376,6 +380,14 @@ export function EntrySheet({
     }
     if (parsed.note) setNote(parsed.note);
   };
+  const appliedPrefill = useRef<ParsedEntry | undefined>(undefined);
+  useEffect(() => {
+    if (!prefill || appliedPrefill.current === prefill) return;
+    appliedPrefill.current = prefill;
+    applyParsed(prefill);
+    // applyParsed reads current form state; re-run only for a new prefill.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
   const parseContext: ParseContext = {
     expCats,
     incCats,

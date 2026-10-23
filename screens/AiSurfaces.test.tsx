@@ -9,7 +9,7 @@ import { Share } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { AiProvider } from '../ai/AiProvider';
-import type { Availability, SuitoAi } from '../ai/contract';
+import type { Availability, ParsedEntry, SuitoAi } from '../ai/contract';
 import { DEFAULT_AI_STATE, type AiState } from '../ai/state';
 import { createFakeSuitoAi } from '../ai/fake';
 import { CURRENCIES, type Transaction } from '../domain';
@@ -161,7 +161,7 @@ describe('Summary AI surfaces', () => {
 
 // ------------------------------------------------------------------- Entry
 
-function renderEntry(ai: SuitoAi, onSave = jest.fn()) {
+function renderEntry(ai: SuitoAi, onSave = jest.fn(), prefill?: ParsedEntry) {
   render(
     withAi(
       ai,
@@ -173,6 +173,7 @@ function renderEntry(ai: SuitoAi, onSave = jest.fn()) {
         day={23}
         today={{ y: 2026, m: 9, day: 23 }}
         symbol="¥"
+        prefill={prefill}
         onSave={onSave}
         onClose={() => {}}
       />,
@@ -180,6 +181,23 @@ function renderEntry(ai: SuitoAi, onSave = jest.fn()) {
   );
   return onSave;
 }
+
+describe('Entry prefill (Calendar orb voice entry)', () => {
+  it('opens with the parsed fields filled; Save is still the user’s tap', async () => {
+    const onSave = renderEntry(createFakeSuitoAi(), jest.fn(), {
+      type: 'expense',
+      amount: 850,
+      category: 'Food',
+      date: { y: 2026, m: 9, day: 22 },
+      note: 'lunch',
+    });
+    await settle();
+    expect(screen.getByText('¥850')).toBeTruthy();
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByLabelText(strings.entry.addExpense));
+    expect(onSave.mock.calls[0][0]).toMatchObject({ amountStr: '850', category: 'Food', note: 'lunch', day: 22 });
+  });
+});
 
 describe('Entry text line', () => {
   it('is absent when the on-device model is unavailable', async () => {
