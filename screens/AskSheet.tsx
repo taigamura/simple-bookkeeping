@@ -49,6 +49,9 @@ export interface AskSheetProps {
   /** The prompt previewed and shared by 「ChatGPTで聞く」. */
   buildHandoff: (question: string) => string;
   onClose: () => void;
+  /** Calendar orb: the month this conversation is about (m is 0-based). Shown
+   *  under the title and prefixed to every question sent to the model. */
+  scope?: { y: number; m: number };
   /** gorhom's BottomSheetScrollView in the app; RN ScrollView in tests. */
   ScrollContainer?: ComponentType<ScrollContainerProps>;
   /** gorhom's BottomSheetTextInput in the app, so the sheet rides the keyboard. */
@@ -69,6 +72,7 @@ export function AskSheet({
   locale,
   buildHandoff,
   onClose,
+  scope,
   ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
   InputComponent = TextInput,
 }: AskSheetProps) {
@@ -114,7 +118,8 @@ export function AskSheet({
         next[next.length - 1] = { role: 'assistant', text, pending };
         return next;
       });
-    ai.ask({ requestId, question, history, locale }, (soFar) => {
+    const sent = scope ? strings.ai.orb.scopeQuestion(scope.y, scope.m, question) : question;
+    ai.ask({ requestId, question: sent, history, locale }, (soFar) => {
       if (inFlight.current === requestId) setAnswer(soFar, true);
     }).then(
       (result) => {
@@ -194,7 +199,11 @@ export function AskSheet({
 
   const openHandoff = () => {
     if (!handoffQuestion) return;
-    setHandoff(buildHandoff(handoffQuestion));
+    setHandoff(
+      buildHandoff(
+        scope ? strings.ai.orb.scopeQuestion(scope.y, scope.m, handoffQuestion) : handoffQuestion,
+      ),
+    );
   };
 
   return (
@@ -203,6 +212,19 @@ export function AskSheet({
         <Txt variant="screenTitle">{strings.ai.askTitle}</Txt>
         <IconButton name="x" accessibilityLabel={strings.nav.close} onPress={onClose} />
       </View>
+      {scope && (
+        <View
+          testID="ask-scope"
+          style={[styles.scope, { backgroundColor: colors.card2 }]}
+          accessible
+          accessibilityLabel={strings.ai.orb.scopeLabel(scope.y, scope.m)}
+        >
+          <Feather name="calendar" size={13} color={colors.positive} />
+          <Txt variant="microLabel" tone="positive">
+            {strings.ai.orb.scopeLabel(scope.y, scope.m)}
+          </Txt>
+        </View>
+      )}
 
       <ScrollContainer
         style={styles.scroll}
@@ -342,6 +364,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  scope: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: metrics.chipRadius,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   scroll: { flex: 1, minHeight: 0 },
   transcript: { gap: 14, paddingBottom: 8 },
