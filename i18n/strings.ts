@@ -281,6 +281,15 @@ export interface Strings {
     nudgesExplain: string;
     spotlightSwitch: string;
     spotlightExplain: string;
+    /** Calendar one-liners (PRD #145). */
+    calendar: {
+      forecastLabel: string;
+      dayNoteLabel: string;
+      repeatLabel: string;
+      repeatAccept: string;
+      repeatAcceptA11y: string;
+      repeatDismiss: string;
+    };
   };
 }
 
@@ -560,6 +569,14 @@ export const en: Strings = {
     nudgesExplain: 'A monthly recap and one small observation, written by the model on this iPhone. Everything stays on this iPhone.',
     spotlightSwitch: 'Siri & Search',
     spotlightExplain: 'Lets Siri and Spotlight find your entries. The index stays on this iPhone.',
+    calendar: {
+      forecastLabel: 'Month-end forecast',
+      dayNoteLabel: 'About this day',
+      repeatLabel: 'Repeat suggestion',
+      repeatAccept: 'Make monthly',
+      repeatAcceptA11y: 'Make it a monthly repeat',
+      repeatDismiss: 'Hide suggestion',
+    },
   },
 };
 
@@ -828,5 +845,13 @@ export const ja: Strings = {
     nudgesExplain: '月のふりかえりと小さな気づきを、このiPhoneの中のAIが書きます。データは外に出ません。',
     spotlightSwitch: 'Siriと検索',
     spotlightExplain: 'Siriとスポットライト検索で記録を探せます。索引はこのiPhoneの中だけです。',
+    calendar: {
+      forecastLabel: '月末の見込み',
+      dayNoteLabel: 'この日のこと',
+      repeatLabel: 'くり返しの提案',
+      repeatAccept: '毎月にする',
+      repeatAcceptA11y: '毎月のくり返しにする',
+      repeatDismiss: '提案を閉じる',
+    },
   },
 };
