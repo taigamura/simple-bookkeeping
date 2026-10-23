@@ -13,15 +13,15 @@ _Last updated: 2026-10-23_
   verified via API 2026-10-03). Version **1.0 is live** on the App Store.
 - **1.0.1 (build 69, native tab bar + new search-focused listing) is live**
   (READY_FOR_SALE, checked 2026-10-07). 0 ratings. Next change = new version.
-- **1.1.0 (Suito AI) is on TestFlight** (2026-10-23): latest is **build 72**
-  (`build-1792740825890.ipa`, `feat/suito-ai` `85002a2`, EAS submission
-  `a0fe8931`): PRD #145 (Calendar orb, receipt scan, forecast/day note/repeat
-  suggestion) + `NSPhotoLibraryUsageDescription`. Build 71 (`281173dd`) was
-  rejected by Apple with ITMS-90683 (missing photo-library purpose string; a
-  linked framework references the API). PR #144 not merged. Not submitted
-  for review.
-- Ship with `/ship-ios` (config: `.claude/ship.json`). Submit needs
-  eas-cli >= 25 now: 21.8.0 fails with a bare "GraphQL request failed".
+- **1.1.0 (Suito AI) is on TestFlight** (2026-10-23): latest is **build 73**
+  (`build-1792747682729.ipa`, `feat/suito-ai` `b41c397`, EAS submission
+  `4af65823`): PRD #145 (Calendar orb that floats like voice-memo's, receipt
+  scan, forecast/day note/repeat suggestion) + `NSPhotoLibraryUsageDescription`.
+  Build 71 was rejected (ITMS-90683, missing photo-library string); 72 fixed
+  it. PR #144 not merged. Not submitted for review.
+- Ship with `/ship-ios` (config: `.claude/ship.json`). Build and submit both
+  need eas-cli >= 25 now (`npx -y eas-cli@25.3.0`); 21.8.0, still the Mac's
+  global, fails with a bare "GraphQL request failed".
 
 ## Recent decisions
 
