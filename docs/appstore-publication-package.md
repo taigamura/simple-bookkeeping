@@ -8,6 +8,8 @@ This document contains the complete App Store publication materials for the bili
 
 ## Part 1: English App Store Listing
 
+> **Superseded 2026-10-03.** Parts 1–2 are the V1 launch copy. The current listing lives in [`store.config.json`](../store.config.json) (search-focused rewrite) and syncs to App Store Connect with `npm run listing` (dry run) / `npm run listing -- --push`.
+
 ### App Name
 **Suito**
 
@@ -213,8 +215,8 @@ Each screenshot should show **real app UI** with **fictitious, non-sensitive dat
 **Screenshot 4: Settings (all locales)**
 - Shows Settings view with currency, categories, import/export, and data options visible.
 - Demonstrates theme toggle or lock option if relevant.
-- Caption (EN): "Import Zaim CSV or export to backup. Control theme and optional lock."
-- Caption (JA): "Zaim CSVを読み込み、バックアップを作成。テーマとロックを設定します。"
+- Caption (EN): "Import Zaim CSV or export to backup. Control theme and currency."
+- Caption (JA): "Zaim CSVを読み込み、バックアップを作成。テーマと通貨を設定します。"
 
 **Screenshot 5 (optional, recommended): Budgets sheet (all locales)**
 - Shows Budgets view in per-category mode with 3–4 budget amounts and a "Budget left" bar.
