@@ -17,11 +17,13 @@ _Last updated: 2026-10-23_
 
 ## Recent decisions
 
-- **Suito AI (ADR-0006, not built):** on-device Foundation Models (plain-words
-  entry, monthly letter, model-picked nudges, Ask sheet) + opt-in Apple cloud
-  model + ChatGPT share handoff + Siri intents + Spotlight. JS-written App
-  Group snapshot is the Swift bridge. Min iOS 26; EAS cloud build. Stamp-card
-  twist dropped. Next: `/to-prd`.
+- **Suito AI 1.1.0 (ADR-0006, PRD #143, branch `feat/suito-ai`):** on-device
+  Foundation Models (plain-words entry, monthly letter, model-picked nudges,
+  Ask sheet) + ChatGPT share hand-off + Siri App Intents + Spotlight (on by
+  default). Swift reads a JS-written snapshot in the app's Documents dir (no
+  App Group). Apple cloud model compiled out (privacy gate unverified). Min
+  iOS 26; builds on the local Mac. Stamp-card twist dropped. `ja.lproj` now
+  exists (Siri JA phrases), so UIKit system strings show in Japanese.
 
 - **App Store listing lives in `store.config.json`** (EAS Metadata format);
   `npm run listing` diffs it against ASC, `-- --push` writes it. Search-focused
@@ -41,13 +43,23 @@ _Last updated: 2026-10-23_
 
 - **1.0.1 is live without the real-iPhone check** (native glass bar; ＋ opens
   the Entry sheet *above* the bar; nothing hidden behind it). Check on device.
-- Privacy gate for Suito AI: does Apple count app → Private Cloud Compute
-  requests as data collection? Answer before building the cloud switch.
+- **Suito AI on-device checklist** (TestFlight): see PRD #143 testing section
+  + the Swift slice checklist in the PR. Model quality, Siri phrases, Spotlight,
+  inbox merge, hidden state on non-AI iPhones are untestable on web.
+- Privacy gate for the Apple cloud model: does Apple count app → Private Cloud
+  Compute requests as data collection? Answer before adding the cloud switch.
+- Listing: add AI keywords (AI家計簿, オフラインAI) to `store.config.json`
+  before submitting 1.1.0 for review.
 - Track impressions → page views → downloads in ASC Analytics; baseline is
   pre-2026-10-03 (old listing).
 
 ## Environment gotchas
 
+- WSL has 7 GB RAM: run jest with `--maxWorkers=1`/`2` and Playwright with
+  `--workers=1`; default jest workers crashed WSL. Jest ignores `.claude/`
+  (agent worktrees).
+- e2e `toHaveScreenshot` tolerance (1%) hides text changes, and plain
+  `--update-snapshots` only rewrites failures: use `--update-snapshots=all`.
 - The Mac build server (`192.168.50.175`) is a 2012 dual-core i5. Builds take
   20–75 min. Spotlight indexing a fresh repo copy can push load past 200 and
   time out fastlane. Run builds with `FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT=120`.
