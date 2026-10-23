@@ -4,7 +4,7 @@
 
 import AppIntents
 import Foundation
-import SuitoAi
+internal import SuitoAi
 
 // MARK: - Category
 

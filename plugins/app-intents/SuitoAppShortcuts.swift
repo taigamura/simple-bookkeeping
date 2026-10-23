@@ -1,6 +1,9 @@
 // Compiled into the MAIN APP TARGET only (copied by plugins/withSuitoAppIntents.js).
 // App Shortcuts surface the intents in Siri, Spotlight, Shortcuts and the Action Button picker
-// with no setup. Japanese and English phrases share one list (no per-locale string catalog yet).
+// with no setup. Base phrases are English; the Japanese phrases are their translations in
+// ja.lproj/AppShortcuts.strings (written by the plugin: JA_APP_SHORTCUTS). Siri only matches
+// phrases for the languages the app is localized in, so JA phrases must live there, one
+// translation per English phrase (keep the two lists aligned).
 // Phrases with \(\.$category) are filled from CategoryQuery.suggestedEntities() whenever
 // SuitoShortcutsUpdater.update() runs (after each Siri snapshot write).
 
@@ -11,12 +14,11 @@ struct SuitoAppShortcuts: AppShortcutsProvider {
     AppShortcut(
       intent: AddEntryIntent(),
       phrases: [
-        "\(.applicationName)で記録",
-        "\(.applicationName)に記録",
-        "\(.applicationName)で\(\.$category)を記録",
         "Add an entry in \(.applicationName)",
         "Log an expense in \(.applicationName)",
+        "Add to \(.applicationName)",
         "Log \(\.$category) in \(.applicationName)",
+        "Record \(\.$category) in \(.applicationName)",
       ],
       shortTitle: "Add Entry",
       systemImageName: "plus.circle"
@@ -24,10 +26,8 @@ struct SuitoAppShortcuts: AppShortcutsProvider {
     AppShortcut(
       intent: PeriodSummaryIntent(),
       phrases: [
-        "\(.applicationName)の収支",
-        "\(.applicationName)で\(\.$period)の収支",
-        "\(.applicationName)で\(\.$period)いくら使った",
         "\(.applicationName) summary",
+        "Show my \(.applicationName) balance",
         "\(.applicationName) summary for \(\.$period)",
         "How much did I spend \(\.$period) in \(.applicationName)",
       ],
@@ -37,10 +37,8 @@ struct SuitoAppShortcuts: AppShortcutsProvider {
     AppShortcut(
       intent: CategorySpendingIntent(),
       phrases: [
-        "\(.applicationName)で\(\.$category)はいくら",
-        "\(.applicationName)の\(\.$category)",
-        "\(.applicationName)でカテゴリ別の支出",
         "\(\.$category) spending in \(.applicationName)",
+        "How much on \(\.$category) in \(.applicationName)",
         "Spending by category in \(.applicationName)",
       ],
       shortTitle: "Spending by Category",
@@ -49,7 +47,6 @@ struct SuitoAppShortcuts: AppShortcutsProvider {
     AppShortcut(
       intent: FindEntriesIntent(),
       phrases: [
-        "\(.applicationName)で記録を探す",
         "Find entries in \(.applicationName)",
       ],
       shortTitle: "Find Entries",

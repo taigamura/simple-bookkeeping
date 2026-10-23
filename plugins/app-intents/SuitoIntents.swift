@@ -4,7 +4,7 @@
 
 import AppIntents
 import Foundation
-import SuitoAi
+internal import SuitoAi
 
 // MARK: - Add entry
 
@@ -13,10 +13,10 @@ struct AddEntryIntent: AppIntent {
   static let description: IntentDescription? = IntentDescription("Records an expense or income in Suito. It shows up in the app the next time you open it.")
   static let openAppWhenRun = false
 
-  @Parameter(title: "Amount", requestValueDialog: "How much? / いくら？")
+  @Parameter(title: "Amount", requestValueDialog: "How much?")
   var amount: Int
 
-  @Parameter(title: "Category", requestValueDialog: "Which category? / どのカテゴリ？")
+  @Parameter(title: "Category", requestValueDialog: "Which category?")
   var category: CategoryEntity
 
   @Parameter(title: "Note")
@@ -127,7 +127,7 @@ struct CategorySpendingIntent: AppIntent {
   static let description: IntentDescription? = IntentDescription("How much went to one category in a month or a range of months.")
   static let openAppWhenRun = false
 
-  @Parameter(title: "Category", requestValueDialog: "Which category? / どのカテゴリ？")
+  @Parameter(title: "Category", requestValueDialog: "Which category?")
   var category: CategoryEntity
 
   @Parameter(title: "Period", default: .thisMonth)
