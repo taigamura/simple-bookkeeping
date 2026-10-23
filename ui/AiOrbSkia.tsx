@@ -3,11 +3,11 @@
  * every frame computed in a worklet on the UI thread so it never competes with
  * speech recognition or JS.
  *
- * Time only advances while listening or thinking (a frame callback that is
- * switched off in idle and under reduced motion), so the idle orb is still:
- * ADR-0003 forbids idle motion.
+ * Time always advances while motion is on, so the idle orb turns, bobs and
+ * breathes like voice-memo's (ADR-0003 amendment 2026-10-23). Under reduced
+ * motion the frame callback is off and the sphere holds still.
  */
-import { Canvas, Points } from '@shopify/react-native-skia';
+import { Canvas, Circle, Group, Points, RadialGradient, vec } from '@shopify/react-native-skia';
 import React, { useEffect, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useDerivedValue, useFrameCallback, useSharedValue } from 'react-native-reanimated';
@@ -19,7 +19,7 @@ const N = 150;
 
 export function AiOrbSkia(props: AiOrbProps) {
   const { size, state, level } = props;
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const { enabled } = useMotion();
   const seeds = useMemo(() => fibonacciSphere(N), []);
 
@@ -33,8 +33,8 @@ export function AiOrbSkia(props: AiOrbProps) {
   }, false);
 
   useEffect(() => {
-    clock.setActive(enabled && state !== 'idle');
-  }, [clock, enabled, state]);
+    clock.setActive(enabled);
+  }, [clock, enabled]);
 
   useEffect(() => {
     const target = state === 'listen' && enabled ? Math.max(0, Math.min(1, level)) : 0;
@@ -61,9 +61,21 @@ export function AiOrbSkia(props: AiOrbProps) {
   const front = useDerivedValue(() => frame.value.buckets[2]);
   const glow = useDerivedValue(() => frame.value.accent);
 
+  // voice-memo's ground shadow: a squashed radial fade under the sphere that
+  // swells a little with the voice.
+  const R = size * 0.27;
+  const shadowC = vec(size / 2, size / 2 + R * 1.35);
+  const shadowR = useDerivedValue(() => R * (0.9 + lv.value * 0.15));
+  const shade = mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(28,28,28,0.09)';
+
   return (
-    <OrbShell {...props}>
+    <OrbShell {...props} shadow={false}>
       <Canvas style={StyleSheet.absoluteFill}>
+        <Group transform={[{ scaleY: 0.22 }]} origin={shadowC}>
+          <Circle c={shadowC} r={shadowR}>
+            <RadialGradient c={shadowC} r={shadowR} colors={[shade, 'rgba(0,0,0,0)']} />
+          </Circle>
+        </Group>
         <Points points={back} mode="points" color={colors.ink} opacity={0.28} strokeWidth={1.4} strokeCap="round" />
         <Points points={mid} mode="points" color={colors.ink} opacity={0.5} strokeWidth={1.8} strokeCap="round" />
         <Points points={front} mode="points" color={colors.ink} opacity={0.85} strokeWidth={2.2} strokeCap="round" />

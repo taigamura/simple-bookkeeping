@@ -1,28 +1,30 @@
 /**
- * AiOrb — the Calendar's Suito AI button (PRD #145): a small sphere of ink
- * points, ported from voice-memo's 木霊 (Kodama) RecordOrb.
+ * AiOrb — the Calendar's Suito AI button (PRD #145): a free-floating sphere of
+ * ink points, ported from voice-memo's 木霊 (Kodama) RecordOrb. No disc: like
+ * voice-memo it hovers over a soft ground shadow.
  *
- * - `idle`: a still sphere on a raised disc. ADR-0003 (nothing plays on idle)
- *   and ADR-0006 (no looping mascots) both apply, so idle never turns.
- * - `listen`: the mic level scatters the points outward, a few glow in the
- *   accent, and the disc takes an accent ring.
- * - `think`: the points gather into latitude rings (orbiting on iOS) while the
- *   transcript is read; the ring stays, at half strength.
+ * - `idle`: the sphere slowly turns, bobs and breathes (the one sanctioned idle
+ *   loop, ADR-0003 amendment 2026-10-23: Taiga wants it alive, as in voice-memo).
+ * - `listen`: the mic level scatters the points outward and a few glow in the
+ *   accent.
+ * - `think`: the points gather into orbiting latitude rings while the
+ *   transcript is read.
  *
  * Two renderers share these props and the geometry in `projectOrb`:
  * - iOS: Skia + Reanimated (`AiOrbSkia`), every frame on the UI thread.
- * - Web and Jest: a static stand-in made of plain Views (Skia needs CanvasKit on
- *   web; the jest preset has no Skia). It re-renders per level event, so the
- *   scatter is still visible in screenshots, and it publishes the state as
- *   `accessibilityValue.text` (`aria-valuetext` on web) for tests.
+ * - Web and Jest: a stand-in made of plain Views (Skia needs CanvasKit on web;
+ *   the jest preset has no Skia). On web it animates on requestAnimationFrame
+ *   at ~30 fps; it publishes the state as `accessibilityValue.text`
+ *   (`aria-valuetext` on web) for tests.
  *
- * Reduced motion (`useMotion().enabled === false`): the end state of each
- * phase, no scatter, no spin. The ring and accent points still say "listening".
+ * Reduced motion (`useMotion().enabled === false`): time stops, so the sphere
+ * is still and shows the end state of each phase. Accent points still say
+ * "listening".
  */
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { shadows, useMotion, useTheme } from '../theme';
+import { useMotion, useTheme } from '../theme';
 
 export type OrbState = 'idle' | 'listen' | 'think';
 
@@ -44,8 +46,8 @@ export interface AiOrbProps {
 }
 
 export const LONG_PRESS_MS = 250;
-/** Disc diameter as a share of the hit area. */
-export const DISC_RATIO = 0.86;
+/** Bob amplitude as a share of the hit area (voice-memo floats about this much). */
+export const BOB_RATIO = 0.05;
 
 // ---------------------------------------------------------------- geometry
 
@@ -71,7 +73,7 @@ export function fibonacciSphere(n: number): Seed[] {
 }
 
 export interface OrbFrameInput {
-  /** Seconds of animated time (frozen while idle). */
+  /** Seconds of animated time (frozen under reduced motion). */
   t: number;
   /** 0..1 blend into listening. */
   rec: number;
@@ -100,7 +102,8 @@ export const ACCENT_EVERY = 11;
 export function projectOrb(seeds: Seed[], { t, rec, think, level, size }: OrbFrameInput): OrbFrame {
   'worklet';
   const cx = size / 2;
-  const cy = size / 2;
+  // Hover: a slow bob, as in voice-memo.
+  const cy = size / 2 + Math.sin(t * 1.0) * size * BOB_RATIO;
   const R = size * 0.27;
   const rot = 0.6 + t * (0.25 + think * 0.65);
   const ca = Math.cos(rot);
@@ -129,7 +132,8 @@ export function projectOrb(seeds: Seed[], { t, rec, think, level, size }: OrbFra
     const Y = y * ct - Z * st;
     Z = y * st + Z * ct;
     const scatter = 1 + level * 0.45 * (0.4 + s.k) * (0.6 + 0.4 * Math.sin(t * 6 + s.k * 20));
-    const push = 1 * (1 - rec) + scatter * rec;
+    const breathe = 1 + Math.sin(t * 1.3 + s.k * 6) * 0.015;
+    const push = breathe * (1 - rec) + scatter * rec;
     const persp = 1 / (1.9 - Z * 0.6);
     const p = { x: cx + X * R * push * persp * 1.6, y: cy + Y * R * push * persp * 1.6 };
     if ((rec > 0.5 || think > 0.5) && i % ACCENT_EVERY === 0) {
@@ -162,7 +166,7 @@ export function AiOrb(props: AiOrbProps) {
 /** Stand-in point count: enough to read as a sphere at ~52 px, cheap as Views. */
 const STATIC_N = 72;
 
-/** Pressable shell shared by both renderers: disc, ring, scale, a11y. */
+/** Pressable shell shared by both renderers: ground shadow, scale, a11y. */
 export function OrbShell({
   size,
   state,
@@ -173,11 +177,12 @@ export function OrbShell({
   accessibilityHint,
   testID,
   style,
+  shadow = true,
   children,
-}: AiOrbProps & { children: React.ReactNode }) {
-  const { colors, mode } = useTheme();
-  const disc = Math.round(size * DISC_RATIO);
+}: AiOrbProps & { shadow?: boolean; children: React.ReactNode }) {
+  const { mode } = useTheme();
   const active = state !== 'idle';
+  const shadowW = Math.round(size * 0.5);
   return (
     <Pressable
       onPress={onPress}
@@ -199,40 +204,50 @@ export function OrbShell({
         style,
       ]}
     >
-      <View
-        testID={testID ? `${testID}-disc` : undefined}
-        pointerEvents="none"
-        style={[
-          styles.disc,
-          shadows.card,
-          {
-            width: disc,
-            height: disc,
-            borderRadius: disc / 2,
-            backgroundColor: colors.card,
-            borderColor: active ? colors.positive : colors.border,
-            borderWidth: active ? 2 : StyleSheet.hairlineWidth,
-            opacity: 1,
-            shadowOpacity: mode === 'dark' ? 0.4 : 0.14,
-          },
-        ]}
-      >
-        {state === 'think' && (
-          // A second, half-strength ring inset in the disc while reading.
-          <View
-            testID={testID ? `${testID}-ring` : undefined}
-            style={[
-              StyleSheet.absoluteFill,
-              { borderRadius: disc / 2, borderWidth: 2, borderColor: colors.positive, opacity: 0.35, margin: 3 },
-            ]}
-          />
-        )}
-      </View>
+      {shadow && (
+        // Flat stand-in for voice-memo's radial ground shadow (Skia draws the real gradient).
+        <View
+          testID={testID ? `${testID}-shadow` : 'orb-shadow'}
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: (size - shadowW) / 2,
+            top: size * 0.86,
+            width: shadowW,
+            height: Math.max(3, Math.round(size * 0.07)),
+            borderRadius: size,
+            // A shadow is dark in both themes (ink turns light in dark mode).
+            backgroundColor: '#000',
+            opacity: mode === 'dark' ? 0.45 : 0.08,
+          }}
+        />
+      )}
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         {children}
       </View>
     </Pressable>
   );
+}
+
+/** Seconds since mount, ticking at ~30 fps on web while `on`; 0 elsewhere. */
+function useWebClock(on: boolean): number {
+  const [t, setT] = useState(0);
+  useEffect(() => {
+    if (!on || Platform.OS !== 'web' || typeof requestAnimationFrame === 'undefined') return;
+    let raf = 0;
+    let last = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      if (now - last >= 33) {
+        last = now;
+        setT((now - start) / 1000);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [on]);
+  return t;
 }
 
 /** Web/Jest renderer: same geometry, drawn once per render with plain Views. */
@@ -241,21 +256,22 @@ export function AiOrbStatic(props: AiOrbProps) {
   const { colors } = useTheme();
   const { enabled } = useMotion();
   const seeds = useMemo(() => fibonacciSphere(STATIC_N), []);
+  const t = useWebClock(enabled);
   const frame = useMemo(
     () =>
       projectOrb(seeds, {
-        // Frozen time: the stand-in never spins, only scatters per level event.
-        t: 0,
+        t,
         rec: state === 'listen' ? 1 : 0,
         think: state === 'think' ? 1 : 0,
         level: state === 'listen' && enabled ? Math.max(0, Math.min(1, level)) : 0,
         size,
       }),
-    [seeds, state, level, enabled, size],
+    [seeds, t, state, level, enabled, size],
   );
-  const dot = (p: OrbPoint, d: number, color: string, opacity: number, key: string) => (
+  const dot = (p: OrbPoint, d: number, color: string, opacity: number, key: string, id?: string) => (
     <View
       key={key}
+      testID={id}
       style={{
         position: 'absolute',
         left: p.x - d / 2,
@@ -273,11 +289,8 @@ export function AiOrbStatic(props: AiOrbProps) {
       {frame.buckets[0].map((p, i) => dot(p, 1.6, colors.ink, 0.28, `b${i}`))}
       {frame.buckets[1].map((p, i) => dot(p, 2, colors.ink, 0.5, `m${i}`))}
       {frame.buckets[2].map((p, i) => dot(p, 2.4, colors.ink, 0.85, `f${i}`))}
-      {frame.accent.map((p, i) => dot(p, 2.8, colors.positive, 0.95, `a${i}`))}
+      {frame.accent.map((p, i) => dot(p, 2.8, colors.positive, 0.95, `a${i}`, 'orb-accent'))}
     </OrbShell>
   );
 }
 
-const styles = StyleSheet.create({
-  disc: { alignItems: 'center', justifyContent: 'center' },
-});

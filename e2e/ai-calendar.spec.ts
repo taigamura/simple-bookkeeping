@@ -151,7 +151,7 @@ test('forecast, day note and repeat suggestion sit in their slots, clear of the 
   await expectClearOfTabBar(page, row, 'repeat row');
 
   await settle(page);
-  await expect(page).toHaveScreenshot('ai-calendar-lines.png', { maxDiffPixelRatio: 0.01 });
+  await expect(page).toHaveScreenshot('ai-calendar-lines.png', { mask: [page.getByTestId('ai-orb')], maxDiffPixelRatio: 0.01 });
 });
 
 test('a past month shows no forecast and the grid does not move', async ({ page }) => {
@@ -213,6 +213,6 @@ test.describe('dark appearance', () => {
     await expect(page.getByTestId('ai-day-note')).toBeVisible();
     await expect(page.getByTestId('ai-repeat')).toContainText('Netflix');
     await settle(page);
-    await expect(page).toHaveScreenshot('ai-calendar-lines-dark.png', { maxDiffPixelRatio: 0.01 });
+    await expect(page).toHaveScreenshot('ai-calendar-lines-dark.png', { mask: [page.getByTestId('ai-orb')], maxDiffPixelRatio: 0.01 });
   });
 });

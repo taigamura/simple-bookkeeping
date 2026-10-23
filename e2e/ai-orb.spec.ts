@@ -12,6 +12,10 @@
  * Screenshots: idle (light + dark), listening with the partial bubble, and the
  * month-scoped Ask. The fake's 80 ms level/partial timer would keep the
  * listening shot moving, so the page clock is paused for that one.
+ *
+ * Motion: the orb floats (turns, bobs, breathes) like voice-memo's. Page shots
+ * mask the moving sphere; the sphere itself is pinned under reduced motion,
+ * where it holds still. A separate test proves it moves when motion is on.
  */
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
@@ -26,6 +30,9 @@ async function load(page: Page, query = '?ai=fake') {
   await expect(page.getByTestId('loading-screen')).toBeHidden({ timeout: OPEN_TIMEOUT });
   await expect(page.getByTestId('tab-bar')).toBeVisible();
 }
+
+/** The animated sphere is masked out of page shots; its look is pinned under reduced motion. */
+const orbMask = (page: Page) => ({ mask: [page.getByTestId('ai-orb')], maxDiffPixelRatio: 0.01 });
 
 async function box(locator: Locator) {
   await expect(locator).toBeVisible();
@@ -70,7 +77,7 @@ test('orb floats centred just above the ＋, clear of the grid and the bar; abse
   await expect(page.getByTestId('ai-orb')).toHaveAttribute('aria-valuetext', 'idle');
   await expect(page.getByTestId('ai-orb')).toHaveAttribute('aria-label', 'Suito AI');
   await expectPlacedAboveFab(page);
-  await expect(page).toHaveScreenshot('ai-orb-calendar-light.png', { maxDiffPixelRatio: 0.01 });
+  await expect(page).toHaveScreenshot('ai-orb-calendar-light.png', orbMask(page));
 
   await page.getByRole('tab', { name: 'Summary', exact: true }).click();
   await expect(page.getByText('Net this month').first()).toBeVisible();
@@ -79,6 +86,42 @@ test('orb floats centred just above the ＋, clear of the grid and the bar; abse
   await page.getByRole('tab', { name: 'Calendar', exact: true }).click();
   await expect(page.getByTestId('ai-orb')).toBeVisible();
   await expect(async () => expectPlacedAboveFab(page)).toPass({ timeout: 3_000 });
+});
+
+test('idle orb floats like voice-memo: it keeps moving while you look at it', async ({ page }) => {
+  await load(page);
+  const orb = page.getByTestId('ai-orb');
+  await expect(orb).toHaveAttribute('aria-valuetext', 'idle');
+  const shots: Buffer[] = [];
+  for (let i = 0; i < 3; i++) {
+    shots.push(await orb.screenshot());
+    await page.clock.runFor(700);
+  }
+  expect(shots[1].equals(shots[0]), 'sphere moved after 0.7 s').toBe(false);
+  expect(shots[2].equals(shots[1]), 'and keeps moving').toBe(false);
+  // No disc behind it: it hovers over a ground shadow.
+  await expect(page.getByTestId('ai-orb-disc')).toHaveCount(0);
+  await expect(page.getByTestId('ai-orb-shadow')).toBeVisible();
+});
+
+test.describe('reduced motion', () => {
+  test.use({ contextOptions: { reducedMotion: 'reduce' } });
+  test('the orb holds still, and its look is pinned', async ({ page }) => {
+    await load(page);
+    const orb = page.getByTestId('ai-orb');
+    const before = await orb.screenshot();
+    await page.clock.runFor(1500);
+    expect((await orb.screenshot()).equals(before), 'no motion under reduced motion').toBe(true);
+    await expect(orb).toHaveScreenshot('ai-orb-still-light.png', { maxDiffPixelRatio: 0.01 });
+  });
+
+  test.describe('dark', () => {
+    test.use({ colorScheme: 'dark' });
+    test('still orb keeps its contrast in dark mode', async ({ page }) => {
+      await load(page);
+      await expect(page.getByTestId('ai-orb')).toHaveScreenshot('ai-orb-still-dark.png', { maxDiffPixelRatio: 0.01 });
+    });
+  });
 });
 
 test.describe('japanese labels', () => {
@@ -95,7 +138,7 @@ test.describe('dark appearance', () => {
   test('idle orb keeps its contrast in dark mode', async ({ page }) => {
     await load(page);
     await expectPlacedAboveFab(page);
-    await expect(page).toHaveScreenshot('ai-orb-calendar-dark.png', { maxDiffPixelRatio: 0.01 });
+    await expect(page).toHaveScreenshot('ai-orb-calendar-dark.png', orbMask(page));
   });
 });
 
@@ -135,7 +178,7 @@ test('hold → partial bubble → release → Entry sheet filled with ¥850', as
   // Freeze the fake's 80 ms level timer for a stable shot, then let time run again.
   const now = await page.evaluate(() => Date.now());
   await page.clock.pauseAt(now + 50);
-  await expect(page).toHaveScreenshot('ai-orb-listening.png', { maxDiffPixelRatio: 0.01 });
+  await expect(page).toHaveScreenshot('ai-orb-listening.png', orbMask(page));
   await page.clock.resume();
   await page.waitForTimeout(600);
 

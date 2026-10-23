@@ -33,26 +33,27 @@ describe('AiOrb stand-in', () => {
     expect(LONG_PRESS_MS).toBe(250);
   });
 
-  it('takes an accent ring while listening and a second ring while thinking', () => {
+  it('floats free like voice-memo: no disc behind it, just a soft ground shadow', () => {
     renderOrb('idle');
-    const idleDisc = StyleSheet.flatten(screen.getByTestId('orb-disc').props.style);
-    expect(idleDisc.borderWidth).toBeLessThan(2);
-    expect(screen.queryByTestId('orb-ring')).toBeNull();
+    expect(screen.queryByTestId('orb-disc')).toBeNull();
+    expect(screen.getByTestId('orb-shadow')).toBeTruthy();
+  });
 
+  it('shows accent points only while listening or thinking', () => {
+    renderOrb('idle');
+    expect(screen.queryAllByTestId('orb-accent')).toHaveLength(0);
     screen.rerender(
       <ThemeProvider>
         <AiOrb testID="orb" size={60} state="listen" level={0.8} />
       </ThemeProvider>,
     );
-    expect(StyleSheet.flatten(screen.getByTestId('orb-disc').props.style).borderWidth).toBe(2);
-    expect(screen.queryByTestId('orb-ring')).toBeNull();
-
+    expect(screen.queryAllByTestId('orb-accent').length).toBeGreaterThan(0);
     screen.rerender(
       <ThemeProvider>
         <AiOrb testID="orb" size={60} state="think" level={0} />
       </ThemeProvider>,
     );
-    expect(screen.getByTestId('orb-ring')).toBeTruthy();
+    expect(screen.queryAllByTestId('orb-accent').length).toBeGreaterThan(0);
   });
 
   it('routes tap, hold and release to their handlers', () => {
@@ -76,11 +77,22 @@ describe('projectOrb', () => {
   const spread = (f: ReturnType<typeof projectOrb>) =>
     Math.max(...[...f.buckets.flat(), ...f.accent].map((p) => Math.hypot(p.x - 30, p.y - 30)));
 
-  it('idle: every point inside the disc, no accent points', () => {
+  it('idle: every point inside the hit area, no accent points', () => {
     const f = projectOrb(seeds, base);
     expect(f.accent).toHaveLength(0);
     expect(f.buckets.flat()).toHaveLength(72);
-    expect(spread(f)).toBeLessThan(60 * 0.43);
+    expect(spread(f)).toBeLessThan(60 * 0.48);
+  });
+
+  it('idle floats: as time passes the sphere turns and bobs', () => {
+    const centroidY = (f: ReturnType<typeof projectOrb>) => {
+      const pts = f.buckets.flat();
+      return pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+    };
+    const a = projectOrb(seeds, base);
+    const b = projectOrb(seeds, { ...base, t: 1.5 });
+    expect(b.buckets.flat()[0]).not.toEqual(a.buckets.flat()[0]);
+    expect(Math.abs(centroidY(b) - centroidY(a))).toBeGreaterThan(0.5);
   });
 
   it('listening: the level scatters points outward and some glow', () => {
