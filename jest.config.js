@@ -19,8 +19,10 @@ module.exports = {
   // widens the wall-clock budget; no assertion, retry, or skip is involved.
   testTimeout: 20000,
   // The Playwright suite (#58) uses jest's default `.spec.ts` naming — keep
-  // jest out of it (and out of exported web builds).
-  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/e2e/', '<rootDir>/dist/'],
+  // jest out of it (and out of exported web builds). Agent git worktrees under
+  // .claude/worktrees hold whole repo copies; collecting them triples the run.
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/e2e/', '<rootDir>/dist/', '<rootDir>/.claude/'],
+  modulePathIgnorePatterns: ['<rootDir>/.claude/'],
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|@expo/vector-icons|react-native-safe-area-context|react-native-svg))',
   ],

@@ -37,7 +37,10 @@ import {
   type TxType,
   type WeekendShift,
 } from '../domain';
-import { strings } from '../i18n';
+import { detectLanguage, strings } from '../i18n';
+import { useAi } from '../ai/AiProvider';
+import type { ParsedEntry, ParseContext } from '../ai/contract';
+import { AiEntryLine, AI_ENTRY_LINE_HEIGHT } from '../ui/AiEntryLine';
 import { CategoryChips, Keypad, PressScale, SegmentedToggle } from '../ui';
 import {
   useTheme,
@@ -67,6 +70,13 @@ interface EntrySheetProps {
   editing?: Transaction;
   /** Draft supplied by quick-entry flows before the sheet is shown. */
   initialDraft?: EntryDraft;
+  /** AI result (Calendar orb voice entry) applied once on open, like the AI
+   *  text line's parse: fills what it found, nothing is saved until the CTA. */
+  prefill?: ParsedEntry;
+  /** Repeat preset applied once on open (Calendar repeat suggestion, PRD #145:
+   *  edit the latest matching entry with repeat already set to monthly).
+   *  Nothing is saved until the CTA. */
+  initialRepeat?: Repeat;
   /** Settings management route: recurring cadences only and explicit stop copy. */
   repeatManagement?: boolean;
   /** Collects the draft on save; the host stores or splits the corresponding ledger item. */
@@ -152,16 +162,18 @@ const NATIVE_BOTTOM_ALLOWANCE = 34;
  * Scaling is what keeps an ordinary phone from scrolling a form that was
  * designed not to; the pinning is what guarantees the button is *reachable*.
  */
-export function entryCompactScale(windowHeight: number, chrome: number): number {
+export function entryCompactScale(windowHeight: number, chrome: number, extra = 0): number {
   // Entry opens at the host's expanded detent. Reserve the pinned footer
   // before scaling the scrollable body;
   // otherwise the form can still be just tall enough to push 0/00 below the
   // fold even though the sheet itself is fullscreen.
   const budget = windowHeight - chrome - SHEET_CHROME - FOOTER_BUDGET;
-  return Math.max(MIN_COMPACT_SCALE, Math.min(1, budget / NATURAL_FORM_HEIGHT));
+  // `extra` is fixed-height content above the scaled form (the AI text line):
+  // it does not shrink, so it comes straight out of the budget.
+  return Math.max(MIN_COMPACT_SCALE, Math.min(1, (budget - extra) / NATURAL_FORM_HEIGHT));
 }
 
-function useCompactScale(): number {
+function useCompactScale(extra = 0): number {
   const { height: windowHeight } = useWindowDimensions();
   // Everything between the window edges and the sheet's content box. On web
   // that is the phone frame's padding + border (imported from BottomSheet so
@@ -176,7 +188,7 @@ function useCompactScale(): number {
   // is reachable, so precision here buys nothing.
   const chrome =
     Platform.OS === 'web' ? WEB_FRAME_INSET : metrics.statusOffset + NATIVE_BOTTOM_ALLOWANCE;
-  return entryCompactScale(windowHeight, chrome);
+  return entryCompactScale(windowHeight, chrome, extra);
 }
 
 const formatDate = ({ y, m, day }: RecurrenceDate): string =>
@@ -248,6 +260,8 @@ export function EntrySheet({
   symbol,
   editing,
   initialDraft,
+  prefill,
+  initialRepeat,
   repeatManagement = false,
   onSave,
   onDelete,
@@ -256,7 +270,12 @@ export function EntrySheet({
   ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
 }: EntrySheetProps) {
   const { colors } = useTheme();
-  const scale = useCompactScale();
+  const { ai, availability } = useAi();
+  // Plain-words entry (ADR-0006): new entries only, on-device model only.
+  // Everywhere else the sheet is exactly what it was.
+  const showAiLine =
+    availability.onDevice === 'available' && editing == null && !repeatManagement;
+  const scale = useCompactScale(showAiLine ? AI_ENTRY_LINE_HEIGHT + 14 : 0);
   // Body and footer are measured separately and summed: the body is the part
   // that may scroll, the footer is pinned, and the host needs their total to
   // pick a detent tall enough to show both.
@@ -282,7 +301,9 @@ export function EntrySheet({
     () => initialDraft?.category ?? editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
   );
   const [note, setNote] = useState(initialDraft?.note ?? editing?.note ?? '');
-  const [repeat, setRepeat] = useState<Repeat>(initialDraft?.repeat ?? editing?.repeat ?? 'never');
+  const [repeat, setRepeat] = useState<Repeat>(
+    initialDraft?.repeat ?? initialRepeat ?? editing?.repeat ?? 'never',
+  );
   const [weekendShift, setWeekendShift] = useState<WeekendShift>(
     editing?.occurrence?.weekendShift ?? 'after',
   );
@@ -348,6 +369,39 @@ export function EntrySheet({
     setTimeText(formatTime(nextDate));
   };
 
+  // applyParsed(): a model parse fills whatever it found and leaves the rest
+  // as the user had it. Nothing is saved; the user still taps the CTA.
+  const applyParsed = (parsed: ParsedEntry) => {
+    const nextType = parsed.type ?? txType;
+    if (nextType !== txType) setTxType(nextType);
+    const cats = catsFor(nextType);
+    if (parsed.category && cats.includes(parsed.category)) setCategory(parsed.category);
+    else if (!cats.includes(category)) setCategory(cats[0]);
+    if (parsed.amount !== undefined && parsed.amount > 0) {
+      setAmountStr(String(Math.round(parsed.amount)));
+    }
+    if (parsed.date) {
+      const time = enteredTime ?? { hours: dateTime.getHours(), minutes: dateTime.getMinutes() };
+      setDateTime(dateTimeFromParts(parsed.date, time));
+      setDateText(formatDate(parsed.date));
+    }
+    if (parsed.note) setNote(parsed.note);
+  };
+  const appliedPrefill = useRef<ParsedEntry | undefined>(undefined);
+  useEffect(() => {
+    if (!prefill || appliedPrefill.current === prefill) return;
+    appliedPrefill.current = prefill;
+    applyParsed(prefill);
+    // applyParsed reads current form state; re-run only for a new prefill.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
+  const parseContext: ParseContext = {
+    expCats,
+    incCats,
+    today: { y: today.y, m: today.m, day: today.day },
+    locale: detectLanguage(),
+  };
+
   const save = () => {
     if (!enteredDate || !enteredDateTime || saving) return;
     const draft = {
@@ -389,6 +443,14 @@ export function EntrySheet({
         </View>
         <IconButton name="x" accessibilityLabel={strings.nav.close} onPress={onClose} />
       </View>
+
+      {showAiLine && (
+        <AiEntryLine
+          parse={(text) => ai.parseEntry(text, parseContext)}
+          onParsed={applyParsed}
+          scanReceipt={() => ai.scanReceipt(parseContext)}
+        />
+      )}
 
       <View style={styles.amountBlock}>
         <Txt

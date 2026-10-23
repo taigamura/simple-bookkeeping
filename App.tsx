@@ -1,10 +1,17 @@
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { UNAVAILABLE_AI, type SuitoAi } from './ai/contract';
+import { AiProvider } from './ai/AiProvider';
+import { fakeSuitoAi } from './ai/fake';
+import { useSiriBridge } from './ai/useSiriBridge';
+import { detectLanguage } from './i18n';
+import { nativeSuitoAi } from './modules/suito-ai';
 import { Root } from './nav';
+import { useToday } from './platform/useToday';
 import { useStore } from './store';
 import { MotionProvider, ThemeProvider, useTheme } from './theme';
 import { useAppFonts } from './theme/useAppFonts';
@@ -17,6 +24,26 @@ import { LoadingScreen } from './ui/LoadingScreen';
 // Called at module scope, not inside the component, per the package's own
 // guidance. A no-op on web (no native splash there).
 SplashScreen.preventAutoHideAsync();
+
+/**
+ * The one `SuitoAi` for this run (ADR-0006): the native module when it is
+ * linked (iOS), the deterministic fake on web with `?ai=fake` (Playwright and
+ * manual checks), otherwise everything off.
+ */
+function pickSuitoAi(): SuitoAi {
+  if (nativeSuitoAi) return nativeSuitoAi;
+  if (
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('ai') === 'fake'
+  ) {
+    return fakeSuitoAi;
+  }
+  return UNAVAILABLE_AI;
+}
+
+const suitoAi = pickSuitoAi();
+const locale = detectLanguage();
 
 /**
  * Root. Holds render until both gates clear — mono fonts loaded (decision 5)
@@ -39,6 +66,13 @@ export default function App() {
     persistenceNotice,
   } = useStore();
   const appReady = fontsLoaded && ready;
+  const now = useToday();
+  const today = useMemo(
+    () => ({ y: now.getFullYear(), m: now.getMonth(), day: now.getDate() }),
+    [now],
+  );
+  // Siri snapshot / inbox / Spotlight sync (domain slice; no-op stub here).
+  useSiriBridge({ ai: suitoAi, state, ready, update, locale, today });
 
   useEffect(() => {
     // Keep the native splash as the readiness cover. Providers must not mount
@@ -75,6 +109,7 @@ export default function App() {
     // and the @gorhom/bottom-sheet drags it powers — receive touches. flex:1 so
     // it fills, letting the web phone-frame still size the app below it.
     <GestureHandlerRootView style={styles.root}>
+      <AiProvider ai={suitoAi}>
       <MotionProvider
         initialPreference={state.motion}
         onPreferenceChange={(motion) => update({ motion })}
@@ -103,6 +138,7 @@ export default function App() {
           ) : null}
         </ThemeProvider>
       </MotionProvider>
+      </AiProvider>
     </GestureHandlerRootView>
   );
 }

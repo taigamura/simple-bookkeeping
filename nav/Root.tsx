@@ -7,6 +7,7 @@
  * the ledger and category seeds flow to the screens and new entries persist.
  * Month navigation is fixed to the current month here; it arrives in slice #4.
  */
+import * as GorhomBottomSheet from '@gorhom/bottom-sheet';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
@@ -15,7 +16,9 @@ import {
   Alert,
   Platform,
   StyleSheet,
+  TextInput,
   View,
+  type TextInputProps,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -49,10 +52,15 @@ import {
   type YM,
   type ImportSkipTally,
 } from '../domain';
-import { strings } from '../i18n';
+import { buildFacts, buildHandoffPrompt, buildSiriSnapshot } from '../ai';
+import { useOnDeviceAi } from '../ai/AiProvider';
+import type { ParsedEntry } from '../ai/contract';
+import { useAiFeatures } from '../ai/useAiFeatures';
+import { detectLanguage, strings } from '../i18n';
 import { entrySaved } from '../platform/haptics';
 import { shareTextFile } from '../platform/shareFile';
 import { useToday } from '../platform/useToday';
+import { AskSheet } from '../screens/AskSheet';
 import { BudgetsSheet } from '../screens/BudgetsSheet';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
@@ -64,10 +72,18 @@ import { easings, metrics, useMotion, useTheme, withAppDelay, withAppTiming } fr
 import { SaveWave } from '../ui';
 import { AppShell } from './AppShell';
 import { BottomSheet, SHEET_ANIMATION_DURATION } from './BottomSheet';
+import { CalendarOrb, ORB_RESERVE } from './CalendarOrb';
 import { NativeTabHost } from './NativeTabHost';
 import { NATIVE_TABS } from './nativeTabs';
 import { TabBar } from './TabBar';
 import type { Sheet, Tab } from './types';
+
+// gorhom's keyboard-aware input (the sheet rides up with the keyboard on iOS).
+// Not in the repo's local type shim (types/gorhom-bottom-sheet.d.ts), so read
+// it loosely and fall back to a plain TextInput.
+const SheetTextInput: React.ComponentType<TextInputProps> =
+  (GorhomBottomSheet as unknown as { BottomSheetTextInput?: React.ComponentType<TextInputProps> })
+    .BottomSheetTextInput ?? TextInput;
 
 interface RootProps {
   state: AppState;
@@ -406,7 +422,15 @@ function Shell({
   );
   // Which entry the Entry sheet is editing (#43); null = create mode.
   const [editing, setEditing] = useState<Transaction | null>(null);
+  // Calendar repeat suggestion (PRD #145): the entry id whose edit opens with
+  // repeat preset to monthly. Scoped to that entry so no other edit inherits it.
+  const [repeatPresetFor, setRepeatPresetFor] = useState<string | null>(null);
   const [entryContentHeight, setEntryContentHeight] = useState(0);
+  // Calendar orb: the voice parse the next Entry sheet opens with, and the
+  // month an orb-opened Ask is about (null = the Summary's unscoped Ask).
+  const [entryPrefill, setEntryPrefill] = useState<ParsedEntry | undefined>(undefined);
+  const [askScope, setAskScope] = useState<{ y: number; m: number } | null>(null);
+  const orbOn = useOnDeviceAi();
 
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
   // real current month, with the selected day defaulting to today.
@@ -416,6 +440,30 @@ function Shell({
     [today],
   );
   const [cursor, setCursor] = useState<YM>({ y: today.getFullYear(), m: today.getMonth() });
+  const locale = useMemo(() => detectLanguage(), []);
+  // Suito AI (ADR-0006): letter + nudge writes run while Summary is showing.
+  const { updateAi } = useAiFeatures({
+    state,
+    update,
+    today: todayDate,
+    locale,
+    active: tab === 'summary',
+  });
+  // 「ChatGPTで聞く」: the exact prompt the user previews, then shares.
+  const buildHandoff = (question: string) =>
+    buildHandoffPrompt({
+      question,
+      // This month and last month, so an early or empty month still carries totals.
+      // Fact labels already name their month.
+      facts: [
+        ...buildFacts(state, todayDate.y, todayDate.m, todayDate, locale),
+        ...(todayDate.m === 0
+          ? buildFacts(state, todayDate.y - 1, 11, todayDate, locale)
+          : buildFacts(state, todayDate.y, todayDate.m - 1, todayDate, locale)),
+      ],
+      entries: buildSiriSnapshot(state, todayDate, locale, [], new Date()).entries,
+      locale,
+    });
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
   const symbol = state.currency.symbol;
@@ -494,6 +542,20 @@ function Shell({
   // openEntry(): the ＋ button — always create mode (clear any prior editing).
   const openEntry = () => {
     setEditing(null);
+    setEntryPrefill(undefined);
+    setEntryContentHeight(0);
+    setSheet('entry');
+  };
+
+  // Calendar orb (PRD #145). Tap: Ask about the visible month. Hold + speak:
+  // a create-mode Entry sheet filled from the parse (Save is still a tap).
+  const openAsk = (scope: { y: number; m: number } | null) => {
+    setAskScope(scope);
+    setSheet('ask');
+  };
+  const openVoiceEntry = (entry: ParsedEntry) => {
+    setEditing(null);
+    setEntryPrefill(entry);
     setEntryContentHeight(0);
     setSheet('entry');
   };
@@ -502,6 +564,7 @@ function Shell({
   // Calendar returns to it after save/delete.
   const openEdit = (entry: Transaction) => {
     setEditing(entry);
+    setEntryPrefill(undefined);
     setEntryContentHeight(0);
     setSelectedDay(entry.day);
     setSheet('entry');
@@ -907,7 +970,10 @@ function Shell({
           update({ calendarView: state.calendarView === 'dots' ? 'numbers' : 'dots' })
         }
         onSelectDay={setSelectedDay}
-        onEditEntry={openEdit}
+        onEditEntry={(entry) => {
+          setRepeatPresetFor(null);
+          openEdit(entry);
+        }}
         onDeleteEntry={handleDelete}
         onPrevMonth={() => goMonth(-1)}
         onNextMonth={() => goMonth(1)}
@@ -917,6 +983,20 @@ function Shell({
         pulseM={savedPulse.m}
         pulseDay={savedPulse.day}
         pulseNonce={savedPulse.nonce}
+        ai={{
+          state,
+          today: todayDate,
+          locale,
+          updateAi,
+          // Accept: edit the latest matching entry, repeat preset to monthly.
+          // The cursor/selected day stay put (the entry may be last month's).
+          onAcceptRepeat: (entry) => {
+            setRepeatPresetFor(entry.id);
+            setEditing(entry);
+            setEntryContentHeight(0);
+            setSheet('entry');
+          },
+        }}
       />
     ) : (
       <SummaryScreen
@@ -931,7 +1011,51 @@ function Shell({
         onChangeGranularity={(summaryGranularity) => update({ summaryGranularity })}
         onPeriodChange={setMonth}
         onSettings={openSettings}
+        ai={{
+          state: state.ai,
+          today: { y: todayDate.y, m: todayDate.m },
+          onAsk: () => openAsk(null),
+          onSetLetterDismissed: (key, dismissed) =>
+            updateAi((ai) =>
+              ai.letters[key]
+                ? { ...ai, letters: { ...ai.letters, [key]: { ...ai.letters[key], dismissed } } }
+                : ai,
+            ),
+          onDismissNudge: () =>
+            updateAi((ai) => (ai.nudge ? { ...ai, nudge: { ...ai.nudge, dismissed: true } } : ai)),
+        }}
       />
+    );
+
+  // renderBody(): `renderTab` plus the Calendar orb (PRD #145) when the
+  // on-device model is available. The Calendar gives up a bottom band of
+  // `ORB_RESERVE` so the orb, floating just above the ＋, never covers the grid,
+  // the day list or the bar; Summary is untouched.
+  // The custom bar floats over its tab layers (they are absoluteFill, so the
+  // TabSwitcher padding doesn't reach them); the native Scene ends at the bar.
+  const orbBarInset = NATIVE_TABS ? 0 : metrics.tabBarHeight + insets.bottom;
+  const renderBody = (which: Tab) =>
+    which === 'calendar' && orbOn ? (
+      <View style={styles.flex}>
+        <View style={[styles.flex, { marginBottom: ORB_RESERVE + orbBarInset }]}>
+          {renderTab(which)}
+        </View>
+        <CalendarOrb
+          active={tab === 'calendar' && sheet === null}
+          barInset={orbBarInset}
+          locale={locale}
+          parseContext={() => ({
+            expCats: state.expCats,
+            incCats: state.incCats,
+            today: todayDate,
+            locale,
+          })}
+          onAsk={() => openAsk({ y: cursor.y, m: cursor.m })}
+          onParsed={openVoiceEntry}
+        />
+      </View>
+    ) : (
+      renderTab(which)
     );
 
   return (
@@ -945,14 +1069,14 @@ function Shell({
         // iOS: the system UITabBar (genuine Liquid Glass on iOS 26). It owns
         // the tab switch animation and the bottom inset itself.
         <View style={styles.body}>
-          <NativeTabHost tab={tab} onSelect={selectTab} onAdd={openEntry} render={renderTab} />
+          <NativeTabHost tab={tab} onSelect={selectTab} onAdd={openEntry} render={renderBody} />
         </View>
       ) : (
         <>
           <TabSwitcher
             tab={tab}
             style={[styles.body, { paddingBottom: metrics.tabBarHeight + insets.bottom }]}
-            render={renderTab}
+            render={renderBody}
           />
           <TabBar tab={tab} onSelect={selectTab} onAdd={openEntry} />
         </>
@@ -984,6 +1108,8 @@ function Shell({
             today={todayDate}
             symbol={symbol}
             editing={editing ?? undefined}
+            initialRepeat={editing && editing.id === repeatPresetFor ? 'monthly' : undefined}
+            prefill={sheet === 'entry' ? entryPrefill : undefined}
             repeatManagement={sheet === 'repeat-entry'}
             onSave={handleSubmit}
             onDelete={handleDelete}
@@ -1014,7 +1140,21 @@ function Shell({
             onExportCorruptStash={exportCorruptStash}
             onDeleteAllData={deleteAllData}
             onClose={closeSheet}
+            aiNudgesEnabled={state.ai.nudgesEnabled}
+            onChangeAiNudges={(nudgesEnabled) => updateAi((ai) => ({ ...ai, nudgesEnabled }))}
+            spotlightEnabled={state.ai.spotlightEnabled}
+            onChangeSpotlight={(spotlightEnabled) => updateAi((ai) => ({ ...ai, spotlightEnabled }))}
             ScrollContainer={BottomSheetScrollView}
+            />
+          }
+          ask={
+            <AskSheet
+              locale={locale}
+              scope={askScope ?? undefined}
+              buildHandoff={buildHandoff}
+              onClose={closeSheet}
+              ScrollContainer={BottomSheetScrollView}
+              InputComponent={SheetTextInput}
             />
           }
           budgets={
@@ -1059,10 +1199,12 @@ function SheetBody({
   settings,
   budgets,
   repeats,
+  ask,
 }: {
   sheet: Sheet | null;
   entry: React.ReactNode;
   settings: React.ReactNode;
+  ask: React.ReactNode;
   budgets: React.ReactNode;
   repeats: React.ReactNode;
 }) {
@@ -1080,7 +1222,9 @@ function SheetBody({
           ? budgets
           : sheet === 'repeats'
             ? repeats
-            : null;
+            : sheet === 'ask'
+              ? ask
+              : null;
 
   return (
     <View testID="sheet-body" style={styles.sheetBody}>

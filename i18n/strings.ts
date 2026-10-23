@@ -8,6 +8,8 @@
  * than swapping labels; out of scope here.
  */
 
+const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
 export interface ZaimSkipStrings {
   transfer: (n: number) => string;
   balanceAdjustment: (n: number) => string;
@@ -243,6 +245,74 @@ export interface Strings {
     invalidMessage: string;
     restoreFailedTitle: string;
     restoreFailedMessage: string;
+  };
+  /** Suito AI surfaces (ADR-0006). No em dashes in any of this copy. */
+  ai: {
+    entryLineLabel: string;
+    entryLinePlaceholder: string;
+    entryLineHint: string;
+    entryWorking: string;
+    entryFilled: string;
+    ask: string;
+    askA11y: string;
+    askTitle: string;
+    askPlaceholder: string;
+    askInputLabel: string;
+    askSend: string;
+    askStartersLabel: string;
+    askStarters: string[];
+    askYou: string;
+    askSuito: string;
+    askWaiting: string;
+    askStrongerHint: string;
+    askHandoff: string;
+    askHandoffHint: string;
+    handoffTitle: string;
+    handoffExplain: string;
+    handoffShare: string;
+    handoffBack: string;
+    /** The Calendar orb (voice entry + Ask). */
+    orb: {
+      label: string;
+      hint: string;
+      listening: string;
+      reading: string;
+      tooShort: string;
+      notHeard: string;
+      notUnderstood: string;
+      denied: string;
+      unavailable: string;
+      /** The month an orb-opened Ask is about. */
+      scopeLabel: (y: number, m: number) => string;
+      /** What is sent to the model for a scoped question (the shown text stays the question). */
+      scopeQuestion: (y: number, m: number, question: string) => string;
+    };
+    letterTitle: (m: number) => string;
+    letterDismiss: string;
+    letterReopen: (m: number) => string;
+    nudgeLabel: string;
+    nudgeDismiss: string;
+    settingsSection: string;
+    nudgesSwitch: string;
+    nudgesExplain: string;
+    spotlightSwitch: string;
+    spotlightExplain: string;
+    receipt: {
+      button: string;
+      hint: string;
+      working: string;
+      none: string;
+      denied: string;
+    };
+    /** Calendar one-liners (PRD #145). */
+    calendar: {
+      forecastLabel: string;
+      dayNoteLabel: string;
+      repeatLabel: string;
+      repeatAccept: string;
+      repeatAcceptA11y: string;
+      repeatDismiss: string;
+    };
   };
 }
 
@@ -484,6 +554,73 @@ export const en: Strings = {
     restoreFailedTitle: 'Restore failed',
     restoreFailedMessage: 'Your data was not changed. Choose a backup file and try again.',
   },
+  ai: {
+    entryLineLabel: 'Describe the entry in words',
+    entryLinePlaceholder: 'e.g. lunch 850 yesterday',
+    entryLineHint: 'Fills in the amount, category, date and note. Nothing is saved until you tap the button.',
+    entryWorking: 'Reading',
+    entryFilled: 'Filled in',
+    ask: 'Ask',
+    askA11y: 'Ask about your money',
+    askTitle: 'Ask',
+    askPlaceholder: 'e.g. How much on food this month?',
+    askInputLabel: 'Your question',
+    askSend: 'Send question',
+    askStartersLabel: 'Try asking',
+    askStarters: [
+      'How much did I spend this month?',
+      'What was my biggest category last month?',
+      'How much budget is left?',
+    ],
+    askYou: 'You',
+    askSuito: 'Suito',
+    askWaiting: 'Thinking',
+    askStrongerHint: 'This one may need a bigger AI. You can hand it over with your numbers.',
+    askHandoff: 'Ask another AI',
+    askHandoffHint: 'Shows the exact text first, then opens the share sheet',
+    handoffTitle: 'What you will share',
+    handoffExplain: 'Suito sends nothing. You pick the app in the share sheet.',
+    handoffShare: 'Share',
+    handoffBack: 'Back',
+    orb: {
+      label: 'Suito AI',
+      hint: 'Tap to ask about this month. Touch and hold to say an entry, then let go.',
+      listening: 'Listening',
+      reading: 'Reading',
+      tooShort: 'Hold a little longer while you speak',
+      notHeard: "Didn't catch that",
+      notUnderstood: "Couldn't find an entry in that",
+      denied: 'Allow Microphone and Speech Recognition for Suito in Settings. Tapping still opens Ask.',
+      unavailable: "Voice entry isn't available on this iPhone. Tap to ask instead.",
+      scopeLabel: (y, m) => `${MONTHS_EN[m]} ${y}`,
+      scopeQuestion: (y, m, q) => `About ${MONTHS_EN[m]} ${y}: ${q}`,
+    },
+    letterTitle: (m) => `Your ${MONTHS_EN[m]} recap`,
+    letterDismiss: 'Hide recap',
+    letterReopen: (m) => `Read your ${MONTHS_EN[m]} recap`,
+    nudgeLabel: 'Observation',
+    nudgeDismiss: 'Hide observation',
+    settingsSection: 'AI',
+    nudgesSwitch: 'Recaps and nudges',
+    nudgesExplain: 'A monthly recap and one small observation, written by the model on this iPhone. Everything stays on this iPhone.',
+    spotlightSwitch: 'Siri & Search',
+    spotlightExplain: 'Lets Siri and Spotlight find your entries. The index stays on this iPhone.',
+    receipt: {
+      button: 'Scan a receipt',
+      hint: 'Fills in the amount, date, category and store. The photo is read on this iPhone and not kept. Nothing is saved until you tap the button.',
+      working: 'Reading',
+      none: 'Couldn’t read that receipt',
+      denied: 'Allow the camera in Settings',
+    },
+    calendar: {
+      forecastLabel: 'Month-end forecast',
+      dayNoteLabel: 'About this day',
+      repeatLabel: 'Repeat suggestion',
+      repeatAccept: 'Make monthly',
+      repeatAcceptA11y: 'Make it a monthly repeat',
+      repeatDismiss: 'Hide suggestion',
+    },
+  },
 };
 
 export const ja: Strings = {
@@ -716,5 +853,68 @@ export const ja: Strings = {
     invalidMessage: 'このファイルはこのバージョンで復元できるバックアップではありません。データは変更されていません。',
     restoreFailedTitle: '復元に失敗しました',
     restoreFailedMessage: 'データは変更されていません。バックアップファイルを選んでもう一度お試しください。',
+  },
+  ai: {
+    entryLineLabel: 'ことばで入力',
+    entryLinePlaceholder: '例：昨日 スタバ 620',
+    entryLineHint: '金額・カテゴリ・日付・メモを入力します。ボタンを押すまで保存されません。',
+    entryWorking: '読み取り中',
+    entryFilled: '入力しました',
+    ask: '聞く',
+    askA11y: 'お金について聞く',
+    askTitle: '聞く',
+    askPlaceholder: '例：今月コンビニいくら？',
+    askInputLabel: '質問',
+    askSend: '質問を送る',
+    askStartersLabel: 'たとえば',
+    askStarters: ['今月いくら使った？', '先月いちばん多かったカテゴリは？', '予算はあといくら？'],
+    askYou: 'あなた',
+    askSuito: 'Suito',
+    askWaiting: '考え中',
+    askStrongerHint: 'この質問はもっと大きなAIが向いています。数字をそえて渡せます。',
+    askHandoff: 'ChatGPTで聞く',
+    askHandoffHint: '送る内容を先に表示してから、共有シートを開きます',
+    handoffTitle: '共有する内容',
+    handoffExplain: 'Suitoからは何も送信しません。共有シートで送り先を選んでください。',
+    handoffShare: '共有する',
+    handoffBack: '戻る',
+    orb: {
+      label: 'Suito AI',
+      hint: 'タップで今月について聞けます。長押ししながら話すと記録を入力できます。',
+      listening: '聞いています',
+      reading: '読み取り中',
+      tooShort: 'もう少し長く押したまま話してください',
+      notHeard: '聞き取れませんでした',
+      notUnderstood: '記録の内容を読み取れませんでした',
+      denied: '設定でSuitoのマイクと音声認識を許可してください。タップで「聞く」は使えます。',
+      unavailable: 'このiPhoneでは声の入力が使えません。タップで聞いてください。',
+      scopeLabel: (y, m) => `${y}年${m + 1}月`,
+      scopeQuestion: (y, m, q) => `${y}年${m + 1}月について: ${q}`,
+    },
+    letterTitle: (m) => `${m + 1}月のふりかえり`,
+    letterDismiss: 'ふりかえりを閉じる',
+    letterReopen: (m) => `${m + 1}月のふりかえりを読む`,
+    nudgeLabel: '気づき',
+    nudgeDismiss: '気づきを閉じる',
+    settingsSection: 'AI',
+    nudgesSwitch: 'ふりかえりと気づき',
+    nudgesExplain: '月のふりかえりと小さな気づきを、このiPhoneの中のAIが書きます。データは外に出ません。',
+    spotlightSwitch: 'Siriと検索',
+    spotlightExplain: 'Siriとスポットライト検索で記録を探せます。索引はこのiPhoneの中だけです。',
+    receipt: {
+      button: 'レシートを読み取る',
+      hint: '金額・日付・カテゴリ・店名を入力します。写真はこのiPhoneの中で読み取り、保存しません。ボタンを押すまで記録されません。',
+      working: '読み取り中',
+      none: 'レシートを読み取れませんでした',
+      denied: '設定でカメラを許可してください',
+    },
+    calendar: {
+      forecastLabel: '月末の見込み',
+      dayNoteLabel: 'この日のこと',
+      repeatLabel: 'くり返しの提案',
+      repeatAccept: '毎月にする',
+      repeatAcceptA11y: '毎月のくり返しにする',
+      repeatDismiss: '提案を閉じる',
+    },
   },
 };
