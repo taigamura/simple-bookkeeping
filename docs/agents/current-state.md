@@ -46,7 +46,11 @@ _Last updated: 2026-10-23_
 
 - **1.1.0 scope grew (PRD #145, 2026-10-23):** Calendar AI orb (hold = voice
   entry, tap = Ask), receipt scan, repeat suggestions, month-end forecast, day
-  note. Build on `feat/suito-ai`, new TestFlight build before review.
+  note. Built + merged on `feat/suito-ai` (jest 697, e2e green on web), not
+  pushed. New Swift (`SuitoListen`, `SuitoReceipt`, `wordLine`) is UNCOMPILED:
+  next step is a Mac build → TestFlight, then the device checklist (orb Skia
+  render + position over the native ＋, speech JA/EN offline, receipt OCR on
+  real JP receipts, permission prompts).
 - **1.0.1 is live without the real-iPhone check** (native glass bar; ＋ opens
   the Entry sheet *above* the bar; nothing hidden behind it). Check on device.
 - **Suito AI on-device checklist** (TestFlight): see PRD #143 testing section

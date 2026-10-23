@@ -6,6 +6,15 @@
   entitlement/profile change; (2) the Apple cloud-model switch is compiled out
   of 1.1.0 because the privacy gate couldn't be verified (no network), so the
   local Mac (iOS 26.2 SDK) can build it. PRD: `docs/prd/suito-ai.md`.
+- **Amended 2026-10-23 (PRD #145):** 1.1.0 also gets a Calendar AI orb
+  (hold = on-device speech → parsed entry pre-fills the Entry sheet; tap =
+  Ask scoped to the visible month), receipt scan (VisionKit camera + Vision
+  OCR → parse), and three code-computed one-liners worded by the model
+  (`wordLine`): month-end forecast, day note, monthly-repeat suggestion.
+  Speech is on-device only (`requiresOnDeviceRecognition`); receipt images
+  are never kept, so "Data Not Collected" holds. Receipt scanning was out of
+  scope in #143 and is now in. The orb stays still when idle (ADR-0003), and
+  the Calendar body ends above a 72px orb band.
 - **Supersedes:** the 切符 stamp-card twist (proposed 2026-10-07, dropped)
 
 ## Context
