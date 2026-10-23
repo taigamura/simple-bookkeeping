@@ -7,6 +7,7 @@
  * the ledger and category seeds flow to the screens and new entries persist.
  * Month navigation is fixed to the current month here; it arrives in slice #4.
  */
+import * as GorhomBottomSheet from '@gorhom/bottom-sheet';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
@@ -15,7 +16,9 @@ import {
   Alert,
   Platform,
   StyleSheet,
+  TextInput,
   View,
+  type TextInputProps,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -49,10 +52,13 @@ import {
   type YM,
   type ImportSkipTally,
 } from '../domain';
-import { strings } from '../i18n';
+import { buildFacts, buildHandoffPrompt, buildSiriSnapshot } from '../ai';
+import { useAiFeatures } from '../ai/useAiFeatures';
+import { detectLanguage, strings } from '../i18n';
 import { entrySaved } from '../platform/haptics';
 import { shareTextFile } from '../platform/shareFile';
 import { useToday } from '../platform/useToday';
+import { AskSheet } from '../screens/AskSheet';
 import { BudgetsSheet } from '../screens/BudgetsSheet';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { EntrySheet } from '../screens/EntrySheet';
@@ -68,6 +74,13 @@ import { NativeTabHost } from './NativeTabHost';
 import { NATIVE_TABS } from './nativeTabs';
 import { TabBar } from './TabBar';
 import type { Sheet, Tab } from './types';
+
+// gorhom's keyboard-aware input (the sheet rides up with the keyboard on iOS).
+// Not in the repo's local type shim (types/gorhom-bottom-sheet.d.ts), so read
+// it loosely and fall back to a plain TextInput.
+const SheetTextInput: React.ComponentType<TextInputProps> =
+  (GorhomBottomSheet as unknown as { BottomSheetTextInput?: React.ComponentType<TextInputProps> })
+    .BottomSheetTextInput ?? TextInput;
 
 interface RootProps {
   state: AppState;
@@ -416,6 +429,23 @@ function Shell({
     [today],
   );
   const [cursor, setCursor] = useState<YM>({ y: today.getFullYear(), m: today.getMonth() });
+  const locale = useMemo(() => detectLanguage(), []);
+  // Suito AI (ADR-0006): letter + nudge writes run while Summary is showing.
+  const { updateAi } = useAiFeatures({
+    state,
+    update,
+    today: todayDate,
+    locale,
+    active: tab === 'summary',
+  });
+  // 「ChatGPTで聞く」: the exact prompt the user previews, then shares.
+  const buildHandoff = (question: string) =>
+    buildHandoffPrompt({
+      question,
+      facts: buildFacts(state, todayDate.y, todayDate.m, todayDate, locale),
+      entries: buildSiriSnapshot(state, todayDate, locale, [], new Date()).entries,
+      locale,
+    });
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
   const symbol = state.currency.symbol;
@@ -931,6 +961,19 @@ function Shell({
         onChangeGranularity={(summaryGranularity) => update({ summaryGranularity })}
         onPeriodChange={setMonth}
         onSettings={openSettings}
+        ai={{
+          state: state.ai,
+          today: { y: todayDate.y, m: todayDate.m },
+          onAsk: () => setSheet('ask'),
+          onSetLetterDismissed: (key, dismissed) =>
+            updateAi((ai) =>
+              ai.letters[key]
+                ? { ...ai, letters: { ...ai.letters, [key]: { ...ai.letters[key], dismissed } } }
+                : ai,
+            ),
+          onDismissNudge: () =>
+            updateAi((ai) => (ai.nudge ? { ...ai, nudge: { ...ai.nudge, dismissed: true } } : ai)),
+        }}
       />
     );
 
@@ -1014,7 +1057,20 @@ function Shell({
             onExportCorruptStash={exportCorruptStash}
             onDeleteAllData={deleteAllData}
             onClose={closeSheet}
+            aiNudgesEnabled={state.ai.nudgesEnabled}
+            onChangeAiNudges={(nudgesEnabled) => updateAi((ai) => ({ ...ai, nudgesEnabled }))}
+            spotlightEnabled={state.ai.spotlightEnabled}
+            onChangeSpotlight={(spotlightEnabled) => updateAi((ai) => ({ ...ai, spotlightEnabled }))}
             ScrollContainer={BottomSheetScrollView}
+            />
+          }
+          ask={
+            <AskSheet
+              locale={locale}
+              buildHandoff={buildHandoff}
+              onClose={closeSheet}
+              ScrollContainer={BottomSheetScrollView}
+              InputComponent={SheetTextInput}
             />
           }
           budgets={
@@ -1059,10 +1115,12 @@ function SheetBody({
   settings,
   budgets,
   repeats,
+  ask,
 }: {
   sheet: Sheet | null;
   entry: React.ReactNode;
   settings: React.ReactNode;
+  ask: React.ReactNode;
   budgets: React.ReactNode;
   repeats: React.ReactNode;
 }) {
@@ -1080,7 +1138,9 @@ function SheetBody({
           ? budgets
           : sheet === 'repeats'
             ? repeats
-            : null;
+            : sheet === 'ask'
+              ? ask
+              : null;
 
   return (
     <View testID="sheet-body" style={styles.sheetBody}>

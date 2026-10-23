@@ -19,6 +19,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   TextInput,
   View,
   type StyleProp,
@@ -45,6 +46,7 @@ import {
   type ThemePreference,
 } from '../theme';
 import { PressScale } from '../ui';
+import { useAi } from '../ai/AiProvider';
 
 /** Minimal shape shared by RN's `ScrollView` and gorhom's `BottomSheetScrollView`. */
 interface ScrollContainerProps {
@@ -80,6 +82,12 @@ interface SettingsSheetProps {
   /** Delete all entries and budgets (#67). */
   onDeleteAllData: () => void;
   onClose: () => void;
+  /** Suito AI switches (ADR-0006). The section shows only the switches the
+   *  phone supports; absent handlers hide it entirely. */
+  aiNudgesEnabled?: boolean;
+  onChangeAiNudges?: (enabled: boolean) => void;
+  spotlightEnabled?: boolean;
+  onChangeSpotlight?: (enabled: boolean) => void;
   /** Scrollable wrapper for the rows below the header (#44); see file header. */
   ScrollContainer?: ComponentType<ScrollContainerProps>;
 }
@@ -108,6 +116,10 @@ export function SettingsSheet({
   onExportCorruptStash,
   onDeleteAllData,
   onClose,
+  aiNudgesEnabled = true,
+  onChangeAiNudges,
+  spotlightEnabled = true,
+  onChangeSpotlight,
   ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
 }: SettingsSheetProps) {
   return (
@@ -123,6 +135,12 @@ export function SettingsSheet({
       >
         <Appearance />
         <Motion />
+        <AiSection
+          nudgesEnabled={aiNudgesEnabled}
+          onChangeNudges={onChangeAiNudges}
+          spotlightEnabled={spotlightEnabled}
+          onChangeSpotlight={onChangeSpotlight}
+        />
         <CurrencyGrid value={currency} onChange={onChangeCurrency} />
         <Categories
           expCats={expCats}
@@ -205,6 +223,102 @@ function Motion() {
         ))}
       </View>
     </Section>
+  );
+}
+
+/**
+ * "AI" (ADR-0006): 「ふりかえりと気づき」 needs the on-device model; 「Siriと検索」
+ * needs only iOS 26 (system integration). Each switch carries one line on
+ * where the data goes. No cloud-model switch: compiled out of this release.
+ */
+function AiSection({
+  nudgesEnabled,
+  onChangeNudges,
+  spotlightEnabled,
+  onChangeSpotlight,
+}: {
+  nudgesEnabled: boolean;
+  onChangeNudges?: (enabled: boolean) => void;
+  spotlightEnabled: boolean;
+  onChangeSpotlight?: (enabled: boolean) => void;
+}) {
+  const { availability } = useAi();
+  const showNudges = availability.onDevice === 'available' && onChangeNudges !== undefined;
+  const showSpotlight = availability.system === 'available' && onChangeSpotlight !== undefined;
+  if (!showNudges && !showSpotlight) return null;
+  return (
+    <Section label={strings.ai.settingsSection}>
+      <View testID="settings-ai">
+        {showNudges && (
+          <SwitchRow
+            label={strings.ai.nudgesSwitch}
+            explain={strings.ai.nudgesExplain}
+            value={nudgesEnabled}
+            onChange={onChangeNudges!}
+            testID="settings-ai-nudges"
+          />
+        )}
+        {showSpotlight && (
+          <SwitchRow
+            label={strings.ai.spotlightSwitch}
+            explain={strings.ai.spotlightExplain}
+            value={spotlightEnabled}
+            onChange={onChangeSpotlight!}
+            testID="settings-ai-spotlight"
+            divider={showNudges}
+          />
+        )}
+      </View>
+    </Section>
+  );
+}
+
+function SwitchRow({
+  label,
+  explain,
+  value,
+  onChange,
+  testID,
+  divider = false,
+}: {
+  label: string;
+  explain: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  testID?: string;
+  divider?: boolean;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View
+      testID={testID}
+      style={[
+        styles.switchRow,
+        { backgroundColor: colors.card2 },
+        divider ? styles.switchRowSpaced : null,
+      ]}
+    >
+      <View style={styles.switchText}>
+        <Txt variant="listItem" tone="ink">
+          {label}
+        </Txt>
+        <Txt variant="secondary" tone="dim" style={styles.switchExplain}>
+          {explain}
+        </Txt>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        accessibilityLabel={label}
+        accessibilityHint={explain}
+        trackColor={{ false: colors.card3, true: colors.positive }}
+        thumbColor={colors.onDeep}
+        // react-native-web colours the ON thumb from its own prop (default
+        // teal); keep it the same white as the OFF thumb.
+        {...({ activeThumbColor: colors.onDeep } as object)}
+        ios_backgroundColor={colors.card3}
+      />
+    </View>
   );
 }
 
@@ -666,6 +780,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   linkLabel: { flex: 1 },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 64,
+    borderRadius: metrics.iconTileRadius,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  switchRowSpaced: { marginTop: 8 },
+  switchText: { flex: 1, gap: 3 },
+  switchExplain: { lineHeight: 16 },
   optRow: { flexDirection: 'row', gap: 8 },
   optBox: {
     flex: 1,
