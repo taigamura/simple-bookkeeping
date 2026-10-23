@@ -209,6 +209,17 @@ describe('EntrySheet (edit mode, #43)', () => {
     expect(screen.getByLabelText('Save this and future')).toBeTruthy();
   });
 
+  it('applies an initialRepeat preset on open over a one-time entry (Calendar repeat suggestion)', () => {
+    const onSave = jest.fn();
+    renderSheet({ editing: editingEntry(), initialRepeat: 'monthly', onSave });
+    expect(screen.getByLabelText('↻ Repeat: Every month')).toBeTruthy();
+  });
+
+  it('without initialRepeat a one-time edit keeps Never', () => {
+    renderSheet({ editing: editingEntry() });
+    expect(screen.getByLabelText('↻ Repeat: Never')).toBeTruthy();
+  });
+
   it('shows a plain Save for a projected occurrence — the scope choice is a follow-up, not the label', () => {
     renderSheet({
       editing: editingEntry({

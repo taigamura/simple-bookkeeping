@@ -419,6 +419,9 @@ function Shell({
   );
   // Which entry the Entry sheet is editing (#43); null = create mode.
   const [editing, setEditing] = useState<Transaction | null>(null);
+  // Calendar repeat suggestion (PRD #145): the entry id whose edit opens with
+  // repeat preset to monthly. Scoped to that entry so no other edit inherits it.
+  const [repeatPresetFor, setRepeatPresetFor] = useState<string | null>(null);
   const [entryContentHeight, setEntryContentHeight] = useState(0);
 
   // Calendar cursor. Month navigation lands in slice #4; for now it tracks the
@@ -944,7 +947,10 @@ function Shell({
           update({ calendarView: state.calendarView === 'dots' ? 'numbers' : 'dots' })
         }
         onSelectDay={setSelectedDay}
-        onEditEntry={openEdit}
+        onEditEntry={(entry) => {
+          setRepeatPresetFor(null);
+          openEdit(entry);
+        }}
         onDeleteEntry={handleDelete}
         onPrevMonth={() => goMonth(-1)}
         onNextMonth={() => goMonth(1)}
@@ -954,6 +960,20 @@ function Shell({
         pulseM={savedPulse.m}
         pulseDay={savedPulse.day}
         pulseNonce={savedPulse.nonce}
+        ai={{
+          state,
+          today: todayDate,
+          locale,
+          updateAi,
+          // Accept: edit the latest matching entry, repeat preset to monthly.
+          // The cursor/selected day stay put (the entry may be last month's).
+          onAcceptRepeat: (entry) => {
+            setRepeatPresetFor(entry.id);
+            setEditing(entry);
+            setEntryContentHeight(0);
+            setSheet('entry');
+          },
+        }}
       />
     ) : (
       <SummaryScreen
@@ -1034,6 +1054,7 @@ function Shell({
             today={todayDate}
             symbol={symbol}
             editing={editing ?? undefined}
+            initialRepeat={editing && editing.id === repeatPresetFor ? 'monthly' : undefined}
             repeatManagement={sheet === 'repeat-entry'}
             onSave={handleSubmit}
             onDelete={handleDelete}

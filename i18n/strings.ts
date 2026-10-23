@@ -288,6 +288,15 @@ export interface Strings {
       none: string;
       denied: string;
     };
+    /** Calendar one-liners (PRD #145). */
+    calendar: {
+      forecastLabel: string;
+      dayNoteLabel: string;
+      repeatLabel: string;
+      repeatAccept: string;
+      repeatAcceptA11y: string;
+      repeatDismiss: string;
+    };
   };
 }
 
@@ -574,6 +583,14 @@ export const en: Strings = {
       none: 'Couldn’t read that receipt',
       denied: 'Allow the camera in Settings',
     },
+    calendar: {
+      forecastLabel: 'Month-end forecast',
+      dayNoteLabel: 'About this day',
+      repeatLabel: 'Repeat suggestion',
+      repeatAccept: 'Make monthly',
+      repeatAcceptA11y: 'Make it a monthly repeat',
+      repeatDismiss: 'Hide suggestion',
+    },
   },
 };
 
@@ -848,6 +865,14 @@ export const ja: Strings = {
       working: '読み取り中',
       none: 'レシートを読み取れませんでした',
       denied: '設定でカメラを許可してください',
+    },
+    calendar: {
+      forecastLabel: '月末の見込み',
+      dayNoteLabel: 'この日のこと',
+      repeatLabel: 'くり返しの提案',
+      repeatAccept: '毎月にする',
+      repeatAcceptA11y: '毎月のくり返しにする',
+      repeatDismiss: '提案を閉じる',
     },
   },
 };

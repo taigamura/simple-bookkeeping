@@ -73,6 +73,10 @@ interface EntrySheetProps {
   /** AI result (Calendar orb voice entry) applied once on open, like the AI
    *  text line's parse: fills what it found, nothing is saved until the CTA. */
   prefill?: ParsedEntry;
+  /** Repeat preset applied once on open (Calendar repeat suggestion, PRD #145:
+   *  edit the latest matching entry with repeat already set to monthly).
+   *  Nothing is saved until the CTA. */
+  initialRepeat?: Repeat;
   /** Settings management route: recurring cadences only and explicit stop copy. */
   repeatManagement?: boolean;
   /** Collects the draft on save; the host stores or splits the corresponding ledger item. */
@@ -257,6 +261,7 @@ export function EntrySheet({
   editing,
   initialDraft,
   prefill,
+  initialRepeat,
   repeatManagement = false,
   onSave,
   onDelete,
@@ -296,7 +301,9 @@ export function EntrySheet({
     () => initialDraft?.category ?? editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
   );
   const [note, setNote] = useState(initialDraft?.note ?? editing?.note ?? '');
-  const [repeat, setRepeat] = useState<Repeat>(initialDraft?.repeat ?? editing?.repeat ?? 'never');
+  const [repeat, setRepeat] = useState<Repeat>(
+    initialDraft?.repeat ?? initialRepeat ?? editing?.repeat ?? 'never',
+  );
   const [weekendShift, setWeekendShift] = useState<WeekendShift>(
     editing?.occurrence?.weekendShift ?? 'after',
   );
