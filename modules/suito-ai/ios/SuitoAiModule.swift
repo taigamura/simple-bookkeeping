@@ -134,11 +134,11 @@ public class SuitoAiModule: Module {
       self.storeTask(requestId, task)
     }
 
-    Function("cancelAsk") { (requestId: String) in
+    Function("cancelAsk") { (requestId: String) -> Void in
       self.cancelTask(requestId)
     }
 
-    AsyncFunction("writeSiriSnapshot") { (json: String) in
+    AsyncFunction("writeSiriSnapshot") { (json: String) throws -> Void in
       do {
         try SuitoSiriStore.writeSnapshot(json: json)
       } catch {
@@ -151,7 +151,7 @@ public class SuitoAiModule: Module {
       SuitoSiriStore.readInboxJSON()
     }
 
-    AsyncFunction("clearSiriInbox") { (ids: [String]) in
+    AsyncFunction("clearSiriInbox") { (ids: [String]) throws -> Void in
       do {
         try SuitoSiriStore.clearInbox(ids: ids)
       } catch {

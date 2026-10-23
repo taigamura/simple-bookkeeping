@@ -10,7 +10,7 @@ import SuitoAi
 
 struct AddEntryIntent: AppIntent {
   static let title: LocalizedStringResource = "Add Entry"
-  static let description = IntentDescription("Records an expense or income in Suito. It shows up in the app the next time you open it.")
+  static let description: IntentDescription? = IntentDescription("Records an expense or income in Suito. It shows up in the app the next time you open it.")
   static let openAppWhenRun = false
 
   @Parameter(title: "Amount", requestValueDialog: "How much? / いくら？")
@@ -61,7 +61,7 @@ struct AddEntryIntent: AppIntent {
 
 struct PeriodSummaryIntent: AppIntent {
   static let title: LocalizedStringResource = "Summary"
-  static let description = IntentDescription("Income, spending, net, budget left and no-spend days for a month or a range of months.")
+  static let description: IntentDescription? = IntentDescription("Income, spending, net, budget left and no-spend days for a month or a range of months.")
   static let openAppWhenRun = false
 
   @Parameter(title: "Period", default: .thisMonth)
@@ -124,7 +124,7 @@ struct PeriodSummaryIntent: AppIntent {
 
 struct CategorySpendingIntent: AppIntent {
   static let title: LocalizedStringResource = "Spending by Category"
-  static let description = IntentDescription("How much went to one category in a month or a range of months.")
+  static let description: IntentDescription? = IntentDescription("How much went to one category in a month or a range of months.")
   static let openAppWhenRun = false
 
   @Parameter(title: "Category", requestValueDialog: "Which category? / どのカテゴリ？")
@@ -169,7 +169,7 @@ struct CategorySpendingIntent: AppIntent {
 
 struct FindEntriesIntent: AppIntent {
   static let title: LocalizedStringResource = "Find Entries"
-  static let description = IntentDescription("Returns Suito entries for a period, a category or words in the note, newest first.")
+  static let description: IntentDescription? = IntentDescription("Returns Suito entries for a period, a category or words in the note, newest first.")
   static let openAppWhenRun = false
 
   @Parameter(title: "Period")
@@ -187,7 +187,7 @@ struct FindEntriesIntent: AppIntent {
   @Parameter(title: "Text in note")
   var text: String?
 
-  @Parameter(title: "Limit", default: 100, inclusiveRange: (1, 500))
+  @Parameter(title: "Limit", description: "Maximum number of entries (1 to 500).", default: 100)
   var limit: Int
 
   static var parameterSummary: some ParameterSummary {
@@ -213,7 +213,7 @@ struct FindEntriesIntent: AppIntent {
       ? SuitoIntentSupport.range(preset: period, start: startMonth, end: endMonth, today: snapshot.today)
       : nil
     let name = category.map { SuitoSiriStore.matchCategory($0.id, in: snapshot) ?? $0.id }
-    let found = SuitoSiriStore.findEntries(snapshot, range: range, category: name, text: text, limit: limit)
+    let found = SuitoSiriStore.findEntries(snapshot, range: range, category: name, text: text, limit: max(1, min(500, limit)))
     let entities = found.map { EntryEntity(entry: $0, symbol: snapshot.currency.symbol) }
     let dialog = ja ? "\(entities.count)件見つかりました。" : "Found \(entities.count) entries."
     return .result(value: entities, dialog: IntentDialog(stringLiteral: dialog))
