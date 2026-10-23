@@ -8,6 +8,8 @@
  * than swapping labels; out of scope here.
  */
 
+const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
 export interface ZaimSkipStrings {
   transfer: (n: number) => string;
   balanceAdjustment: (n: number) => string;
@@ -243,6 +245,42 @@ export interface Strings {
     invalidMessage: string;
     restoreFailedTitle: string;
     restoreFailedMessage: string;
+  };
+  /** Suito AI surfaces (ADR-0006). No em dashes in any of this copy. */
+  ai: {
+    entryLineLabel: string;
+    entryLinePlaceholder: string;
+    entryLineHint: string;
+    entryWorking: string;
+    entryFilled: string;
+    ask: string;
+    askA11y: string;
+    askTitle: string;
+    askPlaceholder: string;
+    askInputLabel: string;
+    askSend: string;
+    askStartersLabel: string;
+    askStarters: string[];
+    askYou: string;
+    askSuito: string;
+    askWaiting: string;
+    askStrongerHint: string;
+    askHandoff: string;
+    askHandoffHint: string;
+    handoffTitle: string;
+    handoffExplain: string;
+    handoffShare: string;
+    handoffBack: string;
+    letterTitle: (m: number) => string;
+    letterDismiss: string;
+    letterReopen: (m: number) => string;
+    nudgeLabel: string;
+    nudgeDismiss: string;
+    settingsSection: string;
+    nudgesSwitch: string;
+    nudgesExplain: string;
+    spotlightSwitch: string;
+    spotlightExplain: string;
   };
 }
 
@@ -484,6 +522,45 @@ export const en: Strings = {
     restoreFailedTitle: 'Restore failed',
     restoreFailedMessage: 'Your data was not changed. Choose a backup file and try again.',
   },
+  ai: {
+    entryLineLabel: 'Describe the entry in words',
+    entryLinePlaceholder: 'e.g. lunch 850 yesterday',
+    entryLineHint: 'Fills in the amount, category, date and note. Nothing is saved until you tap the button.',
+    entryWorking: 'Reading',
+    entryFilled: 'Filled in',
+    ask: 'Ask',
+    askA11y: 'Ask about your money',
+    askTitle: 'Ask',
+    askPlaceholder: 'e.g. How much on food this month?',
+    askInputLabel: 'Your question',
+    askSend: 'Send question',
+    askStartersLabel: 'Try asking',
+    askStarters: [
+      'How much did I spend this month?',
+      'What was my biggest category last month?',
+      'How much budget is left?',
+    ],
+    askYou: 'You',
+    askSuito: 'Suito',
+    askWaiting: 'Thinking',
+    askStrongerHint: 'This one may need a bigger AI. You can hand it over with your numbers.',
+    askHandoff: 'Ask another AI',
+    askHandoffHint: 'Shows the exact text first, then opens the share sheet',
+    handoffTitle: 'What you will share',
+    handoffExplain: 'Suito sends nothing. You pick the app in the share sheet.',
+    handoffShare: 'Share',
+    handoffBack: 'Back',
+    letterTitle: (m) => `Your ${MONTHS_EN[m]} recap`,
+    letterDismiss: 'Hide recap',
+    letterReopen: (m) => `Read your ${MONTHS_EN[m]} recap`,
+    nudgeLabel: 'Observation',
+    nudgeDismiss: 'Hide observation',
+    settingsSection: 'AI',
+    nudgesSwitch: 'Recaps and nudges',
+    nudgesExplain: 'A monthly recap and one small observation, written by the model on this iPhone. Everything stays on this iPhone.',
+    spotlightSwitch: 'Siri & Search',
+    spotlightExplain: 'Lets Siri and Spotlight find your entries. The index stays on this iPhone.',
+  },
 };
 
 export const ja: Strings = {
@@ -716,5 +793,40 @@ export const ja: Strings = {
     invalidMessage: 'このファイルはこのバージョンで復元できるバックアップではありません。データは変更されていません。',
     restoreFailedTitle: '復元に失敗しました',
     restoreFailedMessage: 'データは変更されていません。バックアップファイルを選んでもう一度お試しください。',
+  },
+  ai: {
+    entryLineLabel: 'ことばで入力',
+    entryLinePlaceholder: '例：昨日 スタバ 620',
+    entryLineHint: '金額・カテゴリ・日付・メモを入力します。ボタンを押すまで保存されません。',
+    entryWorking: '読み取り中',
+    entryFilled: '入力しました',
+    ask: '聞く',
+    askA11y: 'お金について聞く',
+    askTitle: '聞く',
+    askPlaceholder: '例：今月コンビニいくら？',
+    askInputLabel: '質問',
+    askSend: '質問を送る',
+    askStartersLabel: 'たとえば',
+    askStarters: ['今月いくら使った？', '先月いちばん多かったカテゴリは？', '予算はあといくら？'],
+    askYou: 'あなた',
+    askSuito: 'Suito',
+    askWaiting: '考え中',
+    askStrongerHint: 'この質問はもっと大きなAIが向いています。数字をそえて渡せます。',
+    askHandoff: 'ChatGPTで聞く',
+    askHandoffHint: '送る内容を先に表示してから、共有シートを開きます',
+    handoffTitle: '共有する内容',
+    handoffExplain: 'Suitoからは何も送信しません。共有シートで送り先を選んでください。',
+    handoffShare: '共有する',
+    handoffBack: '戻る',
+    letterTitle: (m) => `${m + 1}月のふりかえり`,
+    letterDismiss: 'ふりかえりを閉じる',
+    letterReopen: (m) => `${m + 1}月のふりかえりを読む`,
+    nudgeLabel: '気づき',
+    nudgeDismiss: '気づきを閉じる',
+    settingsSection: 'AI',
+    nudgesSwitch: 'ふりかえりと気づき',
+    nudgesExplain: '月のふりかえりと小さな気づきを、このiPhoneの中のAIが書きます。データは外に出ません。',
+    spotlightSwitch: 'Siriと検索',
+    spotlightExplain: 'Siriとスポットライト検索で記録を探せます。索引はこのiPhoneの中だけです。',
   },
 };
