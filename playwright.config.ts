@@ -26,6 +26,11 @@ import { defineConfig, devices } from '@playwright/test';
 // rejects the machine, so the `e2e:test:firefox` script also sets
 // PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS. Install with
 // `npm run e2e:install -- firefox`.
+// E2E_PORT lets parallel worktrees each serve their own build: with
+// `reuseExistingServer`, two checkouts on the same port would silently test
+// whichever build started first. e2e/serve.mjs reads the same variable.
+const PORT = process.env.E2E_PORT ?? '4173';
+
 const BROWSER = process.env.E2E_BROWSER === 'firefox' ? 'Desktop Firefox' : 'Desktop Chrome';
 
 export default defineConfig({
@@ -40,7 +45,7 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['github']] : 'list',
   use: {
     ...devices[BROWSER],
-    baseURL: 'http://localhost:4173',
+    baseURL: `http://localhost:${PORT}`,
     // Phone-shaped viewport: the web AppShell centers a maxWidth-402 frame
     // (24px backdrop padding), so 430 wide renders the app at full phone width.
     viewport: { width: 430, height: 932 },
@@ -52,7 +57,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'node e2e/serve.mjs',
-    url: 'http://localhost:4173',
+    url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },

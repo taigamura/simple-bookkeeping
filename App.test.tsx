@@ -9,7 +9,7 @@ jest.mock('./theme/useAppFonts', () => ({ useAppFonts: () => true }));
 jest.mock('./store', () => ({
   useStore: () => ({
     ready: mockStoreReady,
-    state: { theme: 'system', motion: 'system' },
+    state: jest.requireActual('./store/schema').DEFAULT_STATE,
     update: jest.fn(),
     showCorruptNotice: false,
     hasCorruptStash: false,

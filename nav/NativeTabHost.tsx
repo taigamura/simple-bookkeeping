@@ -13,6 +13,11 @@
  * `preventsDefault`, so tapping it fires `onIndexChange` without switching
  * tabs, and we open the entry sheet instead.
  *
+ * `renderAccessory` fills UIKit's bottom accessory (iOS 26): the glass strip
+ * that joins the bar, where the Suito AI orb lives (`OrbAccessory`). Keep it
+ * either always set or always unset while mounted: the native side switches
+ * view branches on its presence, which would rebuild the whole TabView.
+ *
  * Web and Android keep the custom `TabBar` (Root picks via `NATIVE_TABS`).
  */
 import React, { useMemo } from 'react';
@@ -31,6 +36,8 @@ interface NativeTabHostProps {
   onAdd: () => void;
   /** One tab's body (Root's `renderTab`). */
   render: (tab: Tab) => React.ReactNode;
+  /** Bottom accessory content (iOS 26+); see the note above. */
+  renderAccessory?: (props: { placement: 'inline' | 'expanded' | 'none' }) => React.ReactNode;
 }
 
 const ROUTES = [
@@ -53,7 +60,7 @@ const ROUTES = [
   },
 ];
 
-export function NativeTabHost({ tab, onSelect, onAdd, render }: NativeTabHostProps) {
+export function NativeTabHost({ tab, onSelect, onAdd, render, renderAccessory }: NativeTabHostProps) {
   const { colors } = useTheme();
   const navigationState = useMemo(
     () => ({ index: tab === 'summary' ? 1 : 0, routes: ROUTES }),
@@ -73,6 +80,7 @@ export function NativeTabHost({ tab, onSelect, onAdd, render }: NativeTabHostPro
       }
       tabBarActiveTintColor={colors.positive}
       hapticFeedbackEnabled
+      renderBottomAccessoryView={renderAccessory}
     />
   );
 }

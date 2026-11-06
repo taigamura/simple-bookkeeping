@@ -1,0 +1,58 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "copyright": "2026 Taiga Kimura",
+    "info": {
+      "en-US": {
+        "title": "Suito: Budget & Expense Log",
+        "subtitle": "Private money tracker, no ads",
+        "keywords": [
+          "spending",
+          "finance",
+          "savings",
+          "bookkeeping",
+          "ledger",
+          "calendar",
+          "income",
+          "bills",
+          "offline",
+          "simple",
+          "diary",
+          "allowance"
+        ],
+        "promoText": "Log a day's spending in seconds. No account, no ads, no tracking. Moving from Zaim? Import your CSV and pick up where you left off.",
+        "description": "Know where your money went this month, in a few taps.\n\nSuito is a calm, fast money tracker built around a calendar. Tap a day, enter an amount, pick a category, done. Your month's income, spending and budget are always one glance away.\n\nNo sign-up. No ads. No tracking. Everything stays on your iPhone.\n\nTRACK EVERY DAY\n- Log income and expenses on a calendar, with an optional note\n- Repeating entries for rent, salary and subscriptions (daily, monthly or yearly)\n- Edit one occurrence, or this one and everything after it\n\nSTAY ON BUDGET\n- One monthly budget, or a budget for each category\n- See what's left for the month at a glance\n- Monthly summary with spending by category\n\nMAKE IT YOURS\n- Add and edit your own categories\n- Light and dark appearance that follows your iPhone\n- ¥, $, € or £ display\n- Full English and Japanese support\n\nBRING YOUR HISTORY\n- Import from Zaim (CSV, UTF-8 or Shift-JIS)\n- Export everything to CSV any time, for backup or a spreadsheet\n\nPRIVATE BY DESIGN\nSuito has no account, no cloud and no analytics. It never connects to your bank and never sends your data anywhere. Currency choice changes the symbol only; amounts are not converted.\n\nFree, with no ads and no in-app purchases.",
+        "privacyPolicyUrl": "https://taigamura.github.io/simple-bookkeeping/privacy.html",
+        "supportUrl": "https://github.com/taigamura/simple-bookkeeping"
+      },
+      "ja": {
+        "title": "Suito - かんたん家計簿カレンダー",
+        "subtitle": "登録不要・広告なしで予算と収支を管理",
+        "keywords": [
+          "簡単",
+          "無料",
+          "節約",
+          "貯金",
+          "支出",
+          "出費",
+          "お小遣い帳",
+          "おこづかい",
+          "出納帳",
+          "すいとう",
+          "やりくり",
+          "記録",
+          "シンプル",
+          "お金",
+          "固定費",
+          "一人暮らし",
+          "プライバシー",
+          "オフライン"
+        ],
+        "promoText": "今日の支出を数秒で記録。アカウント登録も広告もありません。Zaimから乗り換えるなら、CSVをそのまま読み込めます。",
+        "description": "今月いくら使ったか、ひと目でわかる。\n\nSuito（すいとう）は、カレンダーで使うシンプルな家計簿です。日付をタップして、金額を入れて、カテゴリを選ぶだけ。今月の収入・支出・予算の残りがいつでもすぐに見られます。\n\n会員登録なし。広告なし。データ収集なし。記録はすべてあなたのiPhoneの中だけに保存されます。\n\n■ 毎日の記録\n・カレンダーで収入と支出を記録（メモも残せます）\n・家賃、給料、サブスクなどは繰り返し記録に（毎日・毎月・毎年）\n・この回だけ、またはこの回以降をまとめて編集・削除\n\n■ 予算管理\n・月の予算を合計、またはカテゴリごとに設定\n・今月あといくら使えるか、ひと目で確認\n・カテゴリ別の月間サマリー\n\n■ 自分好みに\n・カテゴリを自由に追加・編集\n・iPhoneの設定に合わせたライト／ダーク表示\n・¥・$・€・£ の表示に対応\n・日本語と英語に完全対応\n\n■ Zaimから乗り換え\n・ZaimのCSVをそのまま読み込み（UTF-8／Shift-JIS対応）\n・いつでもCSVで書き出してバックアップ、表計算ソフトでも使えます\n\n■ プライバシー\nアカウントもクラウドも分析ツールもありません。銀行とも連携せず、データを外部に送信することは一切ありません。通貨の選択は記号の表示のみで、金額の換算は行いません。\n\n無料。広告もアプリ内課金もありません。",
+        "privacyPolicyUrl": "https://taigamura.github.io/simple-bookkeeping/privacy.html",
+        "supportUrl": "https://github.com/taigamura/simple-bookkeeping"
+      }
+    }
+  }
+}

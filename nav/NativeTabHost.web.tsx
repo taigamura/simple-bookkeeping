@@ -11,6 +11,7 @@ export function NativeTabHost(_props: {
   onSelect: (tab: Tab) => void;
   onAdd: () => void;
   render: (tab: Tab) => React.ReactNode;
+  renderAccessory?: (props: { placement: 'inline' | 'expanded' | 'none' }) => React.ReactNode;
 }): null {
   return null;
 }

@@ -29,6 +29,7 @@ import type {
   TxType,
   WeekendShift,
 } from '../domain';
+import { DEFAULT_AI_STATE, normalizeAiState, type AiState } from '../ai/state';
 import { isMotionPreference, type MotionPreference } from '../theme/motion';
 import { isThemePreference, type ThemePreference } from '../theme/tokens';
 
@@ -66,6 +67,10 @@ export interface AppState {
    *  because it is a way of looking at your money, not a transient view state.
    *  Added after v1 blobs shipped — merge-by-known-keys load fills the default. */
   summaryGranularity: SummaryGranularity;
+  /** Suito AI settings, saved letters and today's nudge (ADR-0006).
+   *  Added after v1 blobs shipped — merge-by-known-keys load fills the default.
+   *  Never rejects the ledger: a bad value degrades to defaults field by field. */
+  ai: AiState;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -81,6 +86,7 @@ export const DEFAULT_STATE: AppState = {
   calendarView: 'dots',
   motion: 'system',
   summaryGranularity: 'monthly',
+  ai: DEFAULT_AI_STATE,
 };
 
 /** On-disk envelope: the state plus a version tag for future migrations. */
@@ -101,6 +107,7 @@ const additiveStateKeys: StateKey[] = [
   'calendarView',
   'motion',
   'summaryGranularity',
+  'ai',
 ];
 const txTypes: TxType[] = ['income', 'expense'];
 const repeats: Repeat[] = ['never', 'daily', 'monthly', 'yearly'];
@@ -294,6 +301,8 @@ function validateField(key: StateKey, value: unknown): boolean {
       return isMotionPreference(value);
     case 'summaryGranularity':
       return isSummaryGranularity(value);
+    case 'ai':
+      return true; // normalizeAiState repairs field by field; AI state never rejects the ledger
   }
 }
 
@@ -305,6 +314,7 @@ function normalizeField(key: StateKey, value: unknown): AppState[StateKey] | nul
   if (key === 'recurrenceRules') {
     return (value as unknown[]).map((item) => normalizeRecurrenceRule(item)!);
   }
+  if (key === 'ai') return normalizeAiState(value);
   return value as AppState[StateKey];
 }
 

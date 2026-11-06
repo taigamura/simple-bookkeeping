@@ -111,6 +111,9 @@ import {
   Txt,
 } from '../theme';
 import { IconButton, ThemeToggleButton } from '../nav/IconButton';
+import { useOnDeviceAi } from '../ai/AiProvider';
+import type { AiState } from '../ai/state';
+import { AskPill, LetterCard, LetterReopenRow, NudgeRow } from '../ui/AiCards';
 
 /** How far the period subtitle travels on a period swap, in either direction. */
 const TITLE_TRAVEL = 12;
@@ -131,7 +134,23 @@ interface SummaryScreenProps {
   /** Commit the absolute period a swipe settled on — moves the shared cursor. */
   onPeriodChange: (ym: YM) => void;
   onSettings: () => void;
+  /** Suito AI (ADR-0006). All optional: absent, or with the on-device model
+   *  unavailable, Summary renders exactly as before. */
+  ai?: SummaryAiProps;
 }
+
+export interface SummaryAiProps {
+  state: AiState;
+  /** Real current month; letters and nudges key off it, not the cursor. */
+  today: YM;
+  onAsk: () => void;
+  /** Hide (true) or reopen (false) the letter saved under 'YYYY-MM'. */
+  onSetLetterDismissed: (key: string, dismissed: boolean) => void;
+  onDismissNudge: () => void;
+}
+
+/** 'YYYY-MM' with a 1-based month, the `AiState.letters` key. */
+export const letterKey = ({ y, m }: YM) => `${y}-${String(m + 1).padStart(2, '0')}`;
 
 export function SummaryScreen({
   entries,
@@ -145,8 +164,10 @@ export function SummaryScreen({
   onChangeGranularity,
   onPeriodChange,
   onSettings,
+  ai,
 }: SummaryScreenProps) {
   const { colors } = useTheme();
+  const aiOn = useOnDeviceAi() ? ai : undefined;
   const { enabled: motionEnabled } = useMotion();
   const annual = granularity === 'annual';
   const cursor: YM = { y, m };
@@ -233,9 +254,12 @@ export function SummaryScreen({
             place the headline number lives. Everything inside reads on-deep.
             Fixed, outside the pager, so its figures roll on a period swap. */}
         <View style={[styles.card, { backgroundColor: colors.deep }]}>
-          <Txt variant="microLabel" tone="onDeepMuted">
-            {annual ? strings.summary.netThisYear : strings.summary.netThisMonth}
-          </Txt>
+          <View style={[styles.heroTop, aiOn !== undefined && styles.heroTopWithPill]}>
+            <Txt variant="microLabel" tone="onDeepMuted">
+              {annual ? strings.summary.netThisYear : strings.summary.netThisMonth}
+            </Txt>
+            {aiOn && <AskPill onPress={aiOn.onAsk} />}
+          </View>
           <AnimatedNumber
             value={total}
             initialValue={0}
@@ -284,6 +308,8 @@ export function SummaryScreen({
             </View>
           )}
         </View>
+
+        {aiOn && !annual && <SummaryAi ai={aiOn} cursor={cursor} />}
 
         <Txt variant="microLabel" tone="dim" style={styles.sectionLabel}>
           {strings.summary.spendingByCategory}
@@ -381,6 +407,39 @@ function CategoryList({
   );
 }
 
+/**
+ * Letter card + nudge row under the hero. On the current month the card is
+ * last month's letter and the nudge is today's; on a past month the card is
+ * that month's own letter, which collapses to a reopen row once dismissed.
+ * The 「ふりかえりと気づき」 switch hides both.
+ */
+function SummaryAi({ ai, cursor }: { ai: SummaryAiProps; cursor: YM }) {
+  if (!ai.state.nudgesEnabled) return null;
+  const isCurrent = cursor.y === ai.today.y && cursor.m === ai.today.m;
+  const about = isCurrent ? shiftPeriod(cursor, -1, 'monthly') : cursor;
+  const key = letterKey(about);
+  const letter = ai.state.letters[key];
+  const nudge = isCurrent ? ai.state.nudge : null;
+  return (
+    <>
+      {letter && !letter.dismissed && (
+        <LetterCard
+          m={about.m}
+          paragraphs={letter.paragraphs}
+          facts={letter.facts}
+          onDismiss={() => ai.onSetLetterDismissed(key, true)}
+        />
+      )}
+      {letter && letter.dismissed && !isCurrent && (
+        <LetterReopenRow m={about.m} onPress={() => ai.onSetLetterDismissed(key, false)} />
+      )}
+      {nudge && nudge.text !== null && !nudge.dismissed && (
+        <NudgeRow text={nudge.text} facts={nudge.facts} onDismiss={ai.onDismissNudge} />
+      )}
+    </>
+  );
+}
+
 /** Hairline on the hero block — the palette's `line` is tuned for the ground. */
 const HERO_RULE = 'rgba(255,255,255,.22)';
 
@@ -445,6 +504,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   net: { marginTop: -2 },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heroTopWithPill: { minHeight: 28 },
   legend: { flexDirection: 'row', gap: 20, flexWrap: 'wrap' },
   budgetRow: {
     flexDirection: 'row',

@@ -1,6 +1,11 @@
 # ADR-0003 — Motion system
 
 - **Status:** accepted (2026-07-31)
+- **Amended 2026-10-23:** one sanctioned idle loop. The Calendar AI orb
+  (PRD #145) floats like voice-memo's Kodama orb: it slowly turns, bobs and
+  breathes while idle, with no disc behind it. Taiga asked for it ("should
+  float around, not just be an icon"). Reduced motion stops it. Everything
+  else still obeys "nothing plays on idle".
 - **Builds on:** [ADR-0002](0002-kippu-visual-direction.md) (Kippu visual
   direction), [ADR-0001](0001-follow-os-appearance.md) (follow the OS)
 

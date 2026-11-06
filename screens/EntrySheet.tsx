@@ -12,7 +12,7 @@
  * Presentational state only — the parent owns persistence and where the entries
  * land (it passes the target `y`/`m`/`day`).
  */
-import React, { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import React, { useContext, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import {
   Platform,
   Pressable,
@@ -21,9 +21,11 @@ import {
   TextInput,
   View,
   useWindowDimensions,
+  type LayoutChangeEvent,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import {
   amountValue,
@@ -37,7 +39,10 @@ import {
   type TxType,
   type WeekendShift,
 } from '../domain';
-import { strings } from '../i18n';
+import { detectLanguage, strings } from '../i18n';
+import { useAi } from '../ai/AiProvider';
+import type { ParsedEntry, ParseContext } from '../ai/contract';
+import { AiEntryLine, AI_ENTRY_LINE_HEIGHT } from '../ui/AiEntryLine';
 import { CategoryChips, Keypad, PressScale, SegmentedToggle } from '../ui';
 import {
   useTheme,
@@ -67,6 +72,13 @@ interface EntrySheetProps {
   editing?: Transaction;
   /** Draft supplied by quick-entry flows before the sheet is shown. */
   initialDraft?: EntryDraft;
+  /** AI result (Calendar orb voice entry) applied once on open, like the AI
+   *  text line's parse: fills what it found, nothing is saved until the CTA. */
+  prefill?: ParsedEntry;
+  /** Repeat preset applied once on open (Calendar repeat suggestion, PRD #145:
+   *  edit the latest matching entry with repeat already set to monthly).
+   *  Nothing is saved until the CTA. */
+  initialRepeat?: Repeat;
   /** Settings management route: recurring cadences only and explicit stop copy. */
   repeatManagement?: boolean;
   /** Collects the draft on save; the host stores or splits the corresponding ledger item. */
@@ -92,6 +104,7 @@ interface ScrollContainerProps {
   contentContainerStyle?: StyleProp<ViewStyle>;
   showsVerticalScrollIndicator?: boolean;
   keyboardShouldPersistTaps?: 'always' | 'never' | 'handled';
+  onLayout?: (event: LayoutChangeEvent) => void;
   children: ReactNode;
 }
 
@@ -118,11 +131,11 @@ const next = <T,>(order: T[], value: T): T =>
 const NATURAL_FORM_HEIGHT = 760;
 
 /**
- * Floor for the compact factor. Past this the form has given up as much as it
- * can without the controls becoming hard to hit (see `MIN_KEY_HEIGHT` in
- * `Keypad`), and the remainder is taken as scroll instead.
+ * Floor for the compact factor. Each control also has its own hard floor (see
+ * `MIN_KEY_HEIGHT` in `Keypad`), so this mostly bounds the fit loop below;
+ * past it the remainder is taken as scroll.
  */
-const MIN_COMPACT_SCALE = 0.72;
+export const MIN_COMPACT_SCALE = 0.5;
 
 /** The footer is outside the scaled body and must get its own room budget. */
 const FOOTER_BUDGET = metrics.ctaHeight + 14;
@@ -152,17 +165,21 @@ const NATIVE_BOTTOM_ALLOWANCE = 34;
  * Scaling is what keeps an ordinary phone from scrolling a form that was
  * designed not to; the pinning is what guarantees the button is *reachable*.
  */
-export function entryCompactScale(windowHeight: number, chrome: number): number {
+export function entryCompactScale(windowHeight: number, chrome: number, extra = 0): number {
   // Entry opens at the host's expanded detent. Reserve the pinned footer
   // before scaling the scrollable body;
   // otherwise the form can still be just tall enough to push 0/00 below the
   // fold even though the sheet itself is fullscreen.
   const budget = windowHeight - chrome - SHEET_CHROME - FOOTER_BUDGET;
-  return Math.max(MIN_COMPACT_SCALE, Math.min(1, budget / NATURAL_FORM_HEIGHT));
+  // `extra` is fixed-height content above the scaled form (the AI text line):
+  // it does not shrink, so it comes straight out of the budget.
+  return Math.max(MIN_COMPACT_SCALE, Math.min(1, (budget - extra) / NATURAL_FORM_HEIGHT));
 }
 
-function useCompactScale(): number {
+function useCompactScale(extra = 0): number {
   const { height: windowHeight } = useWindowDimensions();
+  // Null outside a SafeAreaProvider (isolated renders), unlike the hook.
+  const insets = useContext(SafeAreaInsetsContext);
   // Everything between the window edges and the sheet's content box. On web
   // that is the phone frame's padding + border (imported from BottomSheet so
   // the two cannot drift); on native it is the status bar and home indicator,
@@ -175,8 +192,12 @@ function useCompactScale(): number {
   // heuristic. The pinned CTA — not this number — is what guarantees the button
   // is reachable, so precision here buys nothing.
   const chrome =
-    Platform.OS === 'web' ? WEB_FRAME_INSET : metrics.statusOffset + NATIVE_BOTTOM_ALLOWANCE;
-  return entryCompactScale(windowHeight, chrome);
+    Platform.OS === 'web'
+      ? WEB_FRAME_INSET
+      : insets
+        ? insets.top + insets.bottom
+        : metrics.statusOffset + NATIVE_BOTTOM_ALLOWANCE;
+  return entryCompactScale(windowHeight, chrome, extra);
 }
 
 const formatDate = ({ y, m, day }: RecurrenceDate): string =>
@@ -248,6 +269,8 @@ export function EntrySheet({
   symbol,
   editing,
   initialDraft,
+  prefill,
+  initialRepeat,
   repeatManagement = false,
   onSave,
   onDelete,
@@ -256,7 +279,30 @@ export function EntrySheet({
   ScrollContainer = ScrollView as ComponentType<ScrollContainerProps>,
 }: EntrySheetProps) {
   const { colors } = useTheme();
-  const scale = useCompactScale();
+  const { ai, availability } = useAi();
+  // Plain-words entry (ADR-0006): new entries only, on-device model only.
+  // Everywhere else the sheet is exactly what it was.
+  const showAiLine =
+    availability.onDevice === 'available' && editing == null && !repeatManagement;
+  // The window-derived factor is only the first guess. The form's real height
+  // depends on the locale, the category count and the optional rows, so after
+  // layout the body is measured against its scroll viewport and, if it still
+  // overflows, the factor steps down until it fits (or hits the floor). It only
+  // ever shrinks while the sheet is open, so it cannot oscillate; and Entry
+  // always opens at the max detent, so the viewport does not depend on it.
+  const windowScale = useCompactScale(showAiLine ? AI_ENTRY_LINE_HEIGHT + 14 : 0);
+  const [fit, setFit] = useState(1);
+  const scale = Math.max(MIN_COMPACT_SCALE, windowScale * fit);
+  const viewportHeight = useRef(0);
+  const fitToViewport = () => {
+    const content = bodyHeight.current;
+    const viewport = viewportHeight.current;
+    if (content <= 0 || viewport <= 0 || content <= viewport + 1) return;
+    if (scale <= MIN_COMPACT_SCALE) return;
+    // Proportional shrink under-shoots (fixed parts and floors don't scale), so
+    // step at least 3% and let the next layout check again.
+    setFit((f) => f * Math.min(0.97, viewport / content));
+  };
   // Body and footer are measured separately and summed: the body is the part
   // that may scroll, the footer is pinned, and the host needs their total to
   // pick a detent tall enough to show both.
@@ -269,8 +315,10 @@ export function EntrySheet({
   };
   // Scaled spacing. Row heights keep a 40px floor for the same reason the
   // keypad keys do — below that a tap row stops being a comfortable target.
-  const gap = Math.max(8, Math.round(14 * scale));
-  const rowHeight = Math.max(40, Math.round(46 * scale));
+  const gap = Math.max(6, Math.round(14 * scale));
+  const rowHeight = Math.max(36, Math.round(46 * scale));
+  // The "Expense"/"Income" caption repeats the toggle; drop it once space is tight.
+  const showAmountCaption = scale >= 0.8;
   // Latch so a double-tap cannot save twice while the host processes the save
   // and dismisses the sheet.
   const [saving, setSaving] = useState(false);
@@ -282,7 +330,9 @@ export function EntrySheet({
     () => initialDraft?.category ?? editing?.category ?? catsFor(editing?.type ?? 'expense')[0],
   );
   const [note, setNote] = useState(initialDraft?.note ?? editing?.note ?? '');
-  const [repeat, setRepeat] = useState<Repeat>(initialDraft?.repeat ?? editing?.repeat ?? 'never');
+  const [repeat, setRepeat] = useState<Repeat>(
+    initialDraft?.repeat ?? initialRepeat ?? editing?.repeat ?? 'never',
+  );
   const [weekendShift, setWeekendShift] = useState<WeekendShift>(
     editing?.occurrence?.weekendShift ?? 'after',
   );
@@ -348,6 +398,39 @@ export function EntrySheet({
     setTimeText(formatTime(nextDate));
   };
 
+  // applyParsed(): a model parse fills whatever it found and leaves the rest
+  // as the user had it. Nothing is saved; the user still taps the CTA.
+  const applyParsed = (parsed: ParsedEntry) => {
+    const nextType = parsed.type ?? txType;
+    if (nextType !== txType) setTxType(nextType);
+    const cats = catsFor(nextType);
+    if (parsed.category && cats.includes(parsed.category)) setCategory(parsed.category);
+    else if (!cats.includes(category)) setCategory(cats[0]);
+    if (parsed.amount !== undefined && parsed.amount > 0) {
+      setAmountStr(String(Math.round(parsed.amount)));
+    }
+    if (parsed.date) {
+      const time = enteredTime ?? { hours: dateTime.getHours(), minutes: dateTime.getMinutes() };
+      setDateTime(dateTimeFromParts(parsed.date, time));
+      setDateText(formatDate(parsed.date));
+    }
+    if (parsed.note) setNote(parsed.note);
+  };
+  const appliedPrefill = useRef<ParsedEntry | undefined>(undefined);
+  useEffect(() => {
+    if (!prefill || appliedPrefill.current === prefill) return;
+    appliedPrefill.current = prefill;
+    applyParsed(prefill);
+    // applyParsed reads current form state; re-run only for a new prefill.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
+  const parseContext: ParseContext = {
+    expCats,
+    incCats,
+    today: { y: today.y, m: today.m, day: today.day },
+    locale: detectLanguage(),
+  };
+
   const save = () => {
     if (!enteredDate || !enteredDateTime || saving) return;
     const draft = {
@@ -369,6 +452,10 @@ export function EntrySheet({
         style={styles.bodyScroll}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
+        onLayout={(event) => {
+          viewportHeight.current = event.nativeEvent.layout.height;
+          fitToViewport();
+        }}
         // The amount is entered on the in-form keypad, but Note/Date are real
         // text inputs; without this a tap on a keypad key while the keyboard is
         // up would be eaten by the dismiss instead of registering a digit.
@@ -380,6 +467,7 @@ export function EntrySheet({
           onLayout={(event) => {
             bodyHeight.current = event.nativeEvent.layout.height;
             reportHeight();
+            fitToViewport();
           }}
         >
           <View style={styles.topRow}>
@@ -389,6 +477,14 @@ export function EntrySheet({
         </View>
         <IconButton name="x" accessibilityLabel={strings.nav.close} onPress={onClose} />
       </View>
+
+      {showAiLine && (
+        <AiEntryLine
+          parse={(text) => ai.parseEntry(text, parseContext)}
+          onParsed={applyParsed}
+          scanReceipt={() => ai.scanReceipt(parseContext)}
+        />
+      )}
 
       <View style={styles.amountBlock}>
         <Txt
@@ -400,9 +496,11 @@ export function EntrySheet({
         >
           {heroText}
         </Txt>
-        <Txt variant="microLabel" tone="dim">
-          {txType === 'income' ? strings.common.income : strings.common.expense}
-        </Txt>
+        {showAmountCaption && (
+          <Txt variant="microLabel" tone="dim">
+            {txType === 'income' ? strings.common.income : strings.common.expense}
+          </Txt>
+        )}
       </View>
 
       <CategoryChips
@@ -417,8 +515,8 @@ export function EntrySheet({
       )}
 
       <View style={[styles.rowsCard, { backgroundColor: colors.card2 }]}>
-        <View style={styles.dateSection}>
-          <View style={styles.dateRow}>
+        <View style={[styles.dateSection, { minHeight: rowHeight }]}>
+          <View style={[styles.dateRow, { minHeight: rowHeight }]}>
             <Txt variant="optionLabel" tone="dim">
               {strings.entry.dateRowLabel}
             </Txt>
@@ -523,6 +621,7 @@ export function EntrySheet({
           style={[
             styles.noteRow,
             {
+              minHeight: rowHeight,
               borderTopWidth: StyleSheet.hairlineWidth,
               borderTopColor: colors.hair,
             },

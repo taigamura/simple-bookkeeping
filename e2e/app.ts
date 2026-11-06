@@ -17,7 +17,8 @@ export type SheetId =
   | 'repeat-entry-sheet'
   | 'settings-sheet'
   | 'budgets-sheet'
-  | 'repeats-sheet';
+  | 'repeats-sheet'
+  | 'ask-sheet';
 
 /**
  * A fresh cold page load: navigate, then wait for the app to pass its

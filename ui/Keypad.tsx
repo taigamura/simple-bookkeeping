@@ -53,11 +53,12 @@ const DISPLAY: Partial<Record<KeypadKey, string>> = {
 };
 
 /**
- * Smallest key height we will render. iOS asks for 44pt of touch target; keys
- * are ~23% of the sheet width (comfortably past 44 horizontally), so the height
- * is the dimension that matters and this is where it stops.
+ * Smallest key height we will render. Keys are ~23% of the sheet width (about
+ * 85pt, nearly twice iOS's 44pt target horizontally), so a 40pt-tall key is
+ * still a ~3400pt² target; going this far is what lets the whole form fit an
+ * ordinary iPhone without a scroll.
  */
-const MIN_KEY_HEIGHT = 44;
+const MIN_KEY_HEIGHT = 40;
 
 export function Keypad({
   onKey,
@@ -69,7 +70,7 @@ export function Keypad({
 }) {
   const { colors } = useTheme();
   const keyHeight = Math.max(MIN_KEY_HEIGHT, Math.round(metrics.keypadKeySize * scale));
-  const rowGap = Math.max(6, Math.round(metrics.keypadGap * scale));
+  const rowGap = Math.max(5, Math.round(metrics.keypadGap * scale));
   const digitSize = Math.max(18, Math.round(22 * scale));
   const iconSize = Math.max(16, Math.round(20 * scale));
   const accessibilityLabels: Partial<Record<KeypadKey, string>> = {

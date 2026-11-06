@@ -35,10 +35,33 @@
  *   cross-fades whenever the selected day or the displayed month changes, so a
  *   day switch and a month swipe both read as a deliberate swap of content
  *   rather than a flash.
+ *
+ * ## Suito AI one-liners (PRD #145)
+ *
+ * With the on-device model available and the AI switch on (`ai` prop +
+ * `useCalendarAi`), three lines join the screen. None of them moves layout
+ * when it arrives:
+ *
+ * - **Forecast** sits in a fixed one-line slot under the strip. The slot exists
+ *   in every month while AI is on (empty outside the current month), so a
+ *   month swipe never shifts the grid; the text fades in.
+ * - **Day note** sits under the selected day's label. Its slot is reserved as
+ *   soon as code finds the day notable (synchronously, inside the day-list
+ *   cross-fade), and the model's words fade into it.
+ * - **Repeat suggestion** is one row at the top of the day panel (current
+ *   month), reserved while the model words it. Accept hands the latest
+ *   matching entry to the host to edit with repeat preset to monthly; dismiss
+ *   persists the key so it never returns.
+ *
+ * Without the `ai` prop, or with AI unavailable/off, the screen is exactly
+ * the pre-AI layout.
  */
+import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Animated, { FadeIn, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+
+import { useCalendarAi, type CalendarAiInput } from '../ai/useCalendarAi';
 
 import {
   MONTH_NAMES,
@@ -60,7 +83,7 @@ import {
   type YM,
 } from '../domain';
 import { strings } from '../i18n';
-import { AnimatedNumber, ListRow, MonthPager } from '../ui';
+import { AnimatedNumber, ListRow, MonthPager, PressScale } from '../ui';
 import {
   useTheme,
   metrics,
@@ -69,6 +92,7 @@ import {
   easings,
   useMotion,
   withAppTiming,
+  ReduceMotion,
   Txt,
   type Tone,
 } from '../theme';
@@ -83,6 +107,13 @@ import type Swipeable from 'react-native-gesture-handler/Swipeable';
 const TITLE_TRAVEL = 12;
 /** Small settle for the grid when the Calendar tab is mounted from Summary. */
 const GRID_TRAVEL = 14;
+
+/** Suito AI inputs (PRD #145). The host passes the full state (repeat
+ *  detection needs history beyond the visible months) and its `updateAi`. */
+export interface CalendarAiProps extends CalendarAiInput {
+  /** Accept a repeat suggestion: edit `entry` with repeat preset to monthly. */
+  onAcceptRepeat: (entry: Transaction) => void;
+}
 
 interface CalendarScreenProps {
   entries: Transaction[];
@@ -120,6 +151,8 @@ interface CalendarScreenProps {
   pulseDay?: number;
   /** Nonce for that pulse — see `DayCell`'s `pulse` prop. */
   pulseNonce?: number;
+  /** Suito AI one-liners; absent = no AI surfaces at all. */
+  ai?: CalendarAiProps;
 }
 
 // Income is the only tinted figure; a negative net is plain ink. Red is
@@ -149,6 +182,7 @@ export function CalendarScreen({
   pulseM,
   pulseDay,
   pulseNonce,
+  ai,
 }: CalendarScreenProps) {
   const { colors } = useTheme();
   const { enabled } = useMotion();
@@ -160,6 +194,8 @@ export function CalendarScreen({
   // Mode-aware budget logic: check if any budget is active and calculate remaining.
   const budgetActive = isBudgetActive(budgetMode, budgets, totalBudget);
   const remaining = getRemainingBudget(budgetMode, budgets, totalBudget, month);
+  const lines = useCalendarAi(ai ?? null, { y, m, day });
+  const lineEntering = enabled ? FadeIn.duration(durations.base).reduceMotion(ReduceMotion.Never) : undefined;
 
   // Title block direction cue: which way the displayed month moved, derived
   // from the absolute month index (y*12+m) so the December -> January turn
@@ -329,6 +365,25 @@ export function CalendarScreen({
         )}
       </View>
 
+      {lines.enabled && (
+        <View style={styles.forecastSlot} testID="ai-forecast-slot">
+          {lines.forecast !== null && (
+            <Animated.View
+              entering={lineEntering}
+              testID="ai-forecast"
+              style={styles.forecastLine}
+              accessible
+              accessibilityLabel={`${strings.ai.calendar.forecastLabel}: ${lines.forecast}`}
+            >
+              <Feather name="trending-up" size={12} color={colors.positive} />
+              <Txt variant="secondary" tone="muted" numberOfLines={1} style={styles.flex}>
+                {lines.forecast}
+              </Txt>
+            </Animated.View>
+          )}
+        </View>
+      )}
+
       <Animated.View style={enabled && gridAnimatedStyle}>
         <MonthPager
           entries={entries}
@@ -348,16 +403,43 @@ export function CalendarScreen({
 
       <Animated.View style={[styles.dayList, enabled && dayListAnimatedStyle]}>
         <View style={[styles.dayHeader, { borderBottomColor: colors.line }]}>
-          <Txt variant="microLabel" tone="muted">
-            {dayLabel(y, m, day)}
-          </Txt>
-          <AnimatedNumber
-            value={dNet}
-            format={(n) => signed(n, symbol)}
-            variant="inlineAmount"
-            tone={netTone(dNet)}
-          />
+          <View style={styles.dayHeaderRow}>
+            <Txt variant="microLabel" tone="muted">
+              {dayLabel(y, m, day)}
+            </Txt>
+            <AnimatedNumber
+              value={dNet}
+              format={(n) => signed(n, symbol)}
+              variant="inlineAmount"
+              tone={netTone(dNet)}
+            />
+          </View>
+          {lines.dayNoteExpected && (
+            <View style={styles.dayNoteSlot} testID="ai-day-note-slot">
+              {lines.dayNote !== null && (
+                <Animated.View entering={lineEntering} testID="ai-day-note">
+                  <Txt
+                    variant="secondary"
+                    tone="dim"
+                    numberOfLines={2}
+                    accessibilityLabel={`${strings.ai.calendar.dayNoteLabel}: ${lines.dayNote}`}
+                  >
+                    {lines.dayNote}
+                  </Txt>
+                </Animated.View>
+              )}
+            </View>
+          )}
         </View>
+
+        {lines.repeat && ai && (
+          <RepeatSuggestionRow
+            text={lines.repeat.text}
+            entering={lineEntering}
+            onAccept={() => ai.onAcceptRepeat(lines.repeat!.entry)}
+            onDismiss={() => lines.dismissRepeat(lines.repeat!.key)}
+          />
+        )}
 
         {rows.length === 0 ? (
           <View style={styles.empty}>
@@ -386,6 +468,72 @@ export function CalendarScreen({
           </ScrollView>
         )}
       </Animated.View>
+    </View>
+  );
+}
+
+/** One dismissible repeat suggestion (PRD #145). The row is reserved while
+ *  the model words it, so the list below never jumps when the text lands. */
+function RepeatSuggestionRow({
+  text,
+  entering,
+  onAccept,
+  onDismiss,
+}: {
+  text: string | null;
+  entering: React.ComponentProps<typeof Animated.View>['entering'];
+  onAccept: () => void;
+  onDismiss: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View testID="ai-repeat" style={[styles.repeatRow, { backgroundColor: colors.card }]}>
+      <Feather name="repeat" size={14} color={colors.positive} />
+      <View style={styles.flex}>
+        {text !== null && (
+          <Animated.View entering={entering}>
+            <Txt
+              variant="optionLabel"
+              tone="ink"
+              numberOfLines={2}
+              testID="ai-repeat-text"
+              accessibilityLabel={`${strings.ai.calendar.repeatLabel}: ${text}`}
+            >
+              {text}
+            </Txt>
+          </Animated.View>
+        )}
+      </View>
+      <PressScale
+        scale="control"
+        onPress={onAccept}
+        testID="ai-repeat-accept"
+        accessibilityRole="button"
+        accessibilityLabel={strings.ai.calendar.repeatAcceptA11y}
+        hitSlop={6}
+        style={({ pressed }) => [
+          styles.repeatAccept,
+          { borderColor: colors.positive, opacity: pressed ? 0.7 : 1 },
+        ]}
+      >
+        <Txt variant="secondary" tone="positive">
+          {strings.ai.calendar.repeatAccept}
+        </Txt>
+      </PressScale>
+      <PressScale
+        scale="control"
+        onPress={onDismiss}
+        testID="ai-repeat-dismiss"
+        accessibilityRole="button"
+        accessibilityLabel={strings.ai.calendar.repeatDismiss}
+        hitSlop={8}
+        style={({ pressed }) => [
+          styles.repeatClose,
+          { backgroundColor: colors.card2, opacity: pressed ? 0.7 : 1 },
+        ]}
+      >
+        <Feather name="x" size={13} color={colors.muted} />
+      </PressScale>
     </View>
   );
 }
@@ -454,12 +602,46 @@ const styles = StyleSheet.create({
   // child of `screen`.
   dayList: { flex: 1 },
   dayHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginTop: 10,
     paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  dayHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  flex: { flex: 1 },
+  // Fixed one-line slot: present in every month while AI is on, so the grid
+  // never shifts when the forecast lands or the month changes. Pulled up into
+  // the strip's bottom margin so it reads as the strip's footnote.
+  forecastSlot: { height: 18, marginTop: -8, marginBottom: 8, justifyContent: 'center' },
+  forecastLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dayNoteSlot: { minHeight: 16, marginTop: 6 },
+  repeatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 46,
+    borderRadius: metrics.iconTileRadius + 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  repeatAccept: {
+    height: 26,
+    paddingHorizontal: 10,
+    borderRadius: metrics.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  repeatClose: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 },
   emptyText: { textAlign: 'center' },

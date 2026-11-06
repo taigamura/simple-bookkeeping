@@ -90,3 +90,18 @@ a second copy that would drift. No behaviour in the host changed.
 - Nothing signals that the body scrolls beyond the keypad being visibly cut off.
   On the shortest screens a fade or a rule at the scroll boundary would make the
   affordance explicit.
+
+## Amendment (2026-11-06): measure, then step down
+
+Reported on an iPhone 16 Pro: the form still scrolled, worst with the AI text
+line (~50pt over). The window heuristic's constants (760pt natural height,
+approximate safe area) had drifted from the real form, and the 0.72 floor plus
+44pt keys stopped it short. Now the window factor is only the first guess:
+after layout the body's height is compared with its scroll viewport, and while
+it overflows the factor multiplies down (at least 3% per step) to a 0.5 floor.
+This does not reopen the loop rejected above: Entry always opens at the max
+detent (`defaultHeightRatio={1}`), so the viewport does not depend on the
+factor, and the factor only ever decreases while the sheet is open. Floors
+lowered: keys 40pt (they are ~85pt wide), option rows 36pt; the redundant
+Expense/Income caption hides below 0.8. Safe-area insets are read from
+`SafeAreaInsetsContext` when present. Pinned by `e2e/entry-fit.spec.ts`.

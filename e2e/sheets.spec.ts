@@ -66,28 +66,34 @@ async function expectEveryButtonAccessible(
 ) {
   await expectSheetOpen(page, id);
   const surface = sheet(page, id);
-  const surfaceBox = (await surface.boundingBox())!;
-  const buttons = await surface.getByRole('button').all();
-  expect(buttons.length, `${id} should expose at least one button`).toBeGreaterThan(0);
+  // The sheet can still be easing to its new detent right after a conditional
+  // row appears (e.g. the repeat editor's Stop button). One-shot boxes caught
+  // it mid-glide in CI (48.7px gap vs the 48px cap), so re-measure until the
+  // layout holds; the limits themselves stay strict.
+  await expect(async () => {
+    const surfaceBox = (await surface.boundingBox())!;
+    const buttons = await surface.getByRole('button').all();
+    expect(buttons.length, `${id} should expose at least one button`).toBeGreaterThan(0);
 
-  for (const button of buttons) {
-    const box = (await button.boundingBox())!;
-    const label = (await button.getAttribute('aria-label')) ?? 'unlabelled button';
-    expect(box.x, `${label} should not clip on the left`).toBeGreaterThanOrEqual(surfaceBox.x);
-    expect(box.x + box.width, `${label} should not clip on the right`)
-      .toBeLessThanOrEqual(surfaceBox.x + surfaceBox.width);
-    expect(box.y, `${label} should not clip above the sheet`).toBeGreaterThanOrEqual(surfaceBox.y);
-    expect(box.y + box.height, `${label} should not clip below the sheet`)
-      .toBeLessThanOrEqual(surfaceBox.y + surfaceBox.height);
-  }
+    for (const button of buttons) {
+      const box = (await button.boundingBox())!;
+      const label = (await button.getAttribute('aria-label')) ?? 'unlabelled button';
+      expect(box.x, `${label} should not clip on the left`).toBeGreaterThanOrEqual(surfaceBox.x);
+      expect(box.x + box.width, `${label} should not clip on the right`)
+        .toBeLessThanOrEqual(surfaceBox.x + surfaceBox.width);
+      expect(box.y, `${label} should not clip above the sheet`).toBeGreaterThanOrEqual(surfaceBox.y);
+      expect(box.y + box.height, `${label} should not clip below the sheet`)
+        .toBeLessThanOrEqual(surfaceBox.y + surfaceBox.height);
+    }
 
-  const finalAction = surface.getByLabel(finalActionLabel, { exact: true });
-  const actionBox = (await finalAction.boundingBox())!;
-  const bottomClearance = surfaceBox.y + surfaceBox.height - (actionBox.y + actionBox.height);
-  expect(bottomClearance, `${finalActionLabel} should retain bottom breathing room`)
-    .toBeGreaterThanOrEqual(28);
-  expect(bottomClearance, `${finalActionLabel} should not leave an oversized bottom gap`)
-    .toBeLessThanOrEqual(48);
+    const finalAction = surface.getByLabel(finalActionLabel, { exact: true });
+    const actionBox = (await finalAction.boundingBox())!;
+    const bottomClearance = surfaceBox.y + surfaceBox.height - (actionBox.y + actionBox.height);
+    expect(bottomClearance, `${finalActionLabel} should retain bottom breathing room`)
+      .toBeGreaterThanOrEqual(28);
+    expect(bottomClearance, `${finalActionLabel} should not leave an oversized bottom gap`)
+      .toBeLessThanOrEqual(48);
+  }).toPass({ timeout: OPEN_TIMEOUT });
 }
 
 test('Settings, Repeats, and Budgets render visible bodies after opening and drill-in', async ({ page }) => {
