@@ -163,7 +163,7 @@ test('tap opens Ask scoped to the visible month', async ({ page }) => {
   await expect(ask.getByTestId('ask-answer')).toContainText('steady pace', { timeout: 3_000 });
 });
 
-test('hold → partial bubble → release → Entry sheet filled with ¥850', async ({ page }) => {
+test('hold → partial bubble → release → saved straight away; tap edits it', async ({ page }) => {
   await load(page);
   const orb = page.getByTestId('ai-orb');
   const c = await box(orb);
@@ -190,11 +190,42 @@ test('hold → partial bubble → release → Entry sheet filled with ¥850', as
   await page.waitForTimeout(600);
 
   await page.mouse.up();
+  // No Entry sheet: the entry is saved and the strip says so.
+  await expect(bubble).toHaveText(/^Added ¥850 · /, { timeout: 3_000 });
+  await expect(orb).toContainText('Tap to edit');
+  await expect(page.getByTestId('entry-sheet')).toHaveCount(0);
+  await expect(orb).toHaveAttribute('aria-valuetext', 'idle');
+  // It landed on yesterday (July 2), which the Calendar now selects.
+  await expect(page.getByText('lunch', { exact: true }).first()).toBeVisible();
+  await expectDockedAboveBar(page);
+  // Let the save wave and the totals roll finish (well inside the 5 s window).
+  await expect(page.getByText('¥850', { exact: true }).first()).toBeVisible({ timeout: 3_000 });
+  await page.waitForTimeout(1500);
+  await expect(page).toHaveScreenshot('ai-orb-saved.png', orbMask(page));
+
+  // Tap while it shows: edit that entry.
+  await orb.click();
   await expectSheetOpen(page, 'entry-sheet');
   const entry = page.getByTestId('entry-sheet');
-  await expect(entry.getByText('¥850').first()).toBeVisible({ timeout: 2_000 });
-  await expect(orb).toHaveAttribute('aria-valuetext', 'idle');
-  await expect(bubble).toHaveCount(0);
+  await expect(entry.getByText('¥850').first()).toBeVisible();
+  await expect(entry.getByLabel('Delete entry', { exact: true })).toBeVisible();
+});
+
+test('the "Added" line clears after a few seconds and tap asks again', async ({ page }) => {
+  await load(page);
+  const orb = page.getByTestId('ai-orb');
+  const c = await box(orb);
+  await page.mouse.move(c.x + c.width / 2, c.y + c.height / 2);
+  await page.mouse.down();
+  await expect(page.getByTestId('ai-orb-bubble')).toHaveText('lunch 850 yesterday', { timeout: 2_000 });
+  await page.waitForTimeout(600);
+  await page.mouse.up();
+  await expect(page.getByTestId('ai-orb-bubble')).toHaveText(/^Added/, { timeout: 3_000 });
+  await page.clock.runFor(5_500);
+  await expect(page.getByTestId('ai-orb-bubble')).toHaveCount(0);
+  await expect(orb).toContainText('Tap to ask');
+  await orb.click();
+  await expectSheetOpen(page, 'ask-sheet');
 });
 
 test('a slip (short hold) opens nothing and says so', async ({ page }) => {
