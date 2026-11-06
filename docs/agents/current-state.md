@@ -5,14 +5,15 @@ Claude session by `.claude/hooks/session-context.sh`. **Update it in the same
 change whenever a release ships, a decision lands, or an open item closes.**
 Keep it under ~60 lines; durable reasoning belongs in `docs/adr/`.
 
-_Last updated: 2026-10-23_
+_Last updated: 2026-11-06_
 
 ## Release
 
 - App: **Suito** (bundle `com.taigamura.kaji`; ASC listing name is "Suito",
   verified via API 2026-10-03). Version **1.0 is live** on the App Store.
 - **1.0.1 (build 69, native tab bar + new search-focused listing) is live**
-  (READY_FOR_SALE, checked 2026-10-07). 0 ratings. Next change = new version.
+  (READY_FOR_SALE, checked 2026-10-07). ~40 downloads total (owner-reported
+  2026-11-06). Next change = new version.
 - **1.1.0 (Suito AI) is on TestFlight** (2026-10-23): latest is **build 73**
   (`build-1792747682729.ipa`, `feat/suito-ai` `b41c397`, EAS submission
   `4af65823`): PRD #145 (Calendar orb that floats like voice-memo's, receipt
@@ -36,7 +37,7 @@ _Last updated: 2026-10-23_
 - **App Store listing lives in `store.config.json`** (EAS Metadata format);
   `npm run listing` diffs it against ASC, `-- --push` writes it. Search-focused
   rewrite (title/subtitle/keywords carry search terms) because downloads were
-  near zero. Name/subtitle/keywords/description only change on an editable
+  near zero; ~40 by 2026-11-06. Name/subtitle/keywords/description only change on an editable
   version; promo text can change on the live one.
 
 - **iOS tab bar = system `UITabBar`** (ADR-0005, PR #142). The ＋ is a
@@ -49,13 +50,13 @@ _Last updated: 2026-10-23_
 
 ## Open items
 
-- **1.1.0 scope grew (PRD #145, 2026-10-23):** Calendar AI orb (hold = voice
-  entry, tap = Ask), receipt scan, repeat suggestions, month-end forecast, day
-  note. Built + merged on `feat/suito-ai` (jest 697, e2e green on web), not
-  pushed. New Swift (`SuitoListen`, `SuitoReceipt`, `wordLine`) is UNCOMPILED:
-  next step is a Mac build → TestFlight, then the device checklist (orb Skia
-  render + position over the native ＋, speech JA/EN offline, receipt OCR on
-  real JP receipts, permission prompts).
+- **PRD #145 device checklist (build 73):** orb Skia render, float, and
+  position over the native ＋; speech JA/EN offline; receipt OCR on real JP
+  receipts; permission prompts. Swift compiles; web e2e + CI green.
+- **PRD #145 calls for the owner:** the orb band costs the Calendar ~164px;
+  the "Recaps and nudges" switch gates the Calendar lines but not the orb or
+  receipt button; agent-picked rules (repeat suggestions skip payments >45
+  days old, day notes need 10+ prior entries, forecast slot always reserved).
 - **1.0.1 is live without the real-iPhone check** (native glass bar; ＋ opens
   the Entry sheet *above* the bar; nothing hidden behind it). Check on device.
 - **Suito AI on-device checklist** (TestFlight): see PRD #143 testing section
@@ -66,7 +67,7 @@ _Last updated: 2026-10-23_
 - Listing: add AI keywords (AI家計簿, オフラインAI) to `store.config.json`
   before submitting 1.1.0 for review.
 - Track impressions → page views → downloads in ASC Analytics; baseline is
-  pre-2026-10-03 (old listing).
+  pre-2026-10-03 (old listing); ~40 downloads as of 2026-11-06.
 
 ## Environment gotchas
 
