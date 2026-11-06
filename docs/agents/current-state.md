@@ -5,7 +5,7 @@ Claude session by `.claude/hooks/session-context.sh`. **Update it in the same
 change whenever a release ships, a decision lands, or an open item closes.**
 Keep it under ~60 lines; durable reasoning belongs in `docs/adr/`.
 
-_Last updated: 2026-11-06 (1.1.0 submitted for review)_
+_Last updated: 2026-11-06 (1.1.0 build 75 in review)_
 
 ## Release
 
@@ -14,11 +14,12 @@ _Last updated: 2026-11-06 (1.1.0 submitted for review)_
 - **1.0.1 (build 69, native tab bar + new search-focused listing) is live**
   (READY_FOR_SALE, checked 2026-10-07). ~40 downloads total (owner-reported
   2026-11-06). Next change = new version.
-- **1.1.0 (Suito AI) submitted for review 2026-11-06**, build **74**
-  (`build-1793951558821.ipa`, main `410cf04` = squash of PR #144), review
-  submission `061bd623`, WAITING_FOR_REVIEW. **releaseType MANUAL**: after
-  approval Taiga must press Release (device-check build 74 on TestFlight
-  first). ASC version id `3b67fd96-e0f2-4572-9b70-3f9517236199`.
+- **1.1.0 (Suito AI) in review with build 75** (resubmitted 2026-11-06,
+  `build-1793958007761.ipa`, main `8f09587`, review submission `423d681e`,
+  WAITING_FOR_REVIEW). Build 74 was pulled from review and replaced so the
+  first AI release has hold-to-talk auto-save (PR #148). **releaseType
+  MANUAL**: after approval Taiga presses Release (device-check 75 on
+  TestFlight first). ASC version id `3b67fd96-e0f2-4572-9b70-3f9517236199`.
 - Growth push (PR #146): AI-first listing pushed to 1.1.0 (EN "Suito: AI
   Expense Tracker", JA "Suito - AI家計簿・簡単カレンダー"); new 6.9" screenshots
   (web-captured, custom tab bar) replaced the 6.5" V1 set; In-App Events
@@ -32,7 +33,11 @@ _Last updated: 2026-11-06 (1.1.0 submitted for review)_
 
 ## Recent decisions
 
-- **Orb → tab-bar accessory (2026-11-06, in build 74):**
+- **Voice entries save without the Entry sheet (ADR-0006 amendment,
+  2026-11-06, build 75):** strip shows "Added ¥850 · Food / Tap to edit" for
+  5 s; tap = edit (undo path). No amount → prefilled sheet. Orb dots scale
+  with orb size (`orbDot`/`orbPointCount` in `ui/AiOrb.tsx`).
+- **Orb → tab-bar accessory (2026-11-06, in build 74+):**
   the orb left its floating Calendar band and now lives in UIKit's
   `tabViewBottomAccessory` (glass strip joined to the bar, Music mini-player
   slot) via `renderBottomAccessoryView`: sphere + "Suito AI" + hint, whole
@@ -69,7 +74,7 @@ _Last updated: 2026-11-06 (1.1.0 submitted for review)_
 
 ## Open items
 
-- **Device-verify the orb accessory on build 74 before pressing Release:** strip height/
+- **Device-verify the orb accessory + voice auto-save on build 75 before pressing Release:** strip height/
   `inline` placement when the bar minimizes, `NATIVE_ACCESSORY_CLEARANCE` (56,
   estimated) keeps list bottoms clear, Skia sphere at 34pt, hold-to-talk.
 
