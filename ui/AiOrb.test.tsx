@@ -8,7 +8,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 
 import { ThemeProvider } from '../theme';
-import { AiOrb, LONG_PRESS_MS, fibonacciSphere, projectOrb, type OrbState } from './AiOrb';
+import { AiOrb, LONG_PRESS_MS, fibonacciSphere, orbDot, orbPointCount, projectOrb, type OrbState } from './AiOrb';
 
 function renderOrb(state: OrbState, extra: Partial<React.ComponentProps<typeof AiOrb>> = {}) {
   return render(
@@ -107,5 +107,17 @@ describe('projectOrb', () => {
     const ys = new Set([...f.buckets.flat(), ...f.accent].map((p) => Math.round(p.y)));
     expect(f.accent.length).toBeGreaterThan(0);
     expect(ys.size).toBeLessThan(40);
+  });
+});
+
+describe('dot scaling', () => {
+  it('keeps the 60 pt design as-is and thins the dots for the 34 pt strip', () => {
+    expect(orbDot(2.2, 60)).toBe(2.2);
+    expect(orbPointCount(150, 60)).toBe(150);
+    expect(orbDot(2.2, 34)).toBeCloseTo(1.25, 1);
+    expect(orbPointCount(150, 34)).toBeLessThan(70);
+    // Floors: back dots stay visible, the sphere still reads as a sphere.
+    expect(orbDot(1.4, 26)).toBe(0.8);
+    expect(orbPointCount(72, 26)).toBe(36);
   });
 });

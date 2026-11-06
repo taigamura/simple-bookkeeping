@@ -1,8 +1,9 @@
 /**
  * The orb accessory in the full Root (PRD #145): shown on both tabs, only with
  * the on-device model; tap → Ask scoped to the visible month on the Calendar
- * (unscoped on Summary); hold + speak → a create-mode Entry sheet filled from
- * the parse. Plus AskSheet's `scope` prop on its own.
+ * (unscoped on Summary); hold + speak → the entry is saved straight away and
+ * the strip offers "tap to edit"; a parse without an amount opens the Entry
+ * sheet instead. Plus AskSheet's `scope` prop on its own.
  */
 jest.mock('@gorhom/bottom-sheet', () => require('../test-utils/gorhomBottomSheetWebMock'));
 jest.mock('react-native-safe-area-context', () =>
@@ -31,13 +32,13 @@ const SYSTEM_ONLY: Availability = { onDevice: 'unsupported', system: 'available'
 
 const settle = () => act(async () => {});
 
-async function renderRoot(ai: SuitoAi) {
+async function renderRoot(ai: SuitoAi, update: jest.Mock = jest.fn()) {
   render(
     <AiProvider ai={ai}>
       <ThemeProvider>
         <Root
           state={DEFAULT_STATE}
-          update={jest.fn()}
+          update={update}
           showCorruptNotice={false}
           hasCorruptStash={false}
           readCorruptStash={async () => null}
@@ -115,9 +116,10 @@ describe('Orb accessory in Root', () => {
     expect(screen.queryByTestId('ask-scope')).toBeNull();
   });
 
-  it('hold → partial bubble → release → Entry sheet filled with the parse', async () => {
+  it('hold → partial bubble → release → saved with no Entry sheet; tap edits it', async () => {
     const ai = createFakeSuitoAi({ availability: AVAILABLE });
-    await renderRoot(ai);
+    const update = jest.fn();
+    await renderRoot(ai, update);
     const orb = screen.getByTestId('ai-orb');
     const realNow = Date.now;
     let now = realNow();
@@ -131,9 +133,38 @@ describe('Orb accessory in Root', () => {
 
       now += MIN_HOLD_MS + 100;
       fireEvent(orb, 'pressOut');
+      await waitFor(() => expect(update).toHaveBeenCalled());
+      const saved = update.mock.calls[0][0].entries.find((e: { amount: number }) => e.amount === 850);
+      expect(saved).toMatchObject({ amount: 850, type: 'expense', note: 'lunch' });
+      expect(screen.queryByTestId('entry-sheet')).toBeNull();
+      expect(screen.getByTestId('ai-orb-bubble').props.children).toBe(
+        strings.ai.orb.added('¥850', saved.category),
+      );
+      expect(screen.getByText(strings.ai.orb.tapToEdit)).toBeTruthy();
+
+      fireEvent.press(screen.getByTestId('ai-orb'));
       await waitFor(() => expect(screen.getByTestId('entry-sheet')).toBeTruthy());
-      expect(screen.getAllByText(/850/).length).toBeGreaterThan(0);
-      expect(screen.queryByTestId('ai-orb-bubble')).toBeNull();
+      expect(screen.getByLabelText(strings.entry.deleteEntry)).toBeTruthy();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('a parse with no amount opens the Entry sheet instead of saving', async () => {
+    const ai = createFakeSuitoAi({ availability: AVAILABLE });
+    jest.spyOn(ai, 'parseEntry').mockResolvedValue({ category: 'Food', note: 'lunch' });
+    const update = jest.fn();
+    await renderRoot(ai, update);
+    const orb = screen.getByTestId('ai-orb');
+    let now = Date.now();
+    const spy = jest.spyOn(Date, 'now').mockImplementation(() => now);
+    try {
+      fireEvent(orb, 'longPress');
+      await settle();
+      now += MIN_HOLD_MS + 100;
+      fireEvent(orb, 'pressOut');
+      await waitFor(() => expect(screen.getByTestId('entry-sheet')).toBeTruthy());
+      expect(update).not.toHaveBeenCalled();
     } finally {
       spy.mockRestore();
     }

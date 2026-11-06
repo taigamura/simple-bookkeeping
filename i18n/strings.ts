@@ -277,6 +277,9 @@ export interface Strings {
       hint: string;
       /** Second line of the tab-bar accessory, under the label. */
       accessoryHint: string;
+      /** A voice entry was saved without the Entry sheet. */
+      added: (amount: string, category: string) => string;
+      tapToEdit: string;
       listening: string;
       reading: string;
       tooShort: string;
@@ -588,6 +591,8 @@ export const en: Strings = {
       label: 'Suito AI',
       hint: 'Tap to ask about this month. Touch and hold to say an entry, then let go.',
       accessoryHint: 'Tap to ask · hold to say an entry',
+      added: (amount, category) => `Added ${amount} · ${category}`,
+      tapToEdit: 'Tap to edit',
       listening: 'Listening',
       reading: 'Reading',
       tooShort: 'Hold a little longer while you speak',
@@ -885,6 +890,8 @@ export const ja: Strings = {
       label: 'Suito AI',
       hint: 'タップで今月について聞けます。長押ししながら話すと記録を入力できます。',
       accessoryHint: 'タップで質問・長押しで声で入力',
+      added: (amount, category) => `${amount}・${category}を記録しました`,
+      tapToEdit: 'タップで編集',
       listening: '聞いています',
       reading: '読み取り中',
       tooShort: 'もう少し長く押したまま話してください',

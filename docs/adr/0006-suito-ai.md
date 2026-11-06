@@ -82,3 +82,18 @@ hidden state on unsupported phones.
 - EAS free tier is slower and limited; source goes to Expo's builders.
 - ADR-0003 (no idle motion) still applies: AI UI confirms and points, no
   looping "thinking" mascots.
+
+## Amendment (2026-11-06): voice entries save without the sheet
+
+Taiga, after using build 74: hold-to-talk should add the entry straight away,
+with no Entry sheet to confirm. The parse already carries everything the sheet
+would ask for, and the hold is itself a deliberate gesture, so the confirm step
+was friction rather than safety. Now a voice parse with an amount is saved
+immediately (`Root.saveVoiceEntry`: missing category falls back to the type's
+first category, missing date to today, repeat never), with the usual haptic,
+save wave and landing pulse. The orb strip shows "Added ¥850 · Food / Tap to
+edit" for 5 s (`SAVED_MS`); a tap in that window opens the entry in edit mode,
+which is the undo path (Delete is there). A parse without an amount still opens
+the prefilled Entry sheet. Typed plain-words entry and receipt scan keep the
+sheet: they start inside it, so the user is already looking at the form.
+Every number is still computed by code, never the model.

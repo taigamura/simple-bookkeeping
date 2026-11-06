@@ -560,6 +560,51 @@ function Shell({
     setEntryContentHeight(0);
     setSheet('entry');
   };
+  // Hold + speak saves straight away (no Entry sheet): the parse already has
+  // everything the sheet would ask for, and the orb strip then offers "tap to
+  // edit" for a few seconds. Only a parse without an amount falls back to the
+  // prefilled sheet, since there is nothing to save yet. Returns the saved
+  // entry, or null when the sheet opened instead.
+  const saveVoiceEntry = (parsed: ParsedEntry): Transaction | null => {
+    const amount = parsed.amount !== undefined ? Math.round(parsed.amount) : 0;
+    if (!(amount > 0)) {
+      openVoiceEntry(parsed);
+      return null;
+    }
+    const type = parsed.type ?? 'expense';
+    const cats = type === 'income' ? state.incCats : state.expCats;
+    const category = parsed.category && cats.includes(parsed.category) ? parsed.category : cats[0];
+    const date = parsed.date ?? todayDate;
+    const draft: EntryDraft = {
+      type,
+      amountStr: String(amount),
+      category,
+      note: parsed.note ?? '',
+      ...date,
+      repeat: 'never',
+    };
+    const next = saveLedgerItem(ledger, draft, 'off', undefined, 'one');
+    const created = next.entries.find(
+      (candidate) => !ledger.entries.some((old) => old.id === candidate.id),
+    );
+    if (next === ledger || !created) {
+      openVoiceEntry(parsed);
+      return null;
+    }
+    entrySaved();
+    void noteEntrySaved();
+    setSaveWaveNonce((nonce) => nonce + 1);
+    update({
+      ...next,
+      ...(type === 'expense'
+        ? { expCats: promoteCategory(state.expCats, category) }
+        : { incCats: promoteCategory(state.incCats, category) }),
+    });
+    setCursor({ y: created.y, m: created.m });
+    setSelectedDay(created.day);
+    setSavedPulse((prev) => ({ y: created.y, m: created.m, day: created.day, nonce: prev.nonce + 1 }));
+    return created;
+  };
 
   // openEdit(): tap a day-list row → edit that entry. Re-select its day so the
   // Calendar returns to it after save/delete.
@@ -1044,7 +1089,9 @@ function Shell({
       locale,
     }),
     onAsk: () => openAsk(which === 'calendar' ? { y: cursor.y, m: cursor.m } : null),
-    onParsed: openVoiceEntry,
+    onParsed: saveVoiceEntry,
+    onEdit: openEdit,
+    symbol: state.currency.symbol,
   });
 
   // renderBody(): `renderTab`, plus room for the orb accessory when it shows.

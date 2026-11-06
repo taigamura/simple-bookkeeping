@@ -13,7 +13,14 @@ import { StyleSheet } from 'react-native';
 import { useDerivedValue, useFrameCallback, useSharedValue } from 'react-native-reanimated';
 
 import { useMotion, useTheme, withAppSpring, withAppTiming } from '../theme';
-import { OrbShell, fibonacciSphere, projectOrb, type AiOrbProps } from './AiOrb';
+import {
+  OrbShell,
+  fibonacciSphere,
+  orbDot,
+  orbPointCount,
+  projectOrb,
+  type AiOrbProps,
+} from './AiOrb';
 
 const N = 150;
 
@@ -21,7 +28,8 @@ export function AiOrbSkia(props: AiOrbProps) {
   const { size, state, level } = props;
   const { colors, mode } = useTheme();
   const { enabled } = useMotion();
-  const seeds = useMemo(() => fibonacciSphere(N), []);
+  const n = orbPointCount(N, size);
+  const seeds = useMemo(() => fibonacciSphere(n), [n]);
 
   const time = useSharedValue(0);
   const lv = useSharedValue(0);
@@ -76,10 +84,10 @@ export function AiOrbSkia(props: AiOrbProps) {
             <RadialGradient c={shadowC} r={shadowR} colors={[shade, 'rgba(0,0,0,0)']} />
           </Circle>
         </Group>
-        <Points points={back} mode="points" color={colors.ink} opacity={0.28} strokeWidth={1.4} strokeCap="round" />
-        <Points points={mid} mode="points" color={colors.ink} opacity={0.5} strokeWidth={1.8} strokeCap="round" />
-        <Points points={front} mode="points" color={colors.ink} opacity={0.85} strokeWidth={2.2} strokeCap="round" />
-        <Points points={glow} mode="points" color={colors.positive} opacity={0.95} strokeWidth={2.8} strokeCap="round" />
+        <Points points={back} mode="points" color={colors.ink} opacity={0.28} strokeWidth={orbDot(1.4, size)} strokeCap="round" />
+        <Points points={mid} mode="points" color={colors.ink} opacity={0.5} strokeWidth={orbDot(1.8, size)} strokeCap="round" />
+        <Points points={front} mode="points" color={colors.ink} opacity={0.85} strokeWidth={orbDot(2.2, size)} strokeCap="round" />
+        <Points points={glow} mode="points" color={colors.positive} opacity={0.95} strokeWidth={orbDot(2.8, size)} strokeCap="round" />
       </Canvas>
     </OrbShell>
   );

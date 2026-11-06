@@ -100,6 +100,20 @@ export interface OrbFrame {
 
 export const ACCENT_EVERY = 11;
 
+/**
+ * The dot sizes and counts were tuned on the 60 pt floating orb. Drawn at the
+ * same pixel size in the 34 pt accessory they crowd into a blotchy, noisy
+ * ball, so both renderers scale them down with the orb: dot diameter linearly
+ * (floored so back dots stay visible), point count by size^1.5 (the sphere's
+ * visible area shrinks faster than its outline).
+ */
+export const ORB_DESIGN_SIZE = 60;
+export const orbDotScale = (size: number) => Math.min(1, size / ORB_DESIGN_SIZE);
+export const orbDot = (designDiameter: number, size: number) =>
+  Math.max(0.8, designDiameter * orbDotScale(size));
+export const orbPointCount = (designCount: number, size: number) =>
+  Math.max(36, Math.round(designCount * Math.pow(orbDotScale(size), 1.5)));
+
 /** One frame of the sphere. Pure, and a worklet so Skia runs it on the UI thread. */
 export function projectOrb(seeds: Seed[], { t, rec, think, level, size }: OrbFrameInput): OrbFrame {
   'worklet';
@@ -272,7 +286,8 @@ export function AiOrbStatic(props: AiOrbProps) {
   const { size, state, level } = props;
   const { colors } = useTheme();
   const { enabled } = useMotion();
-  const seeds = useMemo(() => fibonacciSphere(STATIC_N), []);
+  const n = orbPointCount(STATIC_N, size);
+  const seeds = useMemo(() => fibonacciSphere(n), [n]);
   const t = useWebClock(enabled);
   const frame = useMemo(
     () =>
@@ -303,10 +318,12 @@ export function AiOrbStatic(props: AiOrbProps) {
   );
   return (
     <OrbShell {...props}>
-      {frame.buckets[0].map((p, i) => dot(p, 1.6, colors.ink, 0.28, `b${i}`))}
-      {frame.buckets[1].map((p, i) => dot(p, 2, colors.ink, 0.5, `m${i}`))}
-      {frame.buckets[2].map((p, i) => dot(p, 2.4, colors.ink, 0.85, `f${i}`))}
-      {frame.accent.map((p, i) => dot(p, 2.8, colors.positive, 0.95, `a${i}`, 'orb-accent'))}
+      {frame.buckets[0].map((p, i) => dot(p, orbDot(1.6, size), colors.ink, 0.28, `b${i}`))}
+      {frame.buckets[1].map((p, i) => dot(p, orbDot(2, size), colors.ink, 0.5, `m${i}`))}
+      {frame.buckets[2].map((p, i) => dot(p, orbDot(2.4, size), colors.ink, 0.85, `f${i}`))}
+      {frame.accent.map((p, i) =>
+        dot(p, orbDot(2.8, size), colors.positive, 0.95, `a${i}`, 'orb-accent'),
+      )}
     </OrbShell>
   );
 }
