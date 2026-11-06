@@ -1,0 +1,31 @@
+{
+  "host": "http://127.0.0.1:8791",
+  "panelTemplate": "/home/taigamura/.claude/skills/appstore-marketing/assets/panel-template.html",
+  "srcDir": "/tmp/claude-1000/-home-taigamura-dev-simple-bookkeeping/b373f8c4-74f5-483c-9cef-572da0f48986/scratchpad/shots/src",
+  "outDir": "/tmp/claude-1000/-home-taigamura-dev-simple-bookkeeping/b373f8c4-74f5-483c-9cef-572da0f48986/scratchpad/shots/out",
+  "sizes": { "6.9-inch": [1320, 2868] },
+  "langs": {
+    "en": {
+      "font": "'Liberation Sans','Helvetica Neue',Arial,sans-serif",
+      "panels": [
+        ["en-1-entry", "Type it like<br>you'd <span class=\"hl\">say it</span>", "\"lunch 850 yesterday\" becomes a full entry"],
+        ["en-2-voice", "Hold and <span class=\"hl\">speak</span><br>to add an entry", "Your words become an entry, right on your iPhone"],
+        ["en-3-calendar", "A calendar that<br><span class=\"hl\">looks ahead</span>", "Month-end forecast and helpful nudges"],
+        ["en-4-receipt", "<span class=\"hl\">Snap</span> a receipt,<br>skip the typing", "Total, date and store, read on your iPhone"],
+        ["en-5-ask", "<span class=\"hl\">Ask</span> about<br>your money", "Plain questions, answered on your iPhone"],
+        ["en-6-summary", "<span class=\"hl\">Private</span><br>by design", "No account. No ads. The AI runs on your iPhone."]
+      ]
+    },
+    "ja": {
+      "font": "'Meiryo','Meiryo UI','Noto Sans CJK JP','Liberation Sans',sans-serif",
+      "panels": [
+        ["ja-1-entry", "<span class=\"hl\">書くだけ</span>で<br>自動入力", "「昨日ランチ 850円」で金額・カテゴリ・日付が入る"],
+        ["ja-2-voice", "<span class=\"hl\">話すだけ</span>で<br>記録できる", "長押しして話すだけ。文字起こしもiPhoneの中で"],
+        ["ja-3-calendar", "カレンダーが<br><span class=\"hl\">先を読む</span>", "月末の見込み、その日のひとこと、くり返しの提案"],
+        ["ja-4-receipt", "<span class=\"hl\">レシート</span>を<br>撮るだけ", "合計・日付・店名をiPhoneの中で読み取り"],
+        ["ja-5-ask", "お金のこと、<br><span class=\"hl\">聞くだけ</span>", "ふだんの言葉で聞くと、iPhoneの中で答えます"],
+        ["ja-6-summary", "登録なし、<br><span class=\"hl\">広告なし</span>", "AIはiPhoneの中で動き、データは外に出ません"]
+      ]
+    }
+  }
+}

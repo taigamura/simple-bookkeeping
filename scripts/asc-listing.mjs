@@ -6,8 +6,8 @@
 //
 // Apple only lets name, subtitle, keywords and description change on a version
 // that's still being prepared. Promotional text can change on the live version.
-// So --push writes everything to the editable version if one exists, and only
-// promo text to the live one. Auth reuses the ASC API key from eas.json.
+// So --push writes everything to the editable version if one exists, and
+// promo text to the live one only when no version is being prepared. Auth reuses the ASC API key from eas.json.
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 
@@ -58,6 +58,7 @@ const VERSION_FIELDS = {
   description: 'description',
   promoText: 'promotionalText',
   supportUrl: 'supportUrl',
+  releaseNotes: 'whatsNew',
 };
 
 const wanted = (cfg, field) => (field === 'keywords' ? cfg.keywords.join(',') : cfg[field]);
@@ -101,7 +102,10 @@ if (editableVersion) {
 } else {
   console.log('No editable version. Create one in App Store Connect to change name/subtitle/keywords/description.');
 }
-if (liveVersion) {
+// Promo text describes the version being prepared, so while one exists it goes
+// there only: the live version keeps its own (new-feature copy would be false
+// on it). With no version in preparation, promo text updates the live one.
+if (liveVersion && !editableVersion) {
   await sync(
     `v${liveVersion.attributes.versionString} live`,
     `/v1/appStoreVersions/${liveVersion.id}/appStoreVersionLocalizations`,

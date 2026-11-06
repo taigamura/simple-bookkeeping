@@ -4,54 +4,62 @@
     "copyright": "2026 Taiga Kimura",
     "info": {
       "en-US": {
-        "title": "Suito: Budget & Expense Log",
-        "subtitle": "Private money tracker, no ads",
+        "title": "Suito: AI Expense Tracker",
+        "subtitle": "Budget, receipt scanner, voice",
         "keywords": [
           "spending",
+          "money",
+          "manager",
           "finance",
           "savings",
+          "kakeibo",
           "bookkeeping",
-          "ledger",
           "calendar",
           "income",
           "bills",
           "offline",
-          "simple",
-          "diary",
-          "allowance"
+          "private",
+          "log"
         ],
-        "promoText": "Log a day's spending in seconds. No account, no ads, no tracking. Moving from Zaim? Import your CSV and pick up where you left off.",
-        "description": "Know where your money went this month, in a few taps.\n\nSuito is a calm, fast money tracker built around a calendar. Tap a day, enter an amount, pick a category, done. Your month's income, spending and budget are always one glance away.\n\nNo sign-up. No ads. No tracking. Everything stays on your iPhone.\n\nTRACK EVERY DAY\n- Log income and expenses on a calendar, with an optional note\n- Repeating entries for rent, salary and subscriptions (daily, monthly or yearly)\n- Edit one occurrence, or this one and everything after it\n\nSTAY ON BUDGET\n- One monthly budget, or a budget for each category\n- See what's left for the month at a glance\n- Monthly summary with spending by category\n\nMAKE IT YOURS\n- Add and edit your own categories\n- Light and dark appearance that follows your iPhone\n- ¥, $, € or £ display\n- Full English and Japanese support\n\nBRING YOUR HISTORY\n- Import from Zaim (CSV, UTF-8 or Shift-JIS)\n- Export everything to CSV any time, for backup or a spreadsheet\n\nPRIVATE BY DESIGN\nSuito has no account, no cloud and no analytics. It never connects to your bank and never sends your data anywhere. Currency choice changes the symbol only; amounts are not converted.\n\nFree, with no ads and no in-app purchases.",
+        "promoText": "New: Suito AI. Say \"lunch 15 yesterday\" or scan a receipt and the entry fills itself in. The AI runs on your iPhone. No account, no ads, no tracking.",
+        "description": "The AI expense tracker that keeps your money on your iPhone.\n\nSay \"lunch 15 yesterday\" or snap a receipt, and Suito fills in the amount, category, date and note. You check it and tap Save. The AI runs on your iPhone: no account, no ads, nothing sent anywhere.\n\nSUITO AI, ON YOUR IPHONE\n- Voice entry: hold the Suito AI button and say an entry. Speech is turned into text on your iPhone\n- Plain-words entry: type \"coffee 5\" or \"taxi 20 on Monday\" and the fields fill themselves in\n- Receipt scan: the camera reads the total, date and store on your iPhone. The photo is not kept\n- Ask: \"How much did I spend on food this month?\" Answers use Suito's own totals\n- Monthly recap: a short, kind look back at last month\n- Month-end forecast, a note about the day, and suggestions to turn regular payments into repeats\n- Nothing is saved until you tap Save, and every number is calculated by Suito, not guessed by the AI\n\nWant a bigger AI? Suito can prepare a question with your numbers and show you the exact text. You send it to ChatGPT or any app you choose from the share sheet. Suito itself sends nothing.\n\nSIRI, SHORTCUTS AND SPOTLIGHT\n- Add an entry, hear a month's summary, check spending by category or find entries with Siri and Shortcuts\n- Find entries in Spotlight search (you can turn this off in Settings)\n\nTRACK EVERY DAY\n- Log income and expenses on a calendar, with an optional note\n- Repeating entries for rent, salary and subscriptions (daily, monthly or yearly)\n- Edit one occurrence, or this one and everything after it\n\nSTAY ON BUDGET\n- One monthly budget, or a budget for each category\n- See what's left for the month at a glance\n- Monthly summary with spending by category\n\nMAKE IT YOURS\n- Add and edit your own categories\n- Light and dark appearance that follows your iPhone\n- ¥, $, € or £ display\n- Full English and Japanese support\n\nBRING YOUR HISTORY\n- Import CSV exports from Zaim, MoneyForward ME or Okane Reco\n- Export everything to CSV any time, for backup or a spreadsheet\n\nPRIVATE BY DESIGN\nSuito has no account, no cloud and no analytics. It never connects to your bank and never sends your data anywhere. The microphone and camera are used only when you ask, and are read on your iPhone. Currency choice changes the symbol only; amounts are not converted.\n\nREQUIREMENTS\nSuito requires iOS 26 or later. Suito AI (voice entry, plain-words entry, receipt scan, Ask, recaps and Calendar notes) requires an iPhone that supports Apple Intelligence, with Apple Intelligence turned on. On other iPhones these features are hidden, and everything else works, including Siri and Spotlight.\n\nFree, with no ads and no in-app purchases.",
         "privacyPolicyUrl": "https://taigamura.github.io/simple-bookkeeping/privacy.html",
-        "supportUrl": "https://github.com/taigamura/simple-bookkeeping"
+        "supportUrl": "https://github.com/taigamura/simple-bookkeeping",
+        "releaseNotes": "Meet Suito AI, a private AI that runs on your iPhone.\n\n- Hold the Suito AI button and say an entry, like \"lunch 15 yesterday\"\n- Type an entry in plain words, or scan a receipt with the camera\n- Ask questions about your money, and get a monthly recap\n- Month-end forecast, day notes and repeat suggestions on the Calendar\n- Siri, Shortcuts and Spotlight support\n- Import CSV from Zaim, MoneyForward ME or Okane Reco\n\nSuito AI requires an iPhone that supports Apple Intelligence. Nothing is sent anywhere."
       },
       "ja": {
-        "title": "Suito - かんたん家計簿カレンダー",
-        "subtitle": "登録不要・広告なしで予算と収支を管理",
+        "title": "Suito - AI家計簿・簡単カレンダー",
+        "subtitle": "レシート読み取り・音声入力・登録不要・広告なし",
         "keywords": [
-          "簡単",
           "無料",
+          "かんたん",
+          "かけいぼ",
           "節約",
           "貯金",
+          "予算",
+          "収支",
           "支出",
-          "出費",
           "お小遣い帳",
           "おこづかい",
           "出納帳",
           "すいとう",
           "やりくり",
-          "記録",
           "シンプル",
           "お金",
           "固定費",
+          "サブスク",
           "一人暮らし",
-          "プライバシー",
-          "オフライン"
+          "オフライン",
+          "自動",
+          "スキャン",
+          "予測",
+          "記帳"
         ],
-        "promoText": "今日の支出を数秒で記録。アカウント登録も広告もありません。Zaimから乗り換えるなら、CSVをそのまま読み込めます。",
-        "description": "今月いくら使ったか、ひと目でわかる。\n\nSuito（すいとう）は、カレンダーで使うシンプルな家計簿です。日付をタップして、金額を入れて、カテゴリを選ぶだけ。今月の収入・支出・予算の残りがいつでもすぐに見られます。\n\n会員登録なし。広告なし。データ収集なし。記録はすべてあなたのiPhoneの中だけに保存されます。\n\n■ 毎日の記録\n・カレンダーで収入と支出を記録（メモも残せます）\n・家賃、給料、サブスクなどは繰り返し記録に（毎日・毎月・毎年）\n・この回だけ、またはこの回以降をまとめて編集・削除\n\n■ 予算管理\n・月の予算を合計、またはカテゴリごとに設定\n・今月あといくら使えるか、ひと目で確認\n・カテゴリ別の月間サマリー\n\n■ 自分好みに\n・カテゴリを自由に追加・編集\n・iPhoneの設定に合わせたライト／ダーク表示\n・¥・$・€・£ の表示に対応\n・日本語と英語に完全対応\n\n■ Zaimから乗り換え\n・ZaimのCSVをそのまま読み込み（UTF-8／Shift-JIS対応）\n・いつでもCSVで書き出してバックアップ、表計算ソフトでも使えます\n\n■ プライバシー\nアカウントもクラウドも分析ツールもありません。銀行とも連携せず、データを外部に送信することは一切ありません。通貨の選択は記号の表示のみで、金額の換算は行いません。\n\n無料。広告もアプリ内課金もありません。",
+        "promoText": "新機能「Suito AI」。「昨日 ランチ 850」と話すか、レシートを撮るだけで記録が入ります。AIはiPhoneの中で動くので、データは外に出ません。登録も広告もなし。",
+        "description": "話すだけ、撮るだけで記録できるAI家計簿。\n\n「昨日 ランチ 850」と話すか、レシートを撮るだけで、金額・カテゴリ・日付・メモが入ります。確認して保存するだけ。AIはiPhoneの中で動くので、会員登録なし、広告なし、データは外に出ません。\n\n■ Suito AI（iPhoneの中で動くAI）\n・声で入力：Suito AIボタンを長押しして話すだけ。音声の文字起こしもiPhoneの中で行います\n・ことばで入力：「スタバ 620」「おととい タクシー 1800」のように書くだけで自動入力\n・レシート読み取り：カメラで撮ると合計・日付・店名を読み取り、カテゴリも選びます。写真は保存しません\n・聞く：「今月コンビニいくら？」と聞くと、Suitoが計算した数字で答えます\n・先月のふりかえり：やさしい言葉で、先月をふりかえるメッセージ\n・カレンダーに月末の見込み、その日のひとこと、毎月の支払いをくり返しにする提案\n・保存ボタンを押すまで記録されません。数字はすべてSuitoが計算し、AIが数字を作ることはありません\n\nもっと大きなAIに聞きたいときは、数字をそえた質問を作って、送る内容を先に表示します。共有シートからChatGPTなど好きなアプリに自分で送れます。Suitoからは何も送信しません。\n\n■ Siri・ショートカット・スポットライト\n・Siriやショートカットで記録の追加、月のまとめ、カテゴリ別の支出、記録の検索\n・スポットライト検索で記録を探せます（設定でオフにできます）\n\n■ 毎日の記録\n・カレンダーで収入と支出を記録（メモも残せます）\n・家賃、給料、サブスクなどは繰り返し記録に（毎日・毎月・毎年）\n・この回だけ、またはこの回以降をまとめて編集・削除\n\n■ 予算管理\n・月の予算を合計、またはカテゴリごとに設定\n・今月あといくら使えるか、ひと目で確認\n・カテゴリ別の月間サマリー\n\n■ 自分好みに\n・カテゴリを自由に追加・編集\n・iPhoneの設定に合わせたライト／ダーク表示\n・¥・$・€・£ の表示に対応\n・日本語と英語に完全対応\n\n■ ほかの家計簿アプリから乗り換え\n・Zaim、マネーフォワード ME、おカネレコのCSVを読み込み\n・いつでもCSVで書き出してバックアップ、表計算ソフトでも使えます\n\n■ プライバシー\nアカウントもクラウドも分析ツールもありません。銀行とも連携せず、データを外部に送信することは一切ありません。マイクとカメラは使うときだけ動き、iPhoneの中で読み取ります。通貨の選択は記号の表示のみで、金額の換算は行いません。\n\n■ 動作環境\niOS 26以降が必要です。Suito AI（声で入力、ことばで入力、レシート読み取り、聞く、ふりかえり、カレンダーのひとこと）は、Apple Intelligence対応のiPhoneで、Apple Intelligenceをオンにしているときに使えます。対応していないiPhoneではAI機能は表示されず、Siriやスポットライト検索を含むほかの機能はすべて使えます。\n\n無料。広告もアプリ内課金もありません。",
         "privacyPolicyUrl": "https://taigamura.github.io/simple-bookkeeping/privacy.html",
-        "supportUrl": "https://github.com/taigamura/simple-bookkeeping"
+        "supportUrl": "https://github.com/taigamura/simple-bookkeeping",
+        "releaseNotes": "iPhoneの中で動くAI「Suito AI」が加わりました。\n\n・Suito AIボタンを長押しして話すだけで記録を入力（例：昨日 ランチ 850）\n・ことばで入力、レシートを撮って読み取り\n・お金のことを「聞く」、先月のふりかえり\n・カレンダーに月末の見込み、その日のひとこと、くり返しの提案\n・Siri、ショートカット、スポットライト検索に対応\n・Zaim、マネーフォワード ME、おカネレコのCSV読み込みに対応\n\nSuito AIはApple Intelligence対応のiPhoneで使えます。データは外に送信されません。"
       }
     }
   }
