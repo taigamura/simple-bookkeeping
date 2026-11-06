@@ -43,6 +43,8 @@ export interface AiOrbProps {
   accessibilityHint?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
+  /** Drawing only: the host owns the button (OrbAccessory), so no nested button. */
+  decorative?: boolean;
 }
 
 export const LONG_PRESS_MS = 250;
@@ -177,33 +179,15 @@ export function OrbShell({
   accessibilityHint,
   testID,
   style,
+  decorative = false,
   shadow = true,
   children,
 }: AiOrbProps & { shadow?: boolean; children: React.ReactNode }) {
   const { mode } = useTheme();
   const active = state !== 'idle';
   const shadowW = Math.round(size * 0.5);
-  return (
-    <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
-      onPressOut={onPressOut}
-      delayLongPress={LONG_PRESS_MS}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityHint={accessibilityHint}
-      accessibilityState={{ busy: state === 'think' }}
-      accessibilityValue={{ text: state }}
-      // react-native-web drops `accessibilityValue`; this reaches the DOM as aria-valuetext.
-      aria-valuetext={state}
-      testID={testID}
-      style={({ pressed }) => [
-        { width: size, height: size, alignItems: 'center', justifyContent: 'center' },
-        // Static scale per state (no tween): listening reads as "lifted".
-        { transform: [{ scale: pressed && !active ? 0.94 : state === 'listen' ? 1.08 : 1 }] },
-        style,
-      ]}
-    >
+  const body = (
+    <>
       {shadow && (
         // Flat stand-in for voice-memo's radial ground shadow (Skia draws the real gradient).
         <View
@@ -225,9 +209,42 @@ export function OrbShell({
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         {children}
       </View>
+    </>
+  );
+  const frame = (pressed: boolean): StyleProp<ViewStyle> => [
+    { width: size, height: size, alignItems: 'center', justifyContent: 'center' },
+    // Static scale per state (no tween): listening reads as "lifted".
+    { transform: [{ scale: pressed && !active ? 0.94 : state === 'listen' ? 1.08 : 1 }] },
+    style,
+  ];
+  if (decorative) {
+    return (
+      <View testID={testID} style={frame(false)}>
+        {body}
+      </View>
+    );
+  }
+  return (
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      onPressOut={onPressOut}
+      delayLongPress={LONG_PRESS_MS}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ busy: state === 'think' }}
+      accessibilityValue={{ text: state }}
+      // react-native-web drops `accessibilityValue`; this reaches the DOM as aria-valuetext.
+      aria-valuetext={state}
+      testID={testID}
+      style={({ pressed }) => frame(pressed)}
+    >
+      {body}
     </Pressable>
   );
 }
+
 
 /** Seconds since mount, ticking at ~30 fps on web while `on`; 0 elsewhere. */
 function useWebClock(on: boolean): number {

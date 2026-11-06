@@ -58,6 +58,7 @@ import type { ParsedEntry } from '../ai/contract';
 import { useAiFeatures } from '../ai/useAiFeatures';
 import { detectLanguage, strings } from '../i18n';
 import { entrySaved } from '../platform/haptics';
+import { noteEntrySaved } from '../platform/reviewPrompt';
 import { shareTextFile } from '../platform/shareFile';
 import { useToday } from '../platform/useToday';
 import { AskSheet } from '../screens/AskSheet';
@@ -72,7 +73,7 @@ import { easings, metrics, useMotion, useTheme, withAppDelay, withAppTiming } fr
 import { SaveWave } from '../ui';
 import { AppShell } from './AppShell';
 import { BottomSheet, SHEET_ANIMATION_DURATION } from './BottomSheet';
-import { CalendarOrb, ORB_RESERVE } from './CalendarOrb';
+import { ACCESSORY_RESERVE, NATIVE_ACCESSORY_CLEARANCE, OrbAccessory } from './OrbAccessory';
 import { NativeTabHost } from './NativeTabHost';
 import { NATIVE_TABS } from './nativeTabs';
 import { TabBar } from './TabBar';
@@ -800,6 +801,8 @@ function Shell({
       const next = saveLedgerItem(ledger, draft, weekendShift, editing ?? undefined, scope);
       if (next === ledger) return;
       entrySaved();
+      // A new entry (not an edit) may be the moment to ask for a rating.
+      if (editing == null && sheet === 'entry') void noteEntrySaved();
       setSaveWaveNonce((nonce) => nonce + 1);
       update({
         ...next,
@@ -1027,36 +1030,47 @@ function Shell({
       />
     );
 
-  // renderBody(): `renderTab` plus the Calendar orb (PRD #145) when the
-  // on-device model is available. The Calendar gives up a bottom band of
-  // `ORB_RESERVE` so the orb, floating just above the ＋, never covers the grid,
-  // the day list or the bar; Summary is untouched.
-  // The custom bar floats over its tab layers (they are absoluteFill, so the
-  // TabSwitcher padding doesn't reach them); the native Scene ends at the bar.
-  const orbBarInset = NATIVE_TABS ? 0 : metrics.tabBarHeight + insets.bottom;
-  const renderBody = (which: Tab) =>
-    which === 'calendar' && orbOn ? (
-      <View style={styles.flex}>
-        <View style={[styles.flex, { marginBottom: ORB_RESERVE + orbBarInset }]}>
+  // The Suito AI orb (PRD #145) lives in the tab bar's accessory slot when the
+  // on-device model is available, on both tabs (UIKit's accessory belongs to
+  // the bar, not a tab). Tap asks about the visible month on the Calendar and
+  // opens the unscoped Ask on Summary; hold + speak opens a filled Entry.
+  const orbProps = (which: Tab) => ({
+    active: tab === which && sheet === null,
+    locale,
+    parseContext: () => ({
+      expCats: state.expCats,
+      incCats: state.incCats,
+      today: todayDate,
+      locale,
+    }),
+    onAsk: () => openAsk(which === 'calendar' ? { y: cursor.y, m: cursor.m } : null),
+    onParsed: openVoiceEntry,
+  });
+
+  // renderBody(): `renderTab`, plus room for the orb accessory when it shows.
+  // iOS: UIKit draws the accessory above the bar; the body pads past it.
+  // Web/Android: the card floats over the tab layer just above the custom bar
+  // (the layers are absoluteFill and run underneath the floating bar, so the
+  // TabSwitcher padding doesn't reach them), and the body gives up its band.
+  const cardBarInset = metrics.tabBarHeight + insets.bottom;
+  const renderBody = (which: Tab) => {
+    if (!orbOn) return renderTab(which);
+    if (NATIVE_TABS) {
+      return (
+        <View style={[styles.flex, { paddingBottom: NATIVE_ACCESSORY_CLEARANCE }]}>
           {renderTab(which)}
         </View>
-        <CalendarOrb
-          active={tab === 'calendar' && sheet === null}
-          barInset={orbBarInset}
-          locale={locale}
-          parseContext={() => ({
-            expCats: state.expCats,
-            incCats: state.incCats,
-            today: todayDate,
-            locale,
-          })}
-          onAsk={() => openAsk({ y: cursor.y, m: cursor.m })}
-          onParsed={openVoiceEntry}
-        />
+      );
+    }
+    return (
+      <View style={styles.flex}>
+        <View style={[styles.flex, { marginBottom: ACCESSORY_RESERVE + cardBarInset }]}>
+          {renderTab(which)}
+        </View>
+        <OrbAccessory variant="card" barInset={cardBarInset} {...orbProps(which)} />
       </View>
-    ) : (
-      renderTab(which)
     );
+  };
 
   return (
     <View style={styles.flex}>
@@ -1069,7 +1083,19 @@ function Shell({
         // iOS: the system UITabBar (genuine Liquid Glass on iOS 26). It owns
         // the tab switch animation and the bottom inset itself.
         <View style={styles.body}>
-          <NativeTabHost tab={tab} onSelect={selectTab} onAdd={openEntry} render={renderBody} />
+          <NativeTabHost
+            tab={tab}
+            onSelect={selectTab}
+            onAdd={openEntry}
+            render={renderBody}
+            renderAccessory={
+              orbOn
+                ? ({ placement }) => (
+                    <OrbAccessory variant="native" placement={placement} {...orbProps(tab)} />
+                  )
+                : undefined
+            }
+          />
         </View>
       ) : (
         <>

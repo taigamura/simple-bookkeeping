@@ -275,6 +275,8 @@ export interface Strings {
     orb: {
       label: string;
       hint: string;
+      /** Second line of the tab-bar accessory, under the label. */
+      accessoryHint: string;
       listening: string;
       reading: string;
       tooShort: string;
@@ -585,6 +587,7 @@ export const en: Strings = {
     orb: {
       label: 'Suito AI',
       hint: 'Tap to ask about this month. Touch and hold to say an entry, then let go.',
+      accessoryHint: 'Tap to ask · hold to say an entry',
       listening: 'Listening',
       reading: 'Reading',
       tooShort: 'Hold a little longer while you speak',
@@ -881,6 +884,7 @@ export const ja: Strings = {
     orb: {
       label: 'Suito AI',
       hint: 'タップで今月について聞けます。長押ししながら話すと記録を入力できます。',
+      accessoryHint: 'タップで質問・長押しで声で入力',
       listening: '聞いています',
       reading: '読み取り中',
       tooShort: 'もう少し長く押したまま話してください',

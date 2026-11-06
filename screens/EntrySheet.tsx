@@ -12,7 +12,7 @@
  * Presentational state only — the parent owns persistence and where the entries
  * land (it passes the target `y`/`m`/`day`).
  */
-import React, { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import React, { useContext, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import {
   Platform,
   Pressable,
@@ -21,9 +21,11 @@ import {
   TextInput,
   View,
   useWindowDimensions,
+  type LayoutChangeEvent,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import {
   amountValue,
@@ -102,6 +104,7 @@ interface ScrollContainerProps {
   contentContainerStyle?: StyleProp<ViewStyle>;
   showsVerticalScrollIndicator?: boolean;
   keyboardShouldPersistTaps?: 'always' | 'never' | 'handled';
+  onLayout?: (event: LayoutChangeEvent) => void;
   children: ReactNode;
 }
 
@@ -128,11 +131,11 @@ const next = <T,>(order: T[], value: T): T =>
 const NATURAL_FORM_HEIGHT = 760;
 
 /**
- * Floor for the compact factor. Past this the form has given up as much as it
- * can without the controls becoming hard to hit (see `MIN_KEY_HEIGHT` in
- * `Keypad`), and the remainder is taken as scroll instead.
+ * Floor for the compact factor. Each control also has its own hard floor (see
+ * `MIN_KEY_HEIGHT` in `Keypad`), so this mostly bounds the fit loop below;
+ * past it the remainder is taken as scroll.
  */
-const MIN_COMPACT_SCALE = 0.72;
+export const MIN_COMPACT_SCALE = 0.5;
 
 /** The footer is outside the scaled body and must get its own room budget. */
 const FOOTER_BUDGET = metrics.ctaHeight + 14;
@@ -175,6 +178,8 @@ export function entryCompactScale(windowHeight: number, chrome: number, extra = 
 
 function useCompactScale(extra = 0): number {
   const { height: windowHeight } = useWindowDimensions();
+  // Null outside a SafeAreaProvider (isolated renders), unlike the hook.
+  const insets = useContext(SafeAreaInsetsContext);
   // Everything between the window edges and the sheet's content box. On web
   // that is the phone frame's padding + border (imported from BottomSheet so
   // the two cannot drift); on native it is the status bar and home indicator,
@@ -187,7 +192,11 @@ function useCompactScale(extra = 0): number {
   // heuristic. The pinned CTA — not this number — is what guarantees the button
   // is reachable, so precision here buys nothing.
   const chrome =
-    Platform.OS === 'web' ? WEB_FRAME_INSET : metrics.statusOffset + NATIVE_BOTTOM_ALLOWANCE;
+    Platform.OS === 'web'
+      ? WEB_FRAME_INSET
+      : insets
+        ? insets.top + insets.bottom
+        : metrics.statusOffset + NATIVE_BOTTOM_ALLOWANCE;
   return entryCompactScale(windowHeight, chrome, extra);
 }
 
@@ -275,7 +284,25 @@ export function EntrySheet({
   // Everywhere else the sheet is exactly what it was.
   const showAiLine =
     availability.onDevice === 'available' && editing == null && !repeatManagement;
-  const scale = useCompactScale(showAiLine ? AI_ENTRY_LINE_HEIGHT + 14 : 0);
+  // The window-derived factor is only the first guess. The form's real height
+  // depends on the locale, the category count and the optional rows, so after
+  // layout the body is measured against its scroll viewport and, if it still
+  // overflows, the factor steps down until it fits (or hits the floor). It only
+  // ever shrinks while the sheet is open, so it cannot oscillate; and Entry
+  // always opens at the max detent, so the viewport does not depend on it.
+  const windowScale = useCompactScale(showAiLine ? AI_ENTRY_LINE_HEIGHT + 14 : 0);
+  const [fit, setFit] = useState(1);
+  const scale = Math.max(MIN_COMPACT_SCALE, windowScale * fit);
+  const viewportHeight = useRef(0);
+  const fitToViewport = () => {
+    const content = bodyHeight.current;
+    const viewport = viewportHeight.current;
+    if (content <= 0 || viewport <= 0 || content <= viewport + 1) return;
+    if (scale <= MIN_COMPACT_SCALE) return;
+    // Proportional shrink under-shoots (fixed parts and floors don't scale), so
+    // step at least 3% and let the next layout check again.
+    setFit((f) => f * Math.min(0.97, viewport / content));
+  };
   // Body and footer are measured separately and summed: the body is the part
   // that may scroll, the footer is pinned, and the host needs their total to
   // pick a detent tall enough to show both.
@@ -288,8 +315,10 @@ export function EntrySheet({
   };
   // Scaled spacing. Row heights keep a 40px floor for the same reason the
   // keypad keys do — below that a tap row stops being a comfortable target.
-  const gap = Math.max(8, Math.round(14 * scale));
-  const rowHeight = Math.max(40, Math.round(46 * scale));
+  const gap = Math.max(6, Math.round(14 * scale));
+  const rowHeight = Math.max(36, Math.round(46 * scale));
+  // The "Expense"/"Income" caption repeats the toggle; drop it once space is tight.
+  const showAmountCaption = scale >= 0.8;
   // Latch so a double-tap cannot save twice while the host processes the save
   // and dismisses the sheet.
   const [saving, setSaving] = useState(false);
@@ -423,6 +452,10 @@ export function EntrySheet({
         style={styles.bodyScroll}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
+        onLayout={(event) => {
+          viewportHeight.current = event.nativeEvent.layout.height;
+          fitToViewport();
+        }}
         // The amount is entered on the in-form keypad, but Note/Date are real
         // text inputs; without this a tap on a keypad key while the keyboard is
         // up would be eaten by the dismiss instead of registering a digit.
@@ -434,6 +467,7 @@ export function EntrySheet({
           onLayout={(event) => {
             bodyHeight.current = event.nativeEvent.layout.height;
             reportHeight();
+            fitToViewport();
           }}
         >
           <View style={styles.topRow}>
@@ -462,9 +496,11 @@ export function EntrySheet({
         >
           {heroText}
         </Txt>
-        <Txt variant="microLabel" tone="dim">
-          {txType === 'income' ? strings.common.income : strings.common.expense}
-        </Txt>
+        {showAmountCaption && (
+          <Txt variant="microLabel" tone="dim">
+            {txType === 'income' ? strings.common.income : strings.common.expense}
+          </Txt>
+        )}
       </View>
 
       <CategoryChips
@@ -479,8 +515,8 @@ export function EntrySheet({
       )}
 
       <View style={[styles.rowsCard, { backgroundColor: colors.card2 }]}>
-        <View style={styles.dateSection}>
-          <View style={styles.dateRow}>
+        <View style={[styles.dateSection, { minHeight: rowHeight }]}>
+          <View style={[styles.dateRow, { minHeight: rowHeight }]}>
             <Txt variant="optionLabel" tone="dim">
               {strings.entry.dateRowLabel}
             </Txt>
@@ -585,6 +621,7 @@ export function EntrySheet({
           style={[
             styles.noteRow,
             {
+              minHeight: rowHeight,
               borderTopWidth: StyleSheet.hairlineWidth,
               borderTopColor: colors.hair,
             },

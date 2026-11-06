@@ -9,7 +9,7 @@ import { StyleSheet, type ViewStyle } from 'react-native';
 
 import { type Transaction } from '../domain';
 import { ThemeProvider } from '../theme';
-import { entryCompactScale, EntrySheet } from './EntrySheet';
+import { entryCompactScale, EntrySheet, MIN_COMPACT_SCALE } from './EntrySheet';
 
 const renderSheet = (props: Partial<React.ComponentProps<typeof EntrySheet>> = {}) =>
   render(
@@ -47,7 +47,7 @@ describe('EntrySheet', () => {
   it('keeps ordinary phones at normal size and reserves the compact floor for short screens', () => {
     expect(entryCompactScale(932, 50)).toBeGreaterThan(0.9);
     expect(entryCompactScale(932, 50)).toBeLessThanOrEqual(1);
-    expect(entryCompactScale(480, 50)).toBe(0.72);
+    expect(entryCompactScale(480, 50)).toBe(MIN_COMPACT_SCALE);
   });
 
   // The form is now a scrollable body plus a pinned footer holding the CTA, so

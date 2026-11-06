@@ -1,8 +1,8 @@
 /**
- * The Calendar orb in the full Root (PRD #145): shown only on the Calendar and
- * only with the on-device model; tap → Ask scoped to the visible month; hold +
- * speak → a create-mode Entry sheet filled from the parse. Plus AskSheet's
- * `scope` prop on its own.
+ * The orb accessory in the full Root (PRD #145): shown on both tabs, only with
+ * the on-device model; tap → Ask scoped to the visible month on the Calendar
+ * (unscoped on Summary); hold + speak → a create-mode Entry sheet filled from
+ * the parse. Plus AskSheet's `scope` prop on its own.
  */
 jest.mock('@gorhom/bottom-sheet', () => require('../test-utils/gorhomBottomSheetWebMock'));
 jest.mock('react-native-safe-area-context', () =>
@@ -48,7 +48,7 @@ async function renderRoot(ai: SuitoAi) {
   await settle();
 }
 
-describe('Calendar orb in Root', () => {
+describe('Orb accessory in Root', () => {
   it('is absent when the on-device model is unavailable', async () => {
     await renderRoot(createFakeSuitoAi({ availability: SYSTEM_ONLY }));
     expect(screen.queryByTestId('ai-orb')).toBeNull();
@@ -70,17 +70,16 @@ describe('Calendar orb in Root', () => {
     expect(screen.queryByTestId('ai-orb')).toBeNull();
   });
 
-  it('shows on the Calendar, labelled for tap and hold, and leaves on Summary', async () => {
+  it('is one button labelled for tap and hold, with the hint line, and stays on Summary', async () => {
     await renderRoot(createFakeSuitoAi({ availability: AVAILABLE }));
     const orb = screen.getByTestId('ai-orb');
     expect(orb.props.accessibilityLabel).toBe(strings.ai.orb.label);
     expect(orb.props.accessibilityHint).toBe(strings.ai.orb.hint);
+    expect(screen.getAllByText(strings.ai.orb.accessoryHint).length).toBeGreaterThan(0);
 
     fireEvent.press(screen.getByRole('tab', { name: strings.nav.summary }));
-    await waitFor(() => expect(screen.queryByTestId('ai-orb')).toBeNull());
-
-    fireEvent.press(screen.getByRole('tab', { name: strings.nav.calendar }));
-    await waitFor(() => expect(screen.getByTestId('ai-orb')).toBeTruthy());
+    await settle();
+    await waitFor(() => expect(screen.getAllByTestId('ai-orb').length).toBeGreaterThan(0));
   });
 
   it('tap opens Ask scoped to the visible month', async () => {
@@ -97,7 +96,7 @@ describe('Calendar orb in Root', () => {
     );
   });
 
-  it('the Summary Ask stays unscoped', async () => {
+  it('on Summary, both the orb and the Summary Ask are unscoped', async () => {
     await renderRoot(createFakeSuitoAi({ availability: AVAILABLE }));
     fireEvent.press(screen.getByTestId('ai-orb'));
     expect(screen.getByTestId('ask-scope')).toBeTruthy();
@@ -105,6 +104,13 @@ describe('Calendar orb in Root', () => {
     fireEvent.press(screen.getByRole('tab', { name: strings.nav.summary }));
     await settle();
     fireEvent.press(screen.getAllByLabelText(strings.ai.askA11y)[0]);
+    expect(screen.getByTestId('ask-sheet')).toBeTruthy();
+    expect(screen.queryByTestId('ask-scope')).toBeNull();
+    fireEvent.press(screen.getByLabelText(strings.nav.close));
+    await settle();
+    // Only the Summary layer is mounted once the swap settles.
+    const orbs = screen.getAllByTestId('ai-orb');
+    fireEvent.press(orbs[orbs.length - 1]);
     expect(screen.getByTestId('ask-sheet')).toBeTruthy();
     expect(screen.queryByTestId('ask-scope')).toBeNull();
   });

@@ -5,7 +5,7 @@ Claude session by `.claude/hooks/session-context.sh`. **Update it in the same
 change whenever a release ships, a decision lands, or an open item closes.**
 Keep it under ~60 lines; durable reasoning belongs in `docs/adr/`.
 
-_Last updated: 2026-11-06_
+_Last updated: 2026-11-06 (orb accessory + Entry fit)_
 
 ## Release
 
@@ -26,6 +26,19 @@ _Last updated: 2026-11-06_
 
 ## Recent decisions
 
+- **Orb → tab-bar accessory (2026-11-06, uncommitted on `feat/suito-ai`):**
+  the orb left its floating Calendar band and now lives in UIKit's
+  `tabViewBottomAccessory` (glass strip joined to the bar, Music mini-player
+  slot) via `renderBottomAccessoryView`: sphere + "Suito AI" + hint, whole
+  strip is the button, on both tabs (accessory belongs to the bar; toggling it
+  per tab would rebuild the native TabView). Web/Android: same row as a card
+  above the custom bar. `nav/CalendarOrb.tsx` → `nav/OrbAccessory.tsx`.
+- **Entry sheet fit loop (ADR-0004 amendment, 2026-11-06):** window factor is
+  now only the first guess; the body is measured against its scroll viewport
+  and the factor steps down until it fits (min 0.5). Floors: keys 40pt, rows
+  36pt; the Expense/Income caption hides below 0.8. Pinned by
+  `e2e/entry-fit.spec.ts` (16 Pro / 16 / mini; mini + AI line still scrolls
+  ~13pt at the floors).
 - **Suito AI 1.1.0 (ADR-0006, PRD #143, branch `feat/suito-ai`):** on-device
   Foundation Models (plain-words entry, monthly letter, model-picked nudges,
   Ask sheet) + ChatGPT share hand-off + Siri App Intents + Spotlight (on by
@@ -49,6 +62,10 @@ _Last updated: 2026-11-06_
   0003 motion system, 0004 Entry sheet fits its screen.
 
 ## Open items
+
+- **Device-verify the orb accessory (needs a new build):** strip height/
+  `inline` placement when the bar minimizes, `NATIVE_ACCESSORY_CLEARANCE` (56,
+  estimated) keeps list bottoms clear, Skia sphere at 34pt, hold-to-talk.
 
 - **PRD #145 device checklist (build 73):** orb Skia render, float, and
   position over the native ＋; speech JA/EN offline; receipt OCR on real JP
