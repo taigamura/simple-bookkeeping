@@ -5,7 +5,7 @@ Claude session by `.claude/hooks/session-context.sh`. **Update it in the same
 change whenever a release ships, a decision lands, or an open item closes.**
 Keep it under ~60 lines; durable reasoning belongs in `docs/adr/`.
 
-_Last updated: 2026-11-06 (orb accessory + Entry fit)_
+_Last updated: 2026-11-06 (1.1.0 submitted for review)_
 
 ## Release
 
@@ -14,19 +14,25 @@ _Last updated: 2026-11-06 (orb accessory + Entry fit)_
 - **1.0.1 (build 69, native tab bar + new search-focused listing) is live**
   (READY_FOR_SALE, checked 2026-10-07). ~40 downloads total (owner-reported
   2026-11-06). Next change = new version.
-- **1.1.0 (Suito AI) is on TestFlight** (2026-10-23): latest is **build 73**
-  (`build-1792747682729.ipa`, `feat/suito-ai` `b41c397`, EAS submission
-  `4af65823`): PRD #145 (Calendar orb that floats like voice-memo's, receipt
-  scan, forecast/day note/repeat suggestion) + `NSPhotoLibraryUsageDescription`.
-  Build 71 was rejected (ITMS-90683, missing photo-library string); 72 fixed
-  it. PR #144 not merged. Not submitted for review.
+- **1.1.0 (Suito AI) submitted for review 2026-11-06**, build **74**
+  (`build-1793951558821.ipa`, main `410cf04` = squash of PR #144), review
+  submission `061bd623`, WAITING_FOR_REVIEW. **releaseType MANUAL**: after
+  approval Taiga must press Release (device-check build 74 on TestFlight
+  first). ASC version id `3b67fd96-e0f2-4572-9b70-3f9517236199`.
+- Growth push (PR #146): AI-first listing pushed to 1.1.0 (EN "Suito: AI
+  Expense Tracker", JA "Suito - AI家計簿・簡単カレンダー"); new 6.9" screenshots
+  (web-captured, custom tab bar) replaced the 6.5" V1 set; In-App Events
+  "Meet Suito AI" (6831505029, 11/14–12/14) and New Year (6831506644,
+  1/1–1/31/2027) in review (submission `2887d3aa`); featuring nomination
+  `bb21c669` SUBMITTED; rating prompt (expo-store-review) in build 74.
+  Launch post drafts in `docs/marketing/launch-1.1/` (not posted).
 - Ship with `/ship-ios` (config: `.claude/ship.json`). Build and submit both
   need eas-cli >= 25 now (`npx -y eas-cli@25.3.0`); 21.8.0, still the Mac's
   global, fails with a bare "GraphQL request failed".
 
 ## Recent decisions
 
-- **Orb → tab-bar accessory (2026-11-06, uncommitted on `feat/suito-ai`):**
+- **Orb → tab-bar accessory (2026-11-06, in build 74):**
   the orb left its floating Calendar band and now lives in UIKit's
   `tabViewBottomAccessory` (glass strip joined to the bar, Music mini-player
   slot) via `renderBottomAccessoryView`: sphere + "Suito AI" + hint, whole
@@ -63,7 +69,7 @@ _Last updated: 2026-11-06 (orb accessory + Entry fit)_
 
 ## Open items
 
-- **Device-verify the orb accessory (needs a new build):** strip height/
+- **Device-verify the orb accessory on build 74 before pressing Release:** strip height/
   `inline` placement when the bar minimizes, `NATIVE_ACCESSORY_CLEARANCE` (56,
   estimated) keeps list bottoms clear, Skia sphere at 34pt, hold-to-talk.
 
@@ -81,8 +87,13 @@ _Last updated: 2026-11-06 (orb accessory + Entry fit)_
   inbox merge, hidden state on non-AI iPhones are untestable on web.
 - Privacy gate for the Apple cloud model: does Apple count app → Private Cloud
   Compute requests as data collection? Answer before adding the cloud switch.
-- Listing: add AI keywords (AI家計簿, オフラインAI) to `store.config.json`
-  before submitting 1.1.0 for review.
+- **Analytics API is 403 for the EAS ASC key** (needs Admin role): create an
+  ONGOING analytics report request once in ASC (or with an Admin key) to get
+  the impressions → page views → downloads funnel. Sales reports need the
+  vendor number (ASC > Payments and Financial Reports); not recorded yet.
+- After the "Meet Suito AI" event is approved, link it to the nomination.
+- Post the launch drafts (`docs/marketing/launch-1.1/checklist.md`) once
+  1.1.0 is live; screenshots show the web tab bar, retake on device later.
 - Track impressions → page views → downloads in ASC Analytics; baseline is
   pre-2026-10-03 (old listing); ~40 downloads as of 2026-11-06.
 
