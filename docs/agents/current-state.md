@@ -5,7 +5,7 @@ Claude session by `.claude/hooks/session-context.sh`. **Update it in the same
 change whenever a release ships, a decision lands, or an open item closes.**
 Keep it under ~60 lines; durable reasoning belongs in `docs/adr/`.
 
-_Last updated: 2026-11-06 (1.1.0 build 75 in review)_
+_Last updated: 2026-11-18 (1.1.0 live; event published)_
 
 ## Release
 
@@ -14,12 +14,18 @@ _Last updated: 2026-11-06 (1.1.0 build 75 in review)_
 - **1.0.1 (build 69, native tab bar + new search-focused listing) is live**
   (READY_FOR_SALE, checked 2026-10-07). ~40 downloads total (owner-reported
   2026-11-06). Next change = new version.
-- **1.1.0 (Suito AI) in review with build 75** (resubmitted 2026-11-06,
+- **1.1.0 (Suito AI) RELEASED 2026-11-13 (build 75, READY_FOR_SALE).** Future
+  versions use releaseType AFTER_APPROVAL (auto-release; owner decision
+  2026-11-13). History: 1.1.0 was in review with build 75 (resubmitted 2026-11-06,
   `build-1793958007761.ipa`, main `8f09587`, review submission `423d681e`,
   WAITING_FOR_REVIEW). Build 74 was pulled from review and replaced so the
-  first AI release has hold-to-talk auto-save (PR #148). **releaseType
-  MANUAL**: after approval Taiga presses Release (device-check 75 on
-  TestFlight first). ASC version id `3b67fd96-e0f2-4572-9b70-3f9517236199`.
+  first AI release has hold-to-talk auto-save (PR #148). It was MANUAL
+  and released by API on 2026-11-13 without the TestFlight device check. ASC version id `3b67fd96-e0f2-4572-9b70-3f9517236199`.
+- **2026-11-09 rejection (Guideline 5, China):** ChatGPT mentions aren't
+  allowed on the China storefront. Fix: China mainland removed from
+  Availability (no Chinese localization; ~0 downloads there), review notes
+  say so, build 75 resubmitted as-is (submission `3d58479f`). Re-adding China
+  would need ChatGPT stripped from descriptions + the 「ChatGPTで聞く」 button.
 - Growth push (PR #146): AI-first listing pushed to 1.1.0 (EN "Suito: AI
   Expense Tracker", JA "Suito - AI家計簿・簡単カレンダー"); new 6.9" screenshots
   (web-captured, custom tab bar) replaced the 6.5" V1 set; In-App Events
@@ -74,7 +80,7 @@ _Last updated: 2026-11-06 (1.1.0 build 75 in review)_
 
 ## Open items
 
-- **Device-verify the orb accessory + voice auto-save on build 75 before pressing Release:** strip height/
+- **Device-verify the orb accessory + voice auto-save on build 75 (live, released unchecked):** strip height/
   `inline` placement when the bar minimizes, `NATIVE_ACCESSORY_CLEARANCE` (56,
   estimated) keeps list bottoms clear, Skia sphere at 34pt, hold-to-talk.
 
@@ -96,7 +102,9 @@ _Last updated: 2026-11-06 (1.1.0 build 75 in review)_
   ONGOING analytics report request once in ASC (or with an Admin key) to get
   the impressions → page views → downloads funnel. Sales reports need the
   vendor number (ASC > Payments and Financial Reports); not recorded yet.
-- After the "Meet Suito AI" event is approved, link it to the nomination.
+- "Meet Suito AI" event PUBLISHED, New Year APPROVED (checked 2026-11-18). Link
+  "Meet Suito AI" to nomination `bb21c669` (SUBMITTED, no events): PATCH needs
+  `attributes.submitted: true` alongside the `inAppEvents` relationship (400 without).
 - Post the launch drafts (`docs/marketing/launch-1.1/checklist.md`) once
   1.1.0 is live; screenshots show the web tab bar, retake on device later.
 - Track impressions → page views → downloads in ASC Analytics; baseline is
