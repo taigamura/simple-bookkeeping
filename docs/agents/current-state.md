@@ -31,7 +31,9 @@ _Last updated: 2026-11-18 (1.1.0 live; event published)_
   (web-captured, custom tab bar) replaced the 6.5" V1 set; In-App Events
   "Meet Suito AI" (6831505029, 11/14–12/14) and New Year (6831506644,
   1/1–1/31/2027) in review (submission `2887d3aa`); featuring nomination
-  `bb21c669` SUBMITTED; rating prompt (expo-store-review) in build 74.
+  `bb21c669` SUBMITTED, linked to "Meet Suito AI" 2026-11-18 (PATCH needs
+  `attributes.submitted: true` with the relationship; it returned 500 but the
+  link stuck, so verify with GET). Event PUBLISHED; rating prompt (expo-store-review) in build 74.
   Launch post drafts in `docs/marketing/launch-1.1/` (not posted).
 - Ship with `/ship-ios` (config: `.claude/ship.json`). Build and submit both
   need eas-cli >= 25 now (`npx -y eas-cli@25.3.0`); 21.8.0, still the Mac's
@@ -102,9 +104,6 @@ _Last updated: 2026-11-18 (1.1.0 live; event published)_
   ONGOING analytics report request once in ASC (or with an Admin key) to get
   the impressions → page views → downloads funnel. Sales reports need the
   vendor number (ASC > Payments and Financial Reports); not recorded yet.
-- "Meet Suito AI" event PUBLISHED, New Year APPROVED (checked 2026-11-18). Link
-  "Meet Suito AI" to nomination `bb21c669` (SUBMITTED, no events): PATCH needs
-  `attributes.submitted: true` alongside the `inAppEvents` relationship (400 without).
 - Post the launch drafts (`docs/marketing/launch-1.1/checklist.md`) once
   1.1.0 is live; screenshots show the web tab bar, retake on device later.
 - Track impressions → page views → downloads in ASC Analytics; baseline is
